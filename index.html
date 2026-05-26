@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="fr" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SaidAfrica - Accueil Immobilier Haut de Gamme</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/src/assets/images/logo.jpeg">
+    <link rel="stylesheet" href="./src/assets/icones/fontawesome/css/all.min.css">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'georgia', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-800 antialiased pt-16">
+
+    <header id="main-header" class="bg-white shadow-lg fixed w-full top-0 left-0 z-50 transition-all duration-500 py-4">
+        <div class="container mx-auto flex justify-between items-center px-6 lg:px-12 transition-all duration-500">
+
+            <a href="#" class="flex items-center group">
+                <img id="main-logo" src="src/assets/images/logo.jpeg" alt="Said Africa Logo"
+                    class="h-16 md:h-20 w-auto object-contain transition-all duration-500 group-hover:scale-105">
+            </a>
+
+            <nav class="space-x-8 hidden md:flex items-center font-medium">
+                <a href="#accueil" class="relative group py-1 hover:text-blue-600 transition duration-300">
+                    Accueil
+                    <span
+                        class="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
+                </a>
+                <a href="#biens" class="relative group py-1 hover:text-blue-600 transition duration-300">
+                    Nos Biens
+                    <span
+                        class="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
+                </a>
+                <a href="#services" class="relative group py-1 hover:text-blue-600 transition duration-300">
+                    Services
+                    <span
+                        class="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
+                </a>
+                <a href="#apropos" class="relative group py-1 hover:text-blue-600 transition duration-300">
+                    À propos
+                    <span
+                        class="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
+                </a>
+
+                <a href="src/pages/login.html"
+                    class="bg-blue-600 text-white px-5 py-2 rounded-full hover:bg-blue-700 transition duration-300 shadow-md">
+                    Se connecter
+                </a>
+            </nav>
+
+            <button id="menu-btn" class="md:hidden text-2xl text-blue-600 focus:outline-none z-50">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </header>
+
+    <div id="overlay"
+        class="fixed inset-0 bg-black/20 backdrop-blur-md z-40 hidden opacity-0 transition-all duration-500 ease-in-out">
+    </div>
+    <aside id="mobileSidebar"
+        class="fixed top-0 right-0 h-full w-80 bg-white shadow-[-10px_0_30px_rgba(0,0,0,0.1)] transform translate-x-full transition-transform duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] z-50 flex flex-col">
+
+        <div
+            class="p-6 flex justify-between items-center bg-gradient-to-r from-blue-50 to-white border-b border-gray-100">
+            <div class="flex items-center">
+                <img src="src/assets/images/logo.jpeg" alt="Logo" class="h-8 w-auto">
+            </div>
+            <button id="closeSidebar"
+                class="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm text-gray-400 hover:text-blue-600 hover:rotate-90 transition-all duration-300">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+
+        <nav class="flex-grow p-8 space-y-1">
+            <a href="#accueil"
+                class="group flex items-center space-x-4 p-4 rounded-2xl hover:bg-blue-50 transition-all duration-300">
+                <div
+                    class="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 text-gray-400 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                    <i class="fas fa-home"></i>
+                </div>
+                <span class="font-semibold text-gray-700 group-hover:text-blue-600">Accueil</span>
+            </a>
+
+            <a href="#biens"
+                class="group flex items-center space-x-4 p-4 rounded-2xl hover:bg-blue-50 transition-all duration-300">
+                <div
+                    class="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 text-gray-400 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                    <i class="fas fa-building"></i>
+                </div>
+                <span class="font-semibold text-gray-700 group-hover:text-blue-600">Nos Biens</span>
+            </a>
+
+            <a href="#services"
+                class="group flex items-center space-x-4 p-4 rounded-2xl hover:bg-blue-50 transition-all duration-300">
+                <div
+                    class="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 text-gray-400 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                    <i class="fas fa-concierge-bell"></i>
+                </div>
+                <span class="font-semibold text-gray-700 group-hover:text-blue-600">Services</span>
+            </a>
+
+            <a href="#apropos"
+                class="group flex items-center space-x-4 p-4 rounded-2xl hover:bg-blue-50 transition-all duration-300">
+                <div
+                    class="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 text-gray-400 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <span class="font-semibold text-gray-700 group-hover:text-blue-600">À propos</span>
+            </a>
+
+            <div class="pt-6">
+                <a href="src/pages/login.html"
+                    class="flex items-center justify-center space-x-2 w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 hover:shadow-blue-300 transition-all active:scale-95">
+                    <i class="fas fa-user-circle"></i>
+                    <span>Se connecter</span>
+                </a>
+            </div>
+        </nav>
+
+        <div class="p-8 border-t border-gray-100 bg-gray-50/50">
+            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Suivez-nous</p>
+            <div class="flex space-x-4">
+                <a href="#" class="text-gray-400 hover:text-blue-600 transition"><i
+                        class="fab fa-facebook-f text-lg"></i></a>
+                <a href="#" class="text-gray-400 hover:text-pink-600 transition"><i
+                        class="fab fa-instagram text-lg"></i></a>
+                <a href="#" class="text-gray-400 hover:text-blue-400 transition"><i
+                        class="fab fa-twitter text-lg"></i></a>
+                <a href="#" class="text-gray-400 hover:text-red-600 transition"><i
+                        class="fab fa-youtube text-lg"></i></a>
+            </div>
+        </div>
+    </aside>
+
+    <section id="accueil" class="relative h-[85vh] flex items-center overflow-hidden bg-black">
+        <div id="hero-slider" class="absolute inset-0 z-0">
+            <div class="hero-slide active absolute inset-0 transition-opacity duration-1000 opacity-100">
+                <img src="src/assets/images/banniere.jpg" class="w-full h-full object-cover" alt="Villa 1">
+            </div>
+            <div class="hero-slide absolute inset-0 transition-opacity duration-1000 opacity-0">
+                <img src="src/assets/images/bien1.jpg" class="w-full h-full object-cover" alt="Villa 2">
+            </div>
+            <div class="hero-slide absolute inset-0 transition-opacity duration-1000 opacity-0">
+                <img src="src/assets/images/bien2.png" class="w-full h-full object-cover" alt="Villa 3">
+            </div>
+            <div class="hero-slide absolute inset-0 transition-opacity duration-1000 opacity-0">
+                <img src="src/assets/images/bien3.jpg" class="w-full h-full object-cover" alt="Villa 3">
+            </div>
+        </div>
+
+        <div
+            class="absolute inset-0 bg-gradient-to-t from-blue-900/90 via-blue-900/20 to-transparent z-10 pointer-events-none">
+        </div>
+
+        <div class="container mx-auto px-6 lg:px-12 relative z-20">
+            <div class="max-w-3xl text-left text-white">
+                <h3 class="text-3xl md:text-5xl font-extrabold mb-5 drop-shadow-2xl" data-aos="fade-up">
+                    Booster le développement inclusif de l'Afrique
+                </h3>
+                <a href="#biens" class="bg-blue-600 text-white px-8 py-3 rounded-full font-bold text-lg inline-block">
+                    Explorer Nos Biens <i class="fas fa-arrow-right ml-3"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="absolute bottom-8 right-8 z-30 flex space-x-3">
+            <button id="prevSlide"
+                class="w-12 h-12 flex items-center justify-center rounded-full bg-white/10 border border-white/20 text-white transition-all backdrop-blur-md">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <button id="nextSlide"
+                class="w-12 h-12 flex items-center justify-center rounded-full bg-white/10 border border-white/20 text-white transition-all backdrop-blur-md">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </section>
+    <div class="bg-blue-600 py-4 overflow-hidden whitespace-nowrap border-y border-blue-500 relative z-20">
+        <div class="animate-scroll flex items-center gap-12">
+            <div class="flex items-center gap-12 text-white font-bold uppercase tracking-[0.2em] text-sm">
+                <span>Douala - Bonapriso</span>
+                <i class="fas fa-star text-[8px] opacity-50"></i>
+                <span>Yaoundé - Bastos</span>
+                <i class="fas fa-star text-[8px] opacity-50"></i>
+                <span>Kribi - Bord de Mer</span>
+                <i class="fas fa-star text-[8px] opacity-50"></i>
+                <span>Résidences de Luxe</span>
+                <i class="fas fa-star text-[8px] opacity-50"></i>
+                <span>Service Conciergerie 24/7</span>
+                <i class="fas fa-star text-[8px] opacity-50"></i>
+                <span>Said Africa : L'Excellence Immobilière</span>
+                <i class="fas fa-star text-[8px] opacity-50"></i>
+            </div>
+
+            <div class="flex items-center gap-12 text-white font-bold uppercase tracking-[0.2em] text-sm">
+                <span>Douala - Bonapriso</span>
+                <i class="fas fa-star text-[8px] opacity-50"></i>
+                <span>Yaoundé - Bastos</span>
+                <i class="fas fa-star text-[8px] opacity-50"></i>
+                <span>Kribi - Bord de Mer</span>
+                <i class="fas fa-star text-[8px] opacity-50"></i>
+                <span>Résidences de Luxe</span>
+                <i class="fas fa-star text-[8px] opacity-50"></i>
+                <span>Service Conciergerie 24/7</span>
+                <i class="fas fa-star text-[8px] opacity-50"></i>
+                <span>Said Africa : L'Excellence Immobilière</span>
+                <i class="fas fa-star text-[8px] opacity-50"></i>
+            </div>
+        </div>
+    </div>
+    <section class="py-12 bg-white">
+        <div class="container mx-auto px-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                <div data-aos="fade-up" data-aos-delay="100">
+                    <span class="text-3xl md:text-4xl font-extrabold text-blue-600">150+</span>
+                    <p class="text-gray-500 text-xs uppercase tracking-widest mt-2">Biens Vendus</p>
+                </div>
+                <div data-aos="fade-up" data-aos-delay="200">
+                    <span class="text-3xl md:text-4xl font-extrabold text-blue-600">10</span>
+                    <p class="text-gray-500 text-xs uppercase tracking-widest mt-2">Ans d'Expertise</p>
+                </div>
+                <div data-aos="fade-up" data-aos-delay="300">
+                    <span class="text-3xl md:text-4xl font-extrabold text-blue-600">98%</span>
+                    <p class="text-gray-500 text-xs uppercase tracking-widest mt-2">Satisfaction</p>
+                </div>
+                <div data-aos="fade-up" data-aos-delay="400">
+                    <span class="text-3xl md:text-4xl font-extrabold text-blue-600">24/7</span>
+                    <p class="text-gray-500 text-xs uppercase tracking-widest mt-2">Accompagnement</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="biens" class="bg-gray-100 py-16 px-4">
+        <div class="max-w-7xl mx-auto mb-16">
+            <h2 class="text-4xl font-bold text-gray-800 text-center mb-10">Nos Biens Immobiliers Exclusifs</h2>
+            <form
+                class="bg-white rounded-2xl shadow-xl p-8 flex flex-col md:flex-row items-center gap-4 justify-between transition-all duration-300 transform hover:shadow-2xl">
+                <div class="flex items-center w-full md:w-1/4 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                    <i class="fas fa-search text-gray-400 mr-3"></i>
+                    <input id="searchInput" type="text" placeholder="Localité, adresse, ou mot clé..." required
+                        class="outline-none w-full bg-gray-50 text-gray-700 placeholder-gray-400">
+                </div>
+
+                <select id="filterSelect"
+                    class="w-full md:w-1/5 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-700 appearance-none cursor-pointer hover:border-blue-300 transition">
+                    <option value="">Type de bien</option>
+                    <option value="villa">Villa</option>
+                    <option value="appartement">Appartement</option>
+                    <option value="terrain">Terrain</option>
+                </select>
+
+                <select id="statusSelect"
+                    class="w-full md:w-1/5 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-700 appearance-none cursor-pointer hover:border-blue-300 transition">
+                    <option value="">Statut</option>
+                    <option value="vente">À vendre</option>
+                    <option value="location">À louer</option>
+                </select>
+
+                <select id="sortSelect"
+                    class="w-full md:w-1/5 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-700 appearance-none cursor-pointer hover:border-blue-300 transition">
+                    <option value="default">Trier par</option>
+                    <option value="price-asc">Prix Croissant</option>
+                    <option value="price-desc">Prix Décroissant</option>
+                </select>
+                <button type="button"
+                    class="w-full md:w-auto md:flex-1 bg-blue-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-blue-700 transition shadow-md flex items-center justify-center space-x-2">
+                    <i class="fas fa-filter"></i>
+                    <span>Rechercher</span>
+                </button>
+            </form>
+        </div>
+
+        <div id="property-grid" class="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
+        </div>
+
+        <div class="text-center mt-12 hidden" id="view-all-properties-btn-wrapper">
+            <a href="/pages/biens.html"
+                class="inline-flex items-center bg-transparent border-2 border-blue-600 text-blue-600 px-8 py-3 rounded-full font-semibold hover:bg-blue-600 hover:text-white transition duration-300">
+                Voir tous les biens <i class="fas fa-external-link-alt ml-2"></i>
+            </a>
+        </div>
+    </section>
+
+
+
+    <section id="services" class="py-20 px-4 bg-white">
+        <div class="max-w-7xl mx-auto text-center">
+            <h2 class="text-4xl font-bold text-gray-800 mb-4">Un Service Premium</h2>
+            <p class="text-xl text-gray-600 mb-12">Plus qu'une agence, votre partenaire de confiance.</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="p-8 bg-gray-50 rounded-xl shadow-lg transition duration-300 transform hover:scale-[1.02]">
+                    <i class="fas fa-money-bill-wave text-4xl text-blue-600 mx-auto mb-4"></i>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-3">Estimation Gratuite</h3>
+                    <p class="text-gray-600">Nos experts évaluent votre bien au prix juste du marché.</p>
+                </div>
+                <div class="p-8 bg-gray-50 rounded-xl shadow-lg transition duration-300 transform hover:scale-[1.02]">
+                    <i class="fas fa-rocket text-4xl text-blue-600 mx-auto mb-4"></i>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-3">Vente Rapide</h3>
+                    <p class="text-gray-600">Un réseau étendu pour trouver l'acheteur idéal sans délai.</p>
+                </div>
+                <div class="p-8 bg-gray-50 rounded-xl shadow-lg transition duration-300 transform hover:scale-[1.02]">
+                    <i class="fas fa-handshake text-4xl text-blue-600 mx-auto mb-4"></i>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-3">Accompagnement Légal</h3>
+                    <p class="text-gray-600">Sécurité et conformité totale pour toutes vos transactions.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="apropos" class="py-20 px-4 bg-gray-100">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div class="order-2 lg:order-1">
+                <h2 class="text-4xl font-bold text-gray-800 mb-6">Notre Histoire, Notre Engagement</h2>
+                <p class="text-lg text-gray-600 mb-6">
+                    Fondée en 2020, SaidAfrica s'est rapidement imposée comme la référence du marché immobilier de
+                    luxe
+                    au Cameroun. Nous combinons une connaissance approfondie du marché local avec un service client
+                    personnalisé pour vous garantir une expérience d'achat ou de vente sans égal.
+                </p>
+                <ul class="space-y-4 mb-8">
+                    <li class="flex items-start text-gray-700">
+                        <i class="fas fa-check-circle text-blue-600 mr-3 mt-1 text-xl flex-shrink-0"></i>
+                        <span>Plus de 500 transactions réussies.</span>
+                    </li>
+                    <li class="flex items-start text-gray-700">
+                        <i class="fas fa-check-circle text-blue-600 mr-3 mt-1 text-xl flex-shrink-0"></i>
+                        <span>Équipe d'experts juridiques et financiers dédiés.</span>
+                    </li>
+                    <li class="flex items-start text-gray-700">
+                        <i class="fas fa-check-circle text-blue-600 mr-3 mt-1 text-xl flex-shrink-0"></i>
+                        <span>Portefeuille de biens exclusifs et vérifiés.</span>
+                    </li>
+                </ul>
+                <button id="openContactBtn"
+                    class="inline-flex items-center bg-blue-600 text-white px-8 py-3 rounded-full font-semibold hover:bg-blue-700 transition shadow-lg">
+                    Contactez-nous <i class="fas fa-envelope ml-2"></i>
+                </button>
+            </div>
+            <div class="order-1 lg:order-2 relative group">
+                <img src="src/assets/images/about.png" alt="Bureau moderne et équipe de courtiers"
+                    class="w-full h-auto rounded-xl shadow-2xl">
+                <div class="absolute inset-0 bg-blue-600/10 rounded-xl">
+                </div>
+                <div class="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent"></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="nos valeurs" class="py-20 bg-gray-50">
+        <div class="container mx-auto px-6">
+            <div class="flex flex-col md:flex-row items-center gap-12">
+                <div class="md:w-1/2" data-aos="fade-right">
+                    <span class="text-blue-600 font-bold text-sm uppercase tracking-widest">Valeurs</span>
+                    <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mt-3 mb-6">L'excellence au service de votre
+                        patrimoine</h2>
+                    <p class="text-gray-600 leading-relaxed mb-8">
+                        Nous ne nous contentons pas de vendre des m², nous dénichons des lieux de vie qui correspondent
+                        à votre statut et à vos aspirations.
+                    </p>
+                    <div class="space-y-4">
+                        <div class="flex items-start gap-4">
+                            <div
+                                class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 shrink-0">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-900">Discrétion & Confidentialité</h4>
+                                <p class="text-sm text-gray-500">Un traitement VIP pour des transactions en toute
+                                    sérénité.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4">
+                            <div
+                                class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 shrink-0">
+                                <i class="fas fa-file-contract"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-gray-900">Sécurité Juridique</h4>
+                                <p class="text-sm text-gray-500">Vérification rigoureuse des titres fonciers et
+                                    documents notariés.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="md:w-1/2 relative" data-aos="fade-left">
+                    <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
+                        alt="Bureau luxe" class="rounded-3xl shadow-2xl">
+                    <div class="absolute -bottom-6 -left-6 bg-blue-600 p-8 rounded-3xl hidden md:block shadow-xl">
+                        <p class="text-white font-bold text-2xl tracking-tighter">Luxury Real Estate</p>
+                        <p class="text-blue-200 text-xs uppercase mt-1">Certified Agency</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="temoignages" class="py-24 bg-gray-50 overflow-hidden">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-16" data-aos="fade-up">
+                <span class="text-blue-600 text-sm font-bold uppercase tracking-[0.3em]">Avis Clients</span>
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mt-2">Ils nous ont fait confiance</h2>
+                <div class="w-20 h-1 bg-blue-600 mx-auto mt-4 rounded-full"></div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+                <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 relative " data-aos="fade-up"
+                    data-aos-delay="800">
+                    <div
+                        class="absolute -top-4 left-8 w-8 h-8 bg-blue-600 flex items-center justify-center rounded-lg shadow-lg">
+                        <i class="fas fa-quote-left text-white text-xs"></i>
+                    </div>
+                    <p class="text-gray-600 italic mb-6 leading-relaxed">
+                        "Un service d'exception pour l'achat de notre villa à Bonapriso. L'équipe de Said Africa a su
+                        comprendre nos exigences de luxe et de sécurité."
+                    </p>
+                    <div class="flex items-center">
+                        <div
+                            class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
+                            SM</div>
+                        <div class="ml-4">
+                            <h4 class="font-bold text-gray-900 text-sm">Samuel M.</h4>
+                            <p class="text-xs text-gray-400">Investisseur Immobilier</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-8 rounded-3xl shadow-lg border border-gray-100 relative scale-105 z-10"
+                    data-aos="fade-up" data-aos-delay="900">
+                    <div
+                        class="absolute -top-4 left-8 w-8 h-8 bg-blue-600 flex items-center justify-center rounded-lg shadow-lg">
+                        <i class="fas fa-quote-left text-white text-xs"></i>
+                    </div>
+                    <p class="text-gray-600 italic mb-6 leading-relaxed">
+                        "Probablement la meilleure agence de prestige au Cameroun. Leur discrétion et leur
+                        professionnalisme sont inégalés sur le marché de Douala."
+                    </p>
+                    <div class="flex items-center">
+                        <div
+                            class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
+                            EK</div>
+                        <div class="ml-4">
+                            <h4 class="font-bold text-gray-900 text-sm">Esther K.</h4>
+                            <p class="text-xs text-gray-400">Directrice Générale</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 relative" data-aos="fade-up"
+                    data-aos-delay="1000">
+                    <div
+                        class="absolute -top-4 left-8 w-8 h-8 bg-blue-600 flex items-center justify-center rounded-lg shadow-lg">
+                        <i class="fas fa-quote-left text-white text-xs"></i>
+                    </div>
+                    <p class="text-gray-600 italic mb-6 leading-relaxed">
+                        "La gestion locative de mon immeuble est parfaite. Said Africa s'occupe de tout, je reçois mes
+                        rapports mensuels avec une clarté totale."
+                    </p>
+                    <div class="flex items-center">
+                        <div
+                            class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
+                            PN</div>
+                        <div class="ml-4">
+                            <h4 class="font-bold text-gray-900 text-sm">Paul N.</h4>
+                            <p class="text-xs text-gray-400">Propriétaire résident</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <section class="py-16 bg-white border-t border-gray-50">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-10" data-aos="fade-up">
+                <p class="text-gray-400 text-xs font-bold uppercase tracking-[0.4em]">Ils soutiennent notre excellence
+                </p>
+            </div>
+
+            <div class="flex flex-wrap justify-center items-center gap-12 md:gap-20 opacity-60">
+                <div class="grayscale hover:grayscale-0 transition duration-500 transform hover:scale-110"
+                    data-aos="zoom-in" data-aos-delay="100">
+                    <i class="fas fa-university text-4xl md:text-5xl text-gray-400 hover:text-blue-700"></i>
+                    <span class="block text-[10px] text-center mt-2 font-bold text-gray-400">PARTENAIRE BANQUE</span>
+                </div>
+
+                <div class="grayscale hover:grayscale-0 transition duration-500 transform hover:scale-110"
+                    data-aos="zoom-in" data-aos-delay="200">
+                    <i class="fas fa-shield-alt text-4xl md:text-5xl text-gray-400 hover:text-blue-600"></i>
+                    <span class="block text-[10px] text-center mt-2 font-bold text-gray-400">ASSURANCE</span>
+                </div>
+
+                <div class="grayscale hover:grayscale-0 transition duration-500 transform hover:scale-110"
+                    data-aos="zoom-in" data-aos-delay="300">
+                    <i class="fas fa-gavel text-4xl md:text-5xl text-gray-400 hover:text-blue-800"></i>
+                    <span class="block text-[10px] text-center mt-2 font-bold text-gray-400">CONSEIL JURIDIQUE</span>
+                </div>
+
+                <div class="grayscale hover:grayscale-0 transition duration-500 transform hover:scale-110"
+                    data-aos="zoom-in" data-aos-delay="400">
+                    <i class="fas fa-pencil-ruler text-4xl md:text-5xl text-gray-400 hover:text-blue-500"></i>
+                    <span class="block text-[10px] text-center mt-2 font-bold text-gray-400">ARCHITECTES</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-gray-900 text-gray-300 pt-16">
+        <div
+            class="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 pb-12 border-b border-gray-800">
+
+            <div class="space-y-6">
+                <a href="#" class="text-2xl font-extrabold text-blue-500 tracking-tight">
+                    Said<span class="font-normal text-white"> Africa</span>
+                </a>
+                <p class="text-gray-400 text-sm leading-relaxed">
+                    Votre partenaire de confiance pour l'immobilier de luxe au Cameroun et partout dans le monde. Nous
+                    vous accompagnons dans
+                    chaque étape de votre projet.
+                </p>
+                <div class="flex space-x-4">
+                    <a href="#"
+                        class="w-10 h-10 flex items-center justify-center bg-gray-800 rounded-full hover:bg-blue-600 hover:text-white transition duration-300">
+                        <i class="fab fa-facebook-f"></i>
+                    </a>
+                    <a href="#"
+                        class="w-10 h-10 flex items-center justify-center bg-gray-800 rounded-full hover:bg-blue-400 hover:text-white transition duration-300">
+                        <i class="fab fa-twitter"></i>
+                    </a>
+                    <a href="#"
+                        class="instagram-group  flex  items-center justify-center  bg-gray-800 rounded-full w-10 h-10">
+                        <div
+                            class="instagram-btn flex items-center justify-center  bg-gray-800 rounded-full w-full h-full">
+                            <i class="fab fa-instagram text-white text-lg" aria-hidden="true"></i>
+                        </div>
+                    </a>
+                    <a href="#"
+                        class="w-10 h-10 flex items-center justify-center bg-gray-800 rounded-full hover:bg-red-600 hover:text-white transition duration-300">
+                        <i class="fab fa-youtube"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-lg font-bold text-white mb-6 uppercase tracking-wider text-sm">Navigation</h3>
+                <ul class="space-y-4 text-sm">
+                    <li><a href="#accueil" class="hover:text-blue-500 transition flex items-center"><i
+                                class="fas fa-chevron-right mr-2 text-xs"></i> Accueil</a></li>
+                    <li><a href="#apropos" class="hover:text-blue-500 transition flex items-center"><i
+                                class="fas fa-chevron-right mr-2 text-xs"></i> À propos</a></li>
+                    <li><a href="#biens" class="hover:text-blue-500 transition flex items-center"><i
+                                class="fas fa-chevron-right mr-2 text-xs"></i> Nos biens</a></li>
+                    <li><a href="#services" class="hover:text-blue-500 transition flex items-center"><i
+                                class="fas fa-chevron-right mr-2 text-xs"></i> Services</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h3 class="text-lg font-bold text-white mb-6 uppercase tracking-wider text-sm">Contact</h3>
+                <ul class="space-y-4 text-sm">
+                    <li class="flex items-start">
+                        <i class="fas fa-map-marker-alt mt-1 mr-3 text-blue-500"></i>
+                        <span>Bonapriso, Douala, Cameroun</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-phone-alt mr-3 text-blue-500"></i>
+                        <span>+237 600 000 000</span>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-envelope mr-3 text-blue-500"></i>
+                        <span>contact@Saidafrica.cm</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="lg:col-span-2">
+                <h3 class="text-lg font-bold text-white mb-4">Newsletter</h3>
+                <p class="text-sm text-gray-400 mb-6">Restez informé de nos nouvelles opportunités de luxe.</p>
+
+                <form class="relative w-full max-w-md">
+                    <input type="email" placeholder="Votre adresse email professionnel"
+                        class="w-full bg-white px-6 py-4 pr-[140px] rounded-full focus:outline-none text-gray-800 text-sm shadow-inner"
+                        required>
+                    <button type="submit"
+                        class="absolute top-0 right-0 h-full bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 rounded-full transition duration-300 shadow-[0_0_0px_0_rgba(59,130,246,0.5)] hover:shadow-[0_0_15px_3px_rgba(59,130,246,0.5)]">
+                        S'abonner
+                    </button>
+                </form>
+            </div>
+
+        </div>
+
+        <div class="py-8 text-center text-sm text-gray-500">
+            © 2025 SaidAfrica. Tous droits réservés.
+        </div>
+    </footer>
+
+    <div id="reservationModal"
+        class="fixed inset-0 z-[60] bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+
+        <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md m-4 transform scale-95 transition-transform duration-300"
+            id="modalContent">
+
+            <div class="text-center">
+                <i class="fas fa-lock text-5xl text-blue-600 mx-auto mb-4"></i>
+                <h3 class="text-2xl font-bold text-gray-900 mb-3">Réservation Requise</h3>
+                <p class="text-gray-600 mb-6">
+                    Pour demander une visite ou réserver ce bien, veuillez vous connecter à votre compte.
+                </p>
+            </div>
+
+            <div class="flex flex-col space-y-3">
+                <button id="modalLoginBtn"
+                    class="w-full bg-blue-600 text-white px-5 py-3 rounded-lg font-semibold hover:bg-blue-700 transition shadow-md">
+                    Se Connecter Maintenant
+                </button>
+                <button id="modalCloseBtn"
+                    class="w-full bg-red-600 text-white px-5 py-3 rounded-lg font-semibold hover:bg-red-700 transition">
+                    Annuler et Continuer la Navigation
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="contactModal"
+        class="fixed inset-0 z-[70] bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+
+        <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg m-4 transform scale-95 transition-transform duration-300 relative"
+            id="contactModalContent">
+
+            <button id="closeContactBtn" class="absolute top-4 right-4 text-blue-500 hover:text-red-600 transition">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+
+            <div class="text-center mb-8">
+                <h3 class="text-3xl font-bold text-gray-900">Parlons de votre projet</h3>
+                <p class="text-gray-500 mt-2">Laissez-nous un message, nous vous répondrons sous 24h.</p>
+            </div>
+
+            <form id="contactForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Nom Complet</label>
+                    <input type="text" placeholder="Ex: Jean Dupont" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+                    <input type="email" placeholder="jean@exemple.com" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Message</label>
+                    <textarea rows="4" placeholder="En quoi pouvons-nous vous aider ?" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition resize-none"></textarea>
+                </div>
+                <button type="submit"
+                    class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-700 transition shadow-lg transform active:scale-95">
+                    Envoyer le message <i class="fas fa-paper-plane ml-2"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+
+    <div id="infoModal"
+        class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center hidden opacity-0 transition-all duration-300">
+        <div id="infoModalContent"
+            class="bg-white rounded-2xl p-8 max-w-sm w-full mx-4 transform scale-95 transition-all duration-300 shadow-2xl text-center">
+            <div id="infoIcon" class="mb-4 text-6xl"></div>
+            <h3 id="infoTitle" class="text-2xl font-bold mb-2"></h3>
+            <p id="infoMessage" class="text-gray-600 mb-6"></p>
+            <button id="modalBtn" onclick="closeInfoModal()"
+                class="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition shadow-lg">
+                Continuer
+            </button>
+        </div>
+    </div>
+    
+
+    <script type="module" src="/src/js/main.js"></script>
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        AOS.init({
+            duration: 1000, // Durée de l'animation (1 seconde)
+            once: true,     // L'animation ne se joue qu'une seule fois au scroll
+            offset: 100     // Déclenche l'animation 100px avant que l'élément soit visible
+        });
+    </script>
+</body>
+
+</html>

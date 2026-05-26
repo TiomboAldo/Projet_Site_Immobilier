@@ -1,0 +1,139 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+
+/* Effet Hover Premium pour la navigation */
+nav a:not(.bg-blue-600) {
+  position: relative;
+  padding-bottom: 4px;
+}
+
+nav a:not(.bg-blue-600)::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: 0;
+  left: 0;
+  background-color: #2563eb;
+  /* Bleu-600 */
+  transition: width 0.3s ease-in-out;
+}
+
+nav a:not(.bg-blue-600):hover::after {
+  width: 100%;
+}
+
+/* Optionnel : La ligne part du milieu vers les bords */
+/*
+    nav a:not(.bg-blue-600)::after {
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    */
+
+/* Flip card 3D */
+.perspective {
+  perspective: 1000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+.hover\:instagram-gradient:hover {
+  background: linear-gradient(45deg, #feda75, #fa7e1e, #d62976, #962fbf, #4f5bd5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+
+/* Style pour le degrade de Instagram */
+
+/* fond neutre par défaut, transition douce */
+.instagram-btn {
+  /* bg-gray-900 approx. before hover */
+  --tw-bg-opacity: 1;
+  background-color: rgb(31 41 55 / var(--tw-bg-opacity, 1))
+    /* #1f2937 */
+  ;
+  transition: background-image .45s ease, background-color .25s ease;
+}
+
+/* applique le vrai dégradé Instagram au hover (fond seulement) */
+.instagram-group:hover .instagram-btn {
+  background-image: linear-gradient(45deg, #feda75 0%, #fa7e1e 25%, #d62976 50%, #962fbf 75%, #4f5bd5 100%);
+  background-color: transparent;
+  /* supprimer couleur de base */
+}
+
+/* garde l'icône blanche et lisible */
+.instagram-btn i {
+  color: #ffffff;
+}
+
+
+@keyframes scrollText {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-scroll {
+  display: flex;
+  width: max-content;
+  animation: scrollText 30s linear infinite;
+}
+
+.animate-scroll:hover {
+  animation-play-state: paused;
+  /* Le texte s'arrête quand on le survole */
+}
+
+/* Ajoute dans ton CSS pour un meilleur feedback utilisateur */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+
+  100% {
+    background-position: 1000px 0;
+  }
+}
+    /* Animation Ken Burns */
+    @keyframes kenburns {
+        from { transform: scale(1); }
+        to { transform: scale(1.15); }
+    }
+
+    .hero-slide img {
+        transition: transform 0.8s ease-in-out;
+    }
+
+    /* Cette classe sera ajoutée dynamiquement au slide actif */
+    .hero-slide.active img {
+        animation: kenburns 10.5s linear forwards;
+    }
+
+    /* Style des boutons amélioré pour le survol */
+    #prevSlide:hover, #nextSlide:hover {
+        background-color: #2563eb; /* blue-600 */
+        transform: scale(1.1);
+        border-color: transparent;
+    }
+
+

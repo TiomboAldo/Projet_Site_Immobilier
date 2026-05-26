@@ -1,0 +1,150 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace SaidAfricaBackend.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class ReservationsController : ControllerBase
+    {
+        private readonly ApplicationDbContext _context;
+
+        public ReservationsController(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        // ─── POST /api/reservations ───────────────────────────────────────────
+        // Créer une demande de visite
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] CreateReservationRequest req)
+        {
+            // Vérifier que le bien existe
+            var bien = await _context.Biens.FindAsync(req.BienId);
+            if (bien == null)
+                return NotFound(new { success = false, message = "Bien introuvable." });
+
+            // Vérifier que l'utilisateur existe
+            var user = await _context.Users.FindAsync(req.UserId);
+            if (user == null)
+                return NotFound(new { success = false, message = "Utilisateur introuvable." });
+
+            var reservation = new Reservation
+            {
+                UserId     = req.UserId,
+                BienId     = req.BienId,
+                Prenom     = req.Prenom,
+                Nom        = req.Nom,
+                Email      = req.Email,
+                Telephone  = req.Telephone,
+                Lieu       = req.Lieu,
+                DateVisite = req.DateVisite,
+                Message    = req.Message ?? string.Empty,
+                Statut     = "En attente"
+            };
+
+            _context.Reservations.Add(reservation);
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                success = true,
+                message = $"Votre demande de visite pour « {bien.Titre} » a été enregistrée. Nous vous contacterons sous 24h.",
+                data = new ReservationDto(reservation, bien.Titre)
+            });
+        }
+
+        // ─── GET /api/reservations/user/{userId} ──────────────────────────────
+        // Récupérer toutes les réservations d'un utilisateur
+        [HttpGet("user/{userId}")]
+        public async Task<IActionResult> GetByUser(int userId)
+        {
+            var reservations = await _context.Reservations
+                .Where(r => r.UserId == userId)
+                .Include(r => r.Bien)
+                .OrderByDescending(r => r.CreatedAt)
+                .Select(r => new ReservationDto(r, r.Bien!.Titre))
+                .ToListAsync();
+
+            return Ok(new { success = true, data = reservations });
+        }
+
+        // ─── GET /api/reservations/{id} ───────────────────────────────────────
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var r = await _context.Reservations
+                .Include(r => r.Bien)
+                .FirstOrDefaultAsync(r => r.Id == id);
+
+            if (r == null)
+                return NotFound(new { success = false, message = "Réservation introuvable." });
+
+            return Ok(new { success = true, data = new ReservationDto(r, r.Bien!.Titre) });
+        }
+
+        // ─── DELETE /api/reservations/{id} ────────────────────────────────────
+        // Annuler une réservation
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Cancel(int id)
+        {
+            var reservation = await _context.Reservations.FindAsync(id);
+            if (reservation == null)
+                return NotFound(new { success = false, message = "Réservation introuvable." });
+
+            reservation.Statut = "Annulée";
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, message = "Réservation annulée." });
+        }
+    }
+
+    // ─── DTO ──────────────────────────────────────────────────────────────────
+    public class ReservationDto
+    {
+        public int      Id          { get; set; }
+        public int      UserId      { get; set; }
+        public int      BienId      { get; set; }
+        public string   BienTitre   { get; set; }
+        public string   Prenom      { get; set; }
+        public string   Nom         { get; set; }
+        public string   Email       { get; set; }
+        public string   Telephone   { get; set; }
+        public string   Lieu        { get; set; }
+        public DateTime DateVisite  { get; set; }
+        public string   Message     { get; set; }
+        public string   Statut      { get; set; }
+        public DateTime CreatedAt   { get; set; }
+
+        public ReservationDto(Reservation r, string bienTitre)
+        {
+            Id         = r.Id;
+            UserId     = r.UserId;
+            BienId     = r.BienId;
+            BienTitre  = bienTitre;
+            Prenom     = r.Prenom;
+            Nom        = r.Nom;
+            Email      = r.Email;
+            Telephone  = r.Telephone;
+            Lieu       = r.Lieu;
+            DateVisite = r.DateVisite;
+            Message    = r.Message;
+            Statut     = r.Statut;
+            CreatedAt  = r.CreatedAt;
+        }
+    }
+
+    // ─── REQUEST MODEL ────────────────────────────────────────────────────────
+    public class CreateReservationRequest
+    {
+        public int      UserId     { get; set; }
+        public int      BienId     { get; set; }
+        public string   Prenom     { get; set; } = string.Empty;
+        public string   Nom        { get; set; } = string.Empty;
+        public string   Email      { get; set; } = string.Empty;
+        public string   Telephone  { get; set; } = string.Empty;
+        public string   Lieu       { get; set; } = string.Empty;
+        public DateTime DateVisite { get; set; }
+        public string?  Message    { get; set; }
+    }
+}

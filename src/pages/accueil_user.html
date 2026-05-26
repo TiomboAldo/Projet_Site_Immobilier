@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Espace Premium - Said Africa</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: #f3f4f6;
+            overflow-x: hidden;
+        }
+
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-item.active {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white !important;
+            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4);
+        }
+
+        .hover-lift {
+            transition: all 0.3s ease;
+        }
+
+        .hover-lift:hover {
+            transform: translateY(-5px);
+        }
+
+        .section-fade {
+            display: none;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        }
+
+        .section-fade.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .standing-filter.active {
+            border-color: #2563eb !important;
+            background-color: #eff6ff !important;
+        }
+
+        .modal-hidden {
+            display: none !important;
+            pointer-events: none;
+        }
+
+        .modal-visible {
+            display: flex !important;
+            pointer-events: auto;
+        }
+
+        /* FAVORIS */
+        .fav-btn {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            z-index: 20;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(8px);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: rgba(255, 255, 255, 0.85);
+            color: #9ca3af;
+            font-size: 16px;
+        }
+
+        .fav-btn:hover {
+            transform: scale(1.15);
+        }
+
+        .fav-btn:active {
+            transform: scale(0.85);
+        }
+
+        .fav-btn.is-fav {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+
+        /* GALERIE */
+        .thumbnail-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .thumbnail {
+            height: 100px;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .thumbnail:hover {
+            border-color: #2563eb;
+            transform: scale(1.05);
+        }
+
+        .thumbnail.active {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        }
+
+        /* FORMULAIRE */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #6b7280;
+            letter-spacing: 0.05em;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            background-color: #f3f4f6;
+            border-radius: 16px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            background-color: #fff;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .thumbnail-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 80px;
+            background: white;
+            border-right: 1px solid #f3f4f6;
+            z-index: 50;
+            transition: width 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 32px 0;
+            overflow: hidden;
+        }
+
+        .sidebar:hover {
+            width: 256px;
+        }
+
+        .sidebar-logo {
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0 16px;
+        }
+
+        .sidebar-logo-icon {
+            width: 40px;
+            height: 40px;
+            background: #2563eb;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            flex-shrink: 0;
+            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4);
+        }
+
+        .sidebar-logo-text {
+            font-weight: 800;
+            font-size: 20px;
+            color: #1e3a8a;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s;
+            text-transform: uppercase;
+        }
+
+        .sidebar:hover .sidebar-logo-text {
+            opacity: 1;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            width: 100%;
+            padding: 0 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .sidebar-item {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 12px;
+            border-radius: 12px;
+            color: #6b7280;
+            background: none;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .sidebar-item:hover {
+            background: #2563eb;
+            color: #fff;
+        }
+
+        .sidebar-item i {
+            width: 24px;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .sidebar-item span {
+            white-space: nowrap;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .sidebar:hover .sidebar-item span {
+            opacity: 1;
+        }
+
+        .sidebar-footer {
+            width: 100%;
+            padding: 16px;
+            border-top: 1px solid #f3f4f6;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        main {
+            flex: 1;
+            margin-left: 80px;
+            transition: margin-left 0.3s;
+        }
+
+        body {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ── TOAST ─────────────────────────────────────────────────────── */
+        #toast-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+            align-items: center;
+        }
+
+        .toast {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            background: #fff;
+            border-radius: 20px;
+            padding: 18px 22px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18), 0 4px 16px rgba(0, 0, 0, 0.10);
+            min-width: 360px;
+            max-width: 460px;
+            pointer-events: auto;
+            transform: scale(0.85);
+            opacity: 0;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+            border-left: 4px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .toast.show {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .toast.hide {
+            transform: scale(0.85);
+            opacity: 0;
+        }
+
+        .toast.toast-success {
+            border-left-color: #10b981;
+        }
+
+        .toast.toast-error {
+            border-left-color: #ef4444;
+        }
+
+        .toast.toast-info {
+            border-left-color: #2563eb;
+        }
+
+        .toast-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 17px;
+        }
+
+        .toast-success .toast-icon {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        .toast-error .toast-icon {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .toast-info .toast-icon {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+
+        .toast-body {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-weight: 800;
+            font-size: 14px;
+            color: #111827;
+            margin-bottom: 2px;
+        }
+
+        .toast-msg {
+            font-size: 12px;
+            color: #6b7280;
+            font-weight: 500;
+            line-height: 1.5;
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #9ca3af;
+            font-size: 14px;
+            padding: 2px;
+            flex-shrink: 0;
+            transition: color 0.2s;
+        }
+
+        .toast-close:hover {
+            color: #374151;
+        }
+
+        .toast-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            border-radius: 0 0 0 20px;
+            transition: width linear;
+        }
+
+        .toast-success .toast-progress {
+            background: #10b981;
+        }
+
+        .toast-error .toast-progress {
+            background: #ef4444;
+        }
+
+        .toast-info .toast-progress {
+            background: #2563eb;
+        }
+
+        /* ── DASHBOARD ──────────────────────────────────────────────────── */
+        .stat-card {
+            background: white;
+            border-radius: 24px;
+            padding: 28px;
+            border: 1px solid #f3f4f6;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+        }
+
+        .stat-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            margin-bottom: 16px;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 0;
+            border-bottom: 1px solid #f9fafb;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <div class="sidebar-logo-icon"><i class="fas fa-crown"></i></div>
+            <span class="sidebar-logo-text">Said Premium</span>
+        </div>
+        <nav class="sidebar-nav">
+            <button onclick="switchSection('accueil', this)" class="sidebar-item active">
+                <i class="fas fa-home"></i>
+                <span>Accueil</span>
+            </button>
+            <button onclick="switchSection('dashboard', this)" class="sidebar-item">
+                <i class="fas fa-chart-pie"></i>
+                <span>Dashboard</span>
+            </button>
+            <button onclick="switchSection('reservations', this)" class="sidebar-item">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Réservations</span>
+            </button>
+            <button onclick="switchSection('favoris', this)" class="sidebar-item">
+                <i class="fas fa-heart"></i>
+                <span>Favoris</span>
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <button onclick="switchSection('settings', this)" class="sidebar-item">
+                <i class="fas fa-user-cog"></i>
+                <span>Paramètres</span>
+            </button>
+            <button onclick="handleLogout()" class="sidebar-item" style="color: #ef4444;">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Quitter</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main>
+        <header
+            class="glass-effect sticky top-0 z-40 px-8 h-20 flex justify-between items-center border-b border-gray-100">
+            <div>
+                <h2 class="text-sm font-bold text-blue-600 uppercase tracking-widest">Espace Privilège</h2>
+                <p class="text-gray-500 text-xs">Accès exclusif aux biens de standing</p>
+            </div>
+            <div class="flex items-center gap-6">
+                <div class="relative hidden sm:block">
+                    <input type="text" placeholder="Rechercher une ville..."
+                        class="bg-gray-100 border-none rounded-full px-6 py-2 text-sm w-64 focus:ring-2 focus:ring-blue-500"
+                        style="outline:none;">
+                    <i class="fas fa-search absolute right-4 top-3 text-gray-400 text-xs"></i>
+                </div>
+                <div class="flex items-center gap-4 border-l pl-6 relative">
+                    <div class="text-right hidden sm:block">
+                        <p id="userNameDisplay" class="font-bold text-gray-800 text-sm">Chargement...</p>
+                        <span class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">MEMBRE
+                            GOLD</span>
+                    </div>
+                    <button onclick="toggleUserMenu()" id="userMenuBtn"
+                        class="flex items-center gap-2 bg-gray-50 p-1.5 rounded-full hover:bg-gray-100 transition shadow-sm"
+                        style="border:none; cursor:pointer;">
+                        <img src="https://ui-avatars.com/api/?name=User&background=2563eb&color=fff" id="userAvatar"
+                            class="w-9 h-9 rounded-full object-cover shadow-sm ring-1 ring-white">
+                        <i class="fas fa-chevron-down text-xs text-gray-400" id="menuArrow"></i>
+                    </button>
+                    <div id="userDropdown"
+                        class="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 hidden"
+                        style="z-index:100;">
+                        <div class="px-5 py-4 border-b border-gray-50">
+                            <p class="text-[10px] text-blue-600 font-black uppercase tracking-[0.15em] mb-1">Compte
+                                Premium</p>
+                            <p id="userEmailDisplay" class="text-sm font-bold text-gray-800 truncate">
+                                premium@said-africa.com</p>
+                        </div>
+                        <div class="p-2">
+                            <button onclick="switchSection('settings', null)"
+                                class="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition font-semibold"
+                                style="border:none; background:none; cursor:pointer;">
+                                <i class="fas fa-user-circle text-lg opacity-70"></i> Mon Profil
+                            </button>
+                            <button onclick="switchSection('reservations', null)"
+                                class="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl transition font-semibold"
+                                style="border:none; background:none; cursor:pointer;">
+                                <i class="fas fa-calendar-check text-lg opacity-70"></i> Mes Réservations
+                            </button>
+                        </div>
+                        <div class="p-2 border-t border-gray-50">
+                            <button onclick="handleLogout()"
+                                class="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-500 hover:bg-red-50 rounded-xl transition font-bold"
+                                style="border:none; background:none; cursor:pointer;">
+                                <i class="fas fa-sign-out-alt text-lg"></i> Déconnexion
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="p-8">
+            <!-- ACCUEIL -->
+            <section id="section-accueil" class="section-fade active">
+                <div class="relative rounded-[2.5rem] overflow-hidden h-80 shadow-2xl mb-12">
+                    <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200"
+                        class="absolute inset-0 w-full h-full object-cover brightness-50">
+                    <div class="relative z-10 p-12 flex flex-col justify-center h-full max-w-2xl text-white">
+                        <h1 class="text-5xl font-extrabold mb-4">Ravi de vous revoir, <span id="welcomeName"
+                                class="text-blue-400"></span></h1>
+                        <p class="text-gray-200 text-lg mb-8">Découvrez notre sélection exclusive de 18 biens haut
+                            standing.</p>
+                        <button onclick="document.getElementById('filterSection').scrollIntoView({behavior:'smooth'})"
+                            class="bg-blue-600 hover:bg-blue-700 px-8 py-4 rounded-2xl font-bold shadow-xl transition"
+                            style="display:inline-block; width:fit-content; border:none; cursor:pointer; color:white;">
+                            Voir les exclusivités
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mb-10" id="filterSection">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-6">Parcourir par Standing</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <button onclick="filterProperties('all', this)"
+                            class="standing-filter active bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-blue-600 transition text-center"
+                            style="cursor:pointer;">
+                            <i class="fas fa-th-large text-blue-600 text-2xl mb-2 block"></i>
+                            <p class="font-bold text-sm">Tous les biens</p>
+                        </button>
+                        <button onclick="filterProperties('Elite', this)"
+                            class="standing-filter bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-blue-600 transition text-center"
+                            style="cursor:pointer;">
+                            <i class="fas fa-gem text-gray-400 text-2xl mb-2 block"></i>
+                            <p class="font-bold text-sm">Elite Luxe</p>
+                        </button>
+                        <button onclick="filterProperties('Penthouse', this)"
+                            class="standing-filter bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-blue-600 transition text-center"
+                            style="cursor:pointer;">
+                            <i class="fas fa-building text-gray-400 text-2xl mb-2 block"></i>
+                            <p class="font-bold text-sm">Penthouse</p>
+                        </button>
+                        <button onclick="filterProperties('Business', this)"
+                            class="standing-filter bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-blue-600 transition text-center"
+                            style="cursor:pointer;">
+                            <i class="fas fa-briefcase text-gray-400 text-2xl mb-2 block"></i>
+                            <p class="font-bold text-sm">Business</p>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="premiumGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </section>
+
+            <!-- FAVORIS -->
+            <section id="section-favoris" class="section-fade">
+                <h2 class="text-3xl font-extrabold text-gray-900 mb-8">Mes Favoris ❤️</h2>
+                <div id="favoritesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </section>
+
+            <!-- DASHBOARD -->
+            <section id="section-dashboard" class="section-fade">
+                <div class="mb-8 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-3xl font-extrabold text-gray-900">Dashboard</h2>
+                        <p class="text-gray-400 text-sm mt-1">Vue d'ensemble de votre activité premium</p>
+                    </div>
+                    <span
+                        class="text-xs bg-blue-50 text-blue-600 font-bold px-4 py-2 rounded-full border border-blue-100">Mis
+                        à jour en temps réel</span>
+                </div>
+
+                <!-- STATS CARDS -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-10" id="dashboardStats"></div>
+
+                <!-- CHARTS ROW -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+                    <!-- Répartition par standing -->
+                    <div class="bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm">
+                        <h3 class="font-extrabold text-gray-800 mb-6">Biens par standing</h3>
+                        <div id="standingBars" class="space-y-4"></div>
+                    </div>
+
+                    <!-- Activité récente -->
+                    <div class="lg:col-span-2 bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="font-extrabold text-gray-800">Activité récente</h3>
+                            <button onclick="switchSection('reservations', null)"
+                                class="text-xs text-blue-600 font-bold hover:underline"
+                                style="background:none; border:none; cursor:pointer;">Voir tout →</button>
+                        </div>
+                        <div id="recentActivity"></div>
+                    </div>
+                </div>
+
+                <!-- BIENS EN VEDETTE -->
+                <div class="bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="font-extrabold text-gray-800">Biens les plus prisés</h3>
+                        <button onclick="switchSection('accueil', null)"
+                            class="text-xs text-blue-600 font-bold hover:underline"
+                            style="background:none; border:none; cursor:pointer;">Explorer tout →</button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="featuredProperties"></div>
+                </div>
+            </section>
+
+            <!-- RESERVATIONS -->
+            <section id="section-reservations" class="section-fade">
+                <h2 class="text-3xl font-extrabold text-gray-900 mb-8">Mes Réservations</h2>
+                <div id="reservationsGrid"></div>
+            </section>
+
+            <!-- SETTINGS -->
+            <section id="section-settings" class="section-fade">
+                <div class="max-w-4xl mx-auto">
+                    <h2 class="text-3xl font-extrabold text-gray-900 mb-8">Paramètres du profil</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 text-center">
+                            <div class="relative inline-block">
+                                <img id="profilePreview"
+                                    src="https://ui-avatars.com/api/?name=User&background=2563eb&color=fff"
+                                    class="w-32 h-32 rounded-full border-4 border-white shadow-xl object-cover">
+                                <label for="fileInput"
+                                    class="absolute bottom-0 right-0 bg-blue-600 text-white p-3 rounded-full shadow-lg cursor-pointer hover:bg-blue-700 transition flex items-center justify-center"
+                                    style="width:44px; height:44px;">
+                                    <i class="fas fa-camera text-sm"></i>
+                                    <input type="file" id="fileInput" accept="image/*" class="hidden"
+                                        onchange="previewImage(event)">
+                                </label>
+                            </div>
+                            <h3 class="font-bold text-lg mt-4" id="profileFullLabel">Chargement...</h3>
+                            <p class="text-xs text-blue-600 font-bold uppercase tracking-widest">Membre Gold</p>
+                        </div>
+                        <div class="md:col-span-2 bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                <div>
+                                    <label class="block text-xs font-black text-gray-400 uppercase mb-2">Prénom</label>
+                                    <input type="text" id="editPrenom"
+                                        class="w-full bg-gray-50 rounded-2xl px-5 py-4 font-semibold text-gray-700"
+                                        style="border:none; outline:none;">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-black text-gray-400 uppercase mb-2">Nom</label>
+                                    <input type="text" id="editNom"
+                                        class="w-full bg-gray-50 rounded-2xl px-5 py-4 font-semibold text-gray-700"
+                                        style="border:none; outline:none;">
+                                </div>
+                            </div>
+                            <div class="mb-6">
+                                <label class="block text-xs font-black text-gray-400 uppercase mb-2">Adresse
+                                    Email</label>
+                                <input type="email" id="editEmail" disabled
+                                    class="w-full bg-gray-100 rounded-2xl px-5 py-4 text-gray-400 font-semibold cursor-not-allowed"
+                                    style="border:none; outline:none;">
+                                <p class="text-[10px] text-blue-500 mt-2 italic">L'email ne peut pas être modifié pour
+                                    des raisons de sécurité.</p>
+                            </div>
+                            <button type="button" onclick="saveProfile()"
+                                class="w-full bg-gray-900 hover:bg-blue-600 text-white py-4 rounded-2xl font-bold transition"
+                                style="border:none; cursor:pointer;">
+                                Enregistrer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- PROPERTY MODAL -->
+    <div id="propertyModal" class="fixed inset-0 z-[60] modal-hidden items-center justify-center p-4"
+        style="background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
+        <div class="bg-white w-full max-w-4xl rounded-[2.5rem] overflow-hidden shadow-2xl relative flex flex-col md:flex-row"
+            style="max-height: 90vh;">
+            <button onclick="closeModal()"
+                class="absolute top-6 right-6 z-50 bg-black/20 hover:bg-red-500 text-white w-10 h-10 rounded-full flex items-center justify-center transition"
+                style="border:none; cursor:pointer;">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="md:w-1/2 flex flex-col bg-black">
+                <div
+                    style="flex:1; min-height:250px; position:relative; display:flex; align-items:center; justify-content:center;">
+                    <img id="modalMainImg" src="" style="width:100%; height:100%; object-fit:cover; max-height:350px;">
+                </div>
+                <div style="padding:16px; background:white;">
+                    <div class="thumbnail-grid">
+                        <div class="thumbnail active" onclick="changeMainImage(0)"><img id="thumb-0" src="" alt="1">
+                        </div>
+                        <div class="thumbnail" onclick="changeMainImage(1)"><img id="thumb-1" src="" alt="2"></div>
+                        <div class="thumbnail" onclick="changeMainImage(2)"><img id="thumb-2" src="" alt="3"></div>
+                        <div class="thumbnail" id="thumb-container-3" onclick="changeMainImage(3)"
+                            style="display:none;"><img id="thumb-3" src="" alt="4"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="md:w-1/2 p-8 md:p-12 overflow-y-auto">
+                <h3 id="modalTitle" class="text-3xl font-extrabold text-gray-900 mb-2"></h3>
+                <p id="modalLocation" class="text-gray-400 font-medium mb-6"></p>
+                <div class="flex items-center gap-6 mb-8 py-4 border-y border-gray-100">
+                    <div>
+                        <p class="text-[10px] text-gray-400 uppercase font-bold">Surface</p>
+                        <p id="modalSize" class="font-bold text-gray-800"></p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-gray-400 uppercase font-bold">Prix</p>
+                        <p id="modalPrice" class="font-extrabold text-blue-600 text-xl"></p>
+                    </div>
+                </div>
+                <div class="mb-8">
+                    <h4 class="font-bold text-gray-800 mb-3">Description</h4>
+                    <p id="modalDesc" class="text-gray-500 text-sm leading-relaxed"></p>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-8">
+                    <div class="flex items-center gap-2 text-xs font-bold text-gray-600"><i
+                            class="fas fa-shield-alt text-blue-500"></i> Sécurité 24/7</div>
+                    <div class="flex items-center gap-2 text-xs font-bold text-gray-600"><i
+                            class="fas fa-swimming-pool text-blue-500"></i> Piscine / Spa</div>
+                </div>
+                <button onclick="openVisitForm(currentPropertyId)"
+                    class="w-full bg-gray-900 hover:bg-blue-600 text-white py-5 rounded-2xl font-bold transition"
+                    style="border:none; cursor:pointer;">
+                    Reserver une visite
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- VISIT MODAL -->
+    <div id="visitModal" class="fixed inset-0 z-[70] modal-hidden items-center justify-center p-4"
+        style="background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
+        <div class="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden">
+            <div style="background: linear-gradient(135deg, #2563eb, #1d4ed8); padding:32px; position:relative;"
+                class="text-white">
+                <button onclick="closeVisitForm()"
+                    class="absolute top-4 right-4 text-white w-10 h-10 rounded-full flex items-center justify-center transition hover:bg-white/20"
+                    style="border:none; cursor:pointer; background:transparent;">
+                    <i class="fas fa-times"></i>
+                </button>
+                <h2 class="text-3xl font-extrabold mb-2">Demander une visite</h2>
+                <p id="visitPropertyName" class="opacity-80 font-medium">Chargement...</p>
+            </div>
+            <div class="p-8 overflow-y-auto" style="max-height: calc(90vh - 140px);">
+                <form id="visitForm">
+                    <div class="form-row">
+                        <div class="form-group"><label>Prénom <span class="text-red-600">*</span></label><input type="text" id="visitPrenom" required>
+                        </div>
+                        <div class="form-group"><label>Nom <span class="text-red-600">*</span></label><input type="text" id="visitNom" required></div>
+                    </div>
+                    <div class="form-group"><label>Email <span class="text-red-600">*</span></label><input type="email" id="visitEmail" required></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Téléphone <span class="text-red-600">*</span></label><input type="tel" id="visitTelephone"
+                                required></div>
+                        <div class="form-group"><label>Lieu de résidence <span class="text-red-600">*</span></label><input type="text" id="visitLieu"
+                                required></div>
+                    </div>
+                    <div class="form-group"><label>Date souhaitée <span class="text-red-600">*</span></label><input type="date" id="visitDate" required>
+                    </div>
+                    <div class="form-group"><label>Message (optionnel)</label><textarea class="resize-none" id="visitMessage"
+                            placeholder="Dites-nous en plus sur votre intérêt..."></textarea></div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                        <button type="button" onclick="closeVisitForm()"
+                            class="bg-gray-100 hover:bg-gray-200 text-gray-800 py-3 rounded-xl font-bold transition"
+                            style="border:none; cursor:pointer;">Annuler</button>
+                        <button type="submit"
+                            class="bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold transition shadow-lg"
+                            style="border:none; cursor:pointer;">Envoyer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div id="toast-container"></div>
+
+    <script>
+        // ═══════════════════════════════════════════════════════════════════════
+        // CONFIG API
+        // ═══════════════════════════════════════════════════════════════════════
+        const API = 'http://localhost:5257/api';
+
+        // Récupère l'ID utilisateur stocké au login
+        const getUserId = () => parseInt(localStorage.getItem('userId') || '0');
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // ÉTAT GLOBAL (remplace les données hardcodées)
+        // ═══════════════════════════════════════════════════════════════════════
+        let properties = [];   // chargé depuis GET /api/biens
+        let favIds = [];   // chargé depuis GET /api/favoris/user/{id}
+        let reservations = [];   // chargé depuis GET /api/reservations/user/{id}
+        let currentPropertyId = null;
+        let currentFilter = 'all';
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // HELPERS FETCH
+        // ═══════════════════════════════════════════════════════════════════════
+        async function apiFetch(url, options = {}) {
+            try {
+                const res = await fetch(url, {
+                    headers: { 'Content-Type': 'application/json' },
+                    ...options
+                });
+                return await res.json();
+            } catch (err) {
+                console.error('API error:', url, err);
+                return { success: false, message: 'Erreur réseau' };
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // CHARGEMENT INITIAL DES DONNÉES DEPUIS L'API
+        // ═══════════════════════════════════════════════════════════════════════
+        async function loadAllData() {
+            // Afficher un loader pendant le chargement
+            document.getElementById('premiumGrid').innerHTML = `
+                <div class="col-span-full flex flex-col items-center justify-center py-20 text-gray-400">
+                    <i class="fas fa-spinner fa-spin text-4xl text-blue-600 mb-4"></i>
+                    <p class="font-semibold">Chargement des biens...</p>
+                </div>`;
+
+            // 1. Charger les biens
+            const biensRes = await apiFetch(`${API}/biens`);
+            if (biensRes.success) {
+                // Normaliser le format API → format attendu par le rendu
+                properties = biensRes.data.map(b => ({
+                    id: b.id,
+                    title: b.titre,
+                    price: b.prix,
+                    img: b.imageUrl,
+                    gallery: b.galerie && b.galerie.length ? b.galerie : [b.imageUrl],
+                    standing: b.standing,
+                    location: b.localisation,
+                    size: b.surface,
+                    desc: b.description,
+                    type: b.type,
+                    statut: b.statut,
+                    chambres: b.chambres,
+                    sdb: b.sallesDeBain,
+                    equipements: b.equipements || []
+                }));
+            } else {
+                showToast('error', 'Erreur', 'Impossible de charger les biens.');
+            }
+
+            // 2. Charger les favoris (si connecté)
+            const userId = getUserId();
+            if (userId) {
+                const favsRes = await apiFetch(`${API}/favoris/user/${userId}`);
+                if (favsRes.success) {
+                    favIds = favsRes.data.map(f => f.bienId);
+                }
+
+                // 3. Charger les réservations
+                const resaRes = await apiFetch(`${API}/reservations/user/${userId}`);
+                if (resaRes.success) {
+                    reservations = resaRes.data;
+                }
+            }
+
+            // Render initial
+            filterProperties(currentFilter, document.querySelector('.standing-filter'));
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // FAVORIS — connectés à l'API
+        // ═══════════════════════════════════════════════════════════════════════
+        document.addEventListener('click', async function (e) {
+            const btn = e.target.closest('.fav-btn');
+            if (!btn) return;
+            e.preventDefault();
+            e.stopPropagation();
+
+            const id = Number(btn.dataset.propertyId);
+            const userId = getUserId();
+            const isFav = favIds.includes(id);
+
+            // Optimistic UI — mise à jour immédiate
+            if (isFav) {
+                favIds = favIds.filter(f => f !== id);
+            } else {
+                favIds.push(id);
+            }
+
+            // Mettre à jour tous les boutons visuellement
+            document.querySelectorAll(`.fav-btn[data-property-id="${id}"]`).forEach(b => {
+                const nowFav = favIds.includes(id);
+                b.classList.toggle('is-fav', nowFav);
+                const icon = b.querySelector('i');
+                if (icon) icon.className = nowFav ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
+            });
+
+            // Appel API
+            let result;
+            if (isFav) {
+                result = await apiFetch(`${API}/favoris/${userId}/${id}`, { method: 'DELETE' });
+                if (result.success) {
+                    showToast('info', 'Favori retiré', 'Ce bien a été retiré de vos favoris.');
+                }
+            } else {
+                result = await apiFetch(`${API}/favoris`, {
+                    method: 'POST',
+                    body: JSON.stringify({ userId, bienId: id })
+                });
+                if (result.success) {
+                    showToast('success', 'Favori ajouté !', 'Ce bien a été ajouté à vos favoris.');
+                }
+            }
+
+            // Si erreur API → rollback
+            if (!result.success) {
+                if (isFav) favIds.push(id); else favIds = favIds.filter(f => f !== id);
+                showToast('error', 'Erreur', result.message || 'Une erreur est survenue.');
+            }
+
+            // Rafraîchir la section favoris si elle est ouverte
+            const section = document.getElementById('section-favoris');
+            if (section && section.classList.contains('active')) renderFavorites();
+        });
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // RENDU CARTE
+        // ═══════════════════════════════════════════════════════════════════════
+        function buildCard(p, showAsFav = false) {
+            const isFav = showAsFav || favIds.includes(Number(p.id));
+            return `
+            <div class="bg-white rounded-[2rem] overflow-hidden shadow-sm border border-gray-100 hover-lift relative group">
+                <button type="button" class="fav-btn ${isFav ? 'is-fav' : ''}" data-property-id="${p.id}" title="${isFav ? 'Retirer des favoris' : 'Ajouter aux favoris'}">
+                    <i class="${isFav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                </button>
+                <div class="h-48 overflow-hidden cursor-pointer" onclick="openModal(${p.id})">
+                    <img src="${p.img}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500" loading="lazy">
+                </div>
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-2">
+                        <h4 class="font-extrabold text-gray-800 truncate pr-2">${p.title}</h4>
+                        <span class="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-md uppercase">${p.standing}</span>
+                    </div>
+                    <p class="text-blue-600 font-bold text-lg mb-4">${p.price}</p>
+                    <div class="flex justify-between text-[10px] text-gray-400 font-bold uppercase border-t pt-4">
+                        <span><i class="fas fa-expand mr-1"></i>${p.size}m²</span>
+                        <span><i class="fas fa-map-marker-alt mr-1"></i>${p.location}</span>
+                    </div>
+                    <button onclick="openModal(${p.id})" class="w-full mt-4 bg-gray-900 text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-600 transition" style="border:none; cursor:pointer;">
+                        Voir le bien
+                    </button>
+                </div>
+            </div>`;
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // FILTRE PROPRIÉTÉS
+        // ═══════════════════════════════════════════════════════════════════════
+        function filterProperties(filter, btn) {
+            currentFilter = filter;
+            document.querySelectorAll('.standing-filter').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            const filtered = filter === 'all' ? properties : properties.filter(p => p.standing === filter);
+            const grid = document.getElementById('premiumGrid');
+            if (!filtered.length) {
+                grid.innerHTML = `<div class="col-span-full text-center py-20 text-gray-400">
+                    <i class="fas fa-search text-4xl mb-4 block opacity-30"></i>
+                    <p class="font-semibold">Aucun bien dans cette catégorie.</p>
+                </div>`;
+                return;
+            }
+            grid.innerHTML = filtered.map(p => buildCard(p)).join('');
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // FAVORIS — rendu
+        // ═══════════════════════════════════════════════════════════════════════
+        function renderFavorites() {
+            const grid = document.getElementById('favoritesGrid');
+            const favs = properties.filter(p => favIds.includes(p.id));
+            if (!favs.length) {
+                grid.innerHTML = `<div class="col-span-full text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-100">
+                    <i class="fas fa-heart text-4xl text-gray-200 mb-4 block"></i>
+                    <p class="text-gray-400 font-semibold">Aucun favori pour l'instant.</p>
+                    <p class="text-gray-300 text-sm mt-1">Cliquez sur ❤️ pour sauvegarder un bien.</p>
+                </div>`;
+                return;
+            }
+            grid.innerHTML = favs.map(p => buildCard(p, true)).join('');
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // RÉSERVATIONS — rendu depuis l'API
+        // ═══════════════════════════════════════════════════════════════════════
+        async function renderReservations() {
+            const grid = document.getElementById('reservationsGrid');
+            grid.innerHTML = `<div class="text-center py-10"><i class="fas fa-spinner fa-spin text-blue-600 text-2xl"></i></div>`;
+
+            // Recharger depuis l'API à chaque fois
+            const userId = getUserId();
+            if (userId) {
+                const resaRes = await apiFetch(`${API}/reservations/user/${userId}`);
+                if (resaRes.success) reservations = resaRes.data;
+            }
+
+            if (!reservations.length) {
+                grid.innerHTML = `<div class="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-100">
+                    <i class="fas fa-calendar text-4xl text-gray-200 mb-4 block"></i>
+                    <p class="text-gray-400 font-semibold">Aucune réservation.</p>
+                    <p class="text-gray-300 text-sm mt-1">Demandez une visite depuis la fiche d'un bien.</p>
+                </div>`;
+                return;
+            }
+
+            const statutColors = {
+                'En attente': { bg: 'bg-yellow-100', text: 'text-yellow-700' },
+                'Confirmée': { bg: 'bg-green-100', text: 'text-green-700' },
+                'Annulée': { bg: 'bg-red-100', text: 'text-red-700' },
+            };
+
+            grid.innerHTML = reservations.map(r => {
+                const d = new Date(r.dateVisite).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+                const c = statutColors[r.statut] || statutColors['En attente'];
+                return `
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-4">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <h4 class="font-extrabold text-gray-800 text-lg">${r.bienTitre || 'Bien #' + r.bienId}</h4>
+                            <p class="text-sm text-gray-500 mt-1">
+                                <i class="fas fa-calendar-day mr-2 text-blue-500"></i>Visite prévue le <strong>${d}</strong>
+                            </p>
+                            <p class="text-sm text-gray-400 mt-1">
+                                <i class="fas fa-map-marker-alt mr-2 text-blue-400"></i>${r.lieu || 'Lieu non précisé'}
+                            </p>
+                            ${r.message ? `<p class="text-xs text-gray-400 mt-2 italic">"${r.message}"</p>` : ''}
+                        </div>
+                        <div class="flex flex-col items-end gap-2 ml-4">
+                            <span class="text-xs font-bold ${c.bg} ${c.text} px-3 py-1 rounded-full">${r.statut}</span>
+                            ${r.statut === 'En attente' ? `
+                            <button onclick="cancelReservation(${r.id})" class="text-xs text-red-400 hover:text-red-600 font-semibold transition" style="background:none;border:none;cursor:pointer;">
+                                <i class="fas fa-times mr-1"></i>Annuler
+                            </button>` : ''}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function cancelReservation(id) {
+            if (!confirm('Voulez-vous annuler cette réservation ?')) return;
+            const result = await apiFetch(`${API}/reservations/${id}`, { method: 'DELETE' });
+            if (result.success) {
+                showToast('info', 'Réservation annulée', 'Votre demande a été annulée.');
+                renderReservations();
+            } else {
+                showToast('error', 'Erreur', result.message);
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // MODAL BIEN
+        // ═══════════════════════════════════════════════════════════════════════
+        function openModal(id) {
+            const p = properties.find(item => item.id === id);
+            if (!p) return;
+            currentPropertyId = id;
+
+            document.getElementById('modalMainImg').src = p.gallery[0];
+            for (let i = 0; i < 4; i++) {
+                const thumb = document.getElementById(`thumb-${i}`);
+                const container = i === 3 ? document.getElementById('thumb-container-3') : thumb?.parentElement;
+                if (i < 3) {
+                    if (thumb) thumb.src = p.gallery[i] || '';
+                } else {
+                    if (thumb) thumb.src = p.gallery[i] || '';
+                    if (container) container.style.display = p.gallery[i] ? 'block' : 'none';
+                }
+            }
+            document.querySelectorAll('.thumbnail').forEach((t, i) => t.classList.toggle('active', i === 0));
+
+            document.getElementById('modalTitle').innerText = p.title;
+            document.getElementById('modalPrice').innerText = p.price;
+            document.getElementById('modalLocation').innerText = p.location;
+            document.getElementById('modalSize').innerText = p.size + ' m²';
+            document.getElementById('modalDesc').innerText = p.desc;
+
+            const modal = document.getElementById('propertyModal');
+            modal.classList.remove('modal-hidden');
+            modal.classList.add('modal-visible');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('propertyModal');
+            modal.classList.add('modal-hidden');
+            modal.classList.remove('modal-visible');
+        }
+
+        function changeMainImage(index) {
+            const p = properties.find(item => item.id === currentPropertyId);
+            if (!p || !p.gallery[index]) return;
+            document.getElementById('modalMainImg').src = p.gallery[index];
+            document.querySelectorAll('.thumbnail').forEach((t, i) => t.classList.toggle('active', i === index));
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // FORMULAIRE DE VISITE — connecté à POST /api/reservations
+        // ═══════════════════════════════════════════════════════════════════════
+        function openVisitForm(propertyId) {
+            const p = properties.find(item => item.id === propertyId);
+            if (!p) return;
+            document.getElementById('visitPropertyName').innerText = `${p.title} — ${p.location}`;
+            document.getElementById('visitPrenom').value = localStorage.getItem('userPrenom') || '';
+            document.getElementById('visitNom').value = localStorage.getItem('userNom') || '';
+            document.getElementById('visitEmail').value = localStorage.getItem('userEmail') || '';
+            const modal = document.getElementById('visitModal');
+            modal.classList.remove('modal-hidden');
+            modal.classList.add('modal-visible');
+        }
+
+        function closeVisitForm() {
+            const modal = document.getElementById('visitModal');
+            modal.classList.add('modal-hidden');
+            modal.classList.remove('modal-visible');
+            document.getElementById('visitForm').reset();
+        }
+
+        document.getElementById('visitForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const p = properties.find(item => item.id === currentPropertyId);
+            const userId = getUserId();
+
+            const btn = this.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Envoi...';
+            btn.disabled = true;
+
+            const payload = {
+                userId: userId,
+                bienId: currentPropertyId,
+                prenom: document.getElementById('visitPrenom').value,
+                nom: document.getElementById('visitNom').value,
+                email: document.getElementById('visitEmail').value,
+                telephone: document.getElementById('visitTelephone').value,
+                lieu: document.getElementById('visitLieu').value,
+                dateVisite: document.getElementById('visitDate').value,
+                message: document.getElementById('visitMessage').value,
+            };
+
+            const result = await apiFetch(`${API}/reservations`, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+
+            if (result.success) {
+                closeVisitForm();
+                closeModal();
+                showToast('success', 'Demande envoyée !', result.message || `Votre visite pour "${p?.title}" a été enregistrée.`);
+                // Recharger les réservations en mémoire
+                const resaRes = await apiFetch(`${API}/reservations/user/${userId}`);
+                if (resaRes.success) reservations = resaRes.data;
+            } else {
+                showToast('error', 'Erreur', result.message || 'Une erreur est survenue.');
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // TOAST
+        // ═══════════════════════════════════════════════════════════════════════
+        function showToast(type = 'success', title = '', msg = '', duration = 5000) {
+            const icons = { success: 'fa-circle-check', error: 'fa-circle-xmark', info: 'fa-circle-info' };
+            const container = document.getElementById('toast-container');
+            const id = 'toast-' + Date.now();
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.id = id;
+            toast.innerHTML = `
+                <div class="toast-icon"><i class="fa-solid ${icons[type]}"></i></div>
+                <div class="toast-body">
+                    <p class="toast-title">${title}</p>
+                    ${msg ? `<p class="toast-msg">${msg}</p>` : ''}
+                </div>
+                <button class="toast-close" onclick="dismissToast('${id}')"><i class="fas fa-times"></i></button>
+                <div class="toast-progress" id="progress-${id}" style="width:100%;"></div>
+            `;
+            container.appendChild(toast);
+            requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('show')));
+            const prog = document.getElementById(`progress-${id}`);
+            if (prog) {
+                prog.style.transition = `width ${duration}ms linear`;
+                requestAnimationFrame(() => requestAnimationFrame(() => { prog.style.width = '0%'; }));
+            }
+            const timer = setTimeout(() => dismissToast(id), duration);
+            toast._timer = timer;
+        }
+
+        function dismissToast(id) {
+            const toast = document.getElementById(id);
+            if (!toast) return;
+            clearTimeout(toast._timer);
+            toast.classList.remove('show');
+            toast.classList.add('hide');
+            setTimeout(() => toast.remove(), 500);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // DASHBOARD — données réelles depuis l'API
+        // ═══════════════════════════════════════════════════════════════════════
+        function renderDashboard() {
+            const totalBiens = properties.length;
+            const totalFavs = favIds.length;
+            const totalResas = reservations.length;
+            const standingCounts = {
+                Elite: properties.filter(p => p.standing === 'Elite').length,
+                Penthouse: properties.filter(p => p.standing === 'Penthouse').length,
+                Business: properties.filter(p => p.standing === 'Business').length,
+            };
+
+            // Stats cards
+            const statsData = [
+                { icon: 'fa-building', bg: '#dbeafe', color: '#2563eb', label: 'Biens disponibles', value: totalBiens, sub: 'dans notre catalogue' },
+                { icon: 'fa-heart', bg: '#fee2e2', color: '#ef4444', label: 'Mes favoris', value: totalFavs, sub: 'biens sauvegardés' },
+                { icon: 'fa-calendar-check', bg: '#d1fae5', color: '#059669', label: 'Réservations', value: totalResas, sub: 'demandes effectuées' },
+                { icon: 'fa-crown', bg: '#fef3c7', color: '#d97706', label: 'Statut membre', value: 'GOLD', sub: 'accès privilège' },
+            ];
+
+            document.getElementById('dashboardStats').innerHTML = statsData.map(s => `
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:${s.bg}; color:${s.color};">
+                        <i class="fas ${s.icon}"></i>
+                    </div>
+                    <p style="font-size:28px; font-weight:800; color:#111827; line-height:1;">${s.value}</p>
+                    <p style="font-weight:700; color:#374151; font-size:14px; margin-top:6px;">${s.label}</p>
+                    <p style="font-size:11px; color:#9ca3af; margin-top:2px;">${s.sub}</p>
+                </div>
+            `).join('');
+
+            // Barres standing
+            const total = properties.length || 1;
+            const bars = [
+                { label: 'Elite Luxe', count: standingCounts.Elite, color: '#2563eb', bg: '#dbeafe' },
+                { label: 'Penthouse', count: standingCounts.Penthouse, color: '#7c3aed', bg: '#ede9fe' },
+                { label: 'Business', count: standingCounts.Business, color: '#059669', bg: '#d1fae5' },
+            ];
+            document.getElementById('standingBars').innerHTML = bars.map(b => `
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <span style="font-size:13px; font-weight:700; color:#374151;">${b.label}</span>
+                        <span style="font-size:12px; font-weight:800; color:${b.color};">${b.count} biens</span>
+                    </div>
+                    <div style="height:10px; background:${b.bg}; border-radius:99px; overflow:hidden;">
+                        <div style="height:100%; width:${Math.round(b.count / total * 100)}%; background:${b.color}; border-radius:99px; transition: width 1s ease;"></div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Activité récente
+            const actEl = document.getElementById('recentActivity');
+            if (!reservations.length && !favIds.length) {
+                actEl.innerHTML = `<div style="text-align:center; padding:40px 0; color:#9ca3af;">
+                    <i class="fas fa-inbox" style="font-size:32px; display:block; margin-bottom:12px; opacity:0.3;"></i>
+                    <p style="font-weight:600;">Aucune activité pour l'instant</p>
+                    <p style="font-size:12px; margin-top:4px;">Explorez les biens et faites vos premières demandes</p>
+                </div>`;
+            } else {
+                const activities = [];
+                reservations.slice(0, 5).forEach(r => {
+                    const d = new Date(r.createdAt).toLocaleDateString('fr-FR');
+                    activities.push({ color: '#10b981', icon: 'fa-calendar-check', text: `Demande de visite : <strong>${r.bienTitre}</strong>`, time: d });
+                });
+                favIds.slice(0, 3).forEach(id => {
+                    const p = properties.find(item => item.id === id);
+                    if (p) activities.push({ color: '#ef4444', icon: 'fa-heart', text: `Ajouté aux favoris : <strong>${p.title}</strong>`, time: 'Récemment' });
+                });
+                actEl.innerHTML = activities.slice(0, 6).map(a => `
+                    <div class="activity-item">
+                        <div style="width:36px; height:36px; border-radius:10px; background:${a.color}18; color:${a.color}; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:14px;">
+                            <i class="fas ${a.icon}"></i>
+                        </div>
+                        <div style="flex:1;">
+                            <p style="font-size:13px; font-weight:600; color:#374151;">${a.text}</p>
+                            <p style="font-size:11px; color:#9ca3af;">${a.time}</p>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // Biens en vedette (top 3 Elite)
+            const featured = properties.filter(p => p.standing === 'Elite').slice(0, 3);
+            document.getElementById('featuredProperties').innerHTML = featured.map(p => `
+                <div onclick="openModal(${p.id})" style="cursor:pointer; border-radius:20px; overflow:hidden; border:1px solid #f3f4f6; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 32px rgba(0,0,0,0.1)'" onmouseout="this.style.transform=''; this.style.boxShadow=''">
+                    <div style="height:140px; overflow:hidden;">
+                        <img src="${p.img}" style="width:100%; height:100%; object-fit:cover;">
+                    </div>
+                    <div style="padding:16px;">
+                        <p style="font-weight:800; font-size:14px; color:#111827;">${p.title}</p>
+                        <p style="font-size:12px; color:#6b7280; margin-top:2px;"><i class="fas fa-map-marker-alt" style="margin-right:4px; color:#2563eb;"></i>${p.location}</p>
+                        <p style="font-weight:800; color:#2563eb; margin-top:8px; font-size:15px;">${p.price}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // NAVIGATION
+        // ═══════════════════════════════════════════════════════════════════════
+        function switchSection(id, btn) {
+            document.querySelectorAll('.section-fade').forEach(s => s.classList.remove('active'));
+            const section = document.getElementById(`section-${id}`);
+            if (section) section.classList.add('active');
+            document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+
+            if (id === 'favoris') renderFavorites();
+            if (id === 'accueil') filterProperties(currentFilter, null);
+            if (id === 'reservations') renderReservations();
+            if (id === 'dashboard') renderDashboard();
+
+            document.getElementById('userDropdown').classList.add('hidden');
+            loadUserProfile();
+            window.scrollTo(0, 0);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // PROFIL
+        // ═══════════════════════════════════════════════════════════════════════
+        function loadUserProfile() {
+            const prenom = localStorage.getItem('userPrenom') || 'Utilisateur';
+            const nom = localStorage.getItem('userNom') || '';
+            const email = localStorage.getItem('userEmail') || 'premium@said-africa.com';
+            const photo = localStorage.getItem('userPhoto');
+            const avatarUrl = photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(prenom + ' ' + nom)}&background=2563eb&color=fff`;
+
+            const set = (id, val) => { const el = document.getElementById(id); if (el) el[el.tagName === 'IMG' ? 'src' : 'innerText'] = val; };
+            set('welcomeName', prenom);
+            set('userNameDisplay', `${prenom} ${nom}`.trim());
+            set('userEmailDisplay', email);
+            set('profileFullLabel', `${prenom} ${nom}`.trim());
+            document.getElementById('userAvatar').src = avatarUrl;
+            document.getElementById('profilePreview').src = avatarUrl;
+            if (document.getElementById('editPrenom')) document.getElementById('editPrenom').value = prenom;
+            if (document.getElementById('editNom')) document.getElementById('editNom').value = nom;
+            if (document.getElementById('editEmail')) document.getElementById('editEmail').value = email;
+        }
+
+        function saveProfile() {
+            localStorage.setItem('userPrenom', document.getElementById('editPrenom').value);
+            localStorage.setItem('userNom', document.getElementById('editNom').value);
+            loadUserProfile();
+            showToast('success', 'Profil mis à jour !', 'Vos informations ont été sauvegardées.');
+        }
+
+        function previewImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 1.5 * 1024 * 1024) return alert('Image trop lourde (Max 1.5Mo)');
+            const reader = new FileReader();
+            reader.onload = () => { localStorage.setItem('userPhoto', reader.result); loadUserProfile(); };
+            reader.readAsDataURL(file);
+        }
+
+        function toggleUserMenu() {
+            document.getElementById('userDropdown').classList.toggle('hidden');
+            document.getElementById('menuArrow').classList.toggle('rotate-180');
+        }
+
+        function handleLogout() {
+            if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+                ['isLoggedIn', 'userPrenom', 'userNom', 'userEmail', 'userId', 'userRole', 'userPhoto'].forEach(k => localStorage.removeItem(k));
+                window.location.href = './login.html';
+            }
+        }
+
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('#userMenuBtn') && !e.target.closest('#userDropdown')) {
+                document.getElementById('userDropdown').classList.add('hidden');
+            }
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') { closeModal(); closeVisitForm(); }
+        });
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // INIT — chargement des données au démarrage
+        // ═══════════════════════════════════════════════════════════════════════
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUserProfile();
+            loadAllData(); // ← charge tout depuis l'API
+        });
+    </script>
+    <script type="module" src="/src/js/main.js"></script>
+
+</body>
+
+</html>
