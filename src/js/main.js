@@ -1,5 +1,6 @@
 // Import du fichier CSS principal (généré par Tailwind)
 import '../style/input.css';
+import { getBiens, getFavorisByUser, addFavori, removeFavori, normalizeBien } from './api.js';
 
 /* -------------------------------------------
  * GESTION DU MENU MOBILE (Sidebar et Overlay)
@@ -70,22 +71,44 @@ window.addEventListener("scroll", checkSectionsScroll);
 window.addEventListener('load', checkSectionsScroll);
 
 /* -------------------------------------------
- * DONNÉES DES BIENS
+ * DONNÉES DES BIENS — chargées depuis l'API
  * ------------------------------------------- */
-const properties = [
-    { id: 1, title: "Villa de luxe à Douala", type: "villa", status: "vente", price: "350 000 €", beds: 5, baths: 3, size: 400, img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c", gallery: ["src/assets/images/bien1.jpg", "src/assets/images/bien2.jpg", "src/assets/images/bien3.jpg", "src/assets/images/bien4.jpg"], description: "Magnifique villa moderne située dans le quartier prisé de Bonapriso, offrant une vue imprenable, une piscine privée et des finitions haut de gamme. Idéal pour une famille exigeante.", features: ["Piscine", "Jardin paysager", "Climatisation centralisée", "Garage double", "Système de sécurité"], location: "Douala, Bonapriso", isFavorite: false },
-    { id: 2, title: "Appartement moderne à Yaoundé", type: "appartement", status: "location", price: "900 €/mois", beds: 2, baths: 1, size: 120, img: "https://images.unsplash.com/photo-1570129477492-45c003edd2be", description: "Appartement neuf et lumineux en plein cœur du centre-ville. Proche de toutes commodités et transports.", features: ["Balcon", "Cuisine équipée", "Ascenseur", "Concierge"], location: "Yaoundé, Centre-ville", isFavorite: false },
-    { id: 3, title: "Maison familiale à Bonapriso", type: "villa", status: "vente", price: "280 000 €", beds: 4, baths: 2, size: 250, img: "https://images.unsplash.com/photo-1507089947368-19c1da9775ae", description: "Charmante maison de style colonial, parfaite pour une vie de famille tranquille. Grand terrain et potentiel d'extension.", features: ["Grand jardin", "Quartier calme", "Proche écoles"], location: "Douala, Bonapriso", isFavorite: false },
-    { id: 4, title: "Studio chic à Bonamoussadi", type: "appartement", status: "location", price: "400 €/mois", beds: 1, baths: 1, size: 45, img: "/src/assets/images/bien8.jpg", description: "Studio meublé avec goût, parfait pour étudiant ou jeune professionnel. Tous frais inclus.", features: ["Meublé", "Internet inclus", "Sécurité 24/7"], location: "Douala, Bonamoussadi", isFavorite: false },
-    { id: 5, title: "Duplex à Bonanjo", type: "villa", status: "vente", price: "190 000 €", beds: 3, baths: 2, size: 180, img: "/src/assets/images/bien4.jpg", description: "Beau duplex avec terrasse et finitions modernes. Emplacement idéal pour un accès rapide aux affaires.", features: ["Terrasse", "Vue sur la ville", "Proche commodités"], location: "Douala, Bonanjo", isFavorite: false },
-    { id: 6, title: "Terrain constructible à Logpom", type: "terrain", status: "vente", price: "120 000 €", beds: 0, baths: 0, size: 1000, img: "/src/assets/images/bien3.jpg", description: "Vaste terrain titré, prêt à construire. Zone résidentielle en pleine expansion.", features: ["Titre foncier disponible", "Zone viabilisée"], location: "Douala, Logpom", isFavorite: false },
-    { id: 7, title: "Appartement cosy à Akwa", type: "appartement", status: "location", price: "700 €/mois", beds: 2, baths: 1, size: 90, img: "/src/assets/images/bien9.jpg", description: "Appartement bien entretenu, idéalement situé dans le quartier animé d'Akwa.", features: ["Lumineux", "Rangement intégré"], location: "Douala, Akwa", isFavorite: false },
-    { id: 8, title: "Villa à Bastos", type: "villa", status: "vente", price: "420 000 €", beds: 6, baths: 4, size: 500, img: "https://images.unsplash.com/photo-1568605114967-8130f3a36994", description: "Villa de prestige avec de grands volumes et un espace extérieur magnifique. Parfait pour recevoir.", features: ["Piscine", "Cuisine professionnelle", "Salle de sport"], location: "Yaoundé, Bastos", isFavorite: false },
-    { id: 9, title: "Appartement à Bonabéri", type: "appartement", status: "location", price: "800 €/mois", beds: 3, baths: 2, size: 150, img: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267", description: "Spacieux appartement familial dans un immeuble récent et sécurisé.", features: ["3 chambres", "2 salles de bain", "Parking inclus"], location: "Douala, Bonabéri", isFavorite: false },
-    { id: 10, title: "Terrain à Kribi", type: "terrain", status: "vente", price: "95 000 €", beds: 0, baths: 0, size: 800, img: "/src/assets/images/bien1.jpg", description: "Terrain proche de la plage, idéal pour un investissement touristique ou une résidence secondaire.", features: ["Proximité mer", "Zone touristique"], location: "Kribi", isFavorite: false },
-    { id: 11, title: "Appartement à Bonapriso", type: "appartement", status: "location", price: "450 €/mois", beds: 1, baths: 1, size: 50, img: "/src/assets/images/bien7.jpg", description: "Petit appartement coquet, parfait pour un couple ou une personne seule.", features: ["Quartier recherché", "Petite résidence"], location: "Douala, Bonapriso", isFavorite: false },
-    { id: 12, title: "Terrain à Bonamoussadi", type: "terrain", status: "vente", price: "110 000 €", beds: 0, baths: 0, size: 600, img: "https://images.unsplash.com/photo-1599423300746-b62533397364", description: "Terrain en bordure de route, avec accès facile aux grands axes.", features: ["Façade route", "Titre foncier"], location: "Douala, Bonamoussadi", isFavorite: false }
-];
+let properties = [];
+let favIds = [];
+
+function getUserId() {
+    return parseInt(localStorage.getItem('userId') || '0', 10);
+}
+
+async function loadProperties() {
+    if (container) {
+        container.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400">
+            <i class="fas fa-spinner fa-spin text-3xl mb-3"></i>
+            <p>Chargement des biens...</p>
+        </div>`;
+    }
+
+    const res = await getBiens();
+    if (res.success) {
+        properties = res.data.map(normalizeBien);
+    } else {
+        if (container) {
+            container.innerHTML = `<div class="col-span-full text-center py-12 text-red-500">
+                Impossible de charger les biens. Vérifiez que le serveur API est démarré.
+            </div>`;
+        }
+        return;
+    }
+
+    const userId = getUserId();
+    if (userId) {
+        const favsRes = await getFavorisByUser(userId);
+        if (favsRes.success) favIds = favsRes.data.map(f => f.bienId);
+    }
+
+    currentList = properties.slice();
+    renderPage(1, currentList);
+}
 
 /* -------------------------------------------
  * LOGIQUE DE RESERVATION (VERIFICATION CONNEXION)
@@ -96,7 +119,6 @@ let modalCloseBtn;
 
 window.openReservationModal = function (propertyId) {
     const isAuthenticated = localStorage.getItem('isLoggedIn') === 'true';
-    
 
     if (!isAuthenticated) {
         // --- CAS : PAS CONNECTÉ ---
@@ -113,9 +135,8 @@ window.openReservationModal = function (propertyId) {
         return;
     }
 
-    // --- CAS : CONNECTÉ (On remplace la simulation par du vrai contenu) ---
-    const prenom = localStorage.getItem('userPrenom') || "Cher client";
-    alert(`Ravi de vous revoir ${prenom} ! Votre demande de réservation pour le bien #${propertyId} a été envoyée avec succès.`);
+    // --- CAS : CONNECTÉ : la demande de visite se fait depuis la fiche détaillée du bien ---
+    window.viewDetails(propertyId);
 };
 
 function hideReservationModal() {
@@ -129,43 +150,6 @@ function hideReservationModal() {
         }, 300);
     }
 }
-
-// function setupModalListeners() {
-//     reservationModal = document.getElementById('reservationModal');
-//     modalLoginBtn = document.getElementById('modalLoginBtn');
-//     modalCloseBtn = document.getElementById('modalCloseBtn');
-
-//     if (!reservationModal || !modalLoginBtn || !modalCloseBtn) return;
-
-//     modalLoginBtn.addEventListener('click', () => {
-//         // On vérifie si on est déjà dans le dossier /pages/
-//         const isInPagesFolder = window.location.pathname.includes('/pages/');
-
-//         let loginPath, detailsPath;
-
-//         if (isInPagesFolder) {
-//             // Cas 1 : On est sur detail.html (déjà dans /pages/)
-//             loginPath = './login.html';   // Login est juste à côté
-//             detailsPath = './accueil_user.html';
-//         } else {
-//             // Cas 2 : On est sur index.html (à la racine)
-//             loginPath = 'src/pages/login.html'; // On doit entrer dans le dossier
-//             detailsPath = 'src/pages/accueil_user.html';
-//         }
-
-//         localStorage.setItem('redirectAfterLogin', detailsPath);
-//         window.location.href = loginPath;
-//     });
-
-//     modalCloseBtn.addEventListener('click', hideReservationModal);
-
-//     reservationModal.addEventListener('click', (e) => {
-//         if (e.target === reservationModal) {
-//             hideReservationModal();
-//         }
-//     });
-// }
-
 
 function setupModalListeners() {
     reservationModal = document.getElementById('reservationModal');
@@ -202,7 +186,7 @@ function showMessage(title, message, type = 'success') {
     const modal = document.getElementById('infoModal');
     const content = document.getElementById('infoModalContent');
     const iconDiv = document.getElementById('infoIcon');
-    const titleH3 = document.getElementById('infoTitle');
+    const titleH3 = document.getElementById('infoTitle'); 
     const messageP = document.getElementById('infoMessage');
 
     // Configuration selon le type
@@ -233,25 +217,51 @@ function closeInfoModal() {
     setTimeout(() => modal.classList.add('hidden'), 300);
 }
 
+// Exposées sur window : utilisées par des attributs onclick inline et par d'autres pages (details.html).
+// On ne remplace pas une version déjà définie par la page elle-même (ex: login.html a sa propre
+// version avec spinner/redirection — il ne faut pas l'écraser).
+if (typeof window.showMessage !== 'function') window.showMessage = showMessage;
+if (typeof window.closeInfoModal !== 'function') window.closeInfoModal = closeInfoModal;
 
 /* -------------------------------------------
  * LOGIQUE DES FAVORIS
  * ------------------------------------------- */
-window.toggleFavorite = function (id) {
-    const property = properties.find(p => p.id === id);
-    if (property) {
-        property.isFavorite = !property.isFavorite;
+function updateFavoriteIcon(id) {
+    const iconElement = document.getElementById(`favorite-icon-${id}`);
+    if (!iconElement) return;
+    if (favIds.includes(id)) {
+        iconElement.classList.remove('far', 'text-gray-400');
+        iconElement.classList.add('fas', 'text-red-500');
+    } else {
+        iconElement.classList.remove('fas', 'text-red-500');
+        iconElement.classList.add('far', 'text-gray-400');
+    }
+}
 
-        const iconElement = document.getElementById(`favorite-icon-${id}`);
-        if (iconElement) {
-            if (property.isFavorite) {
-                iconElement.classList.remove('far', 'text-gray-400');
-                iconElement.classList.add('fas', 'text-red-500');
-            } else {
-                iconElement.classList.remove('fas', 'text-red-500');
-                iconElement.classList.add('far', 'text-gray-400');
-            }
+window.toggleFavorite = async function (id) {
+    const userId = getUserId();
+    if (!userId) {
+        localStorage.setItem('redirectAfterLogin', 'accueil_user.html');
+        if (reservationModal) {
+            reservationModal.classList.remove('hidden');
+            void reservationModal.offsetWidth;
+            reservationModal.classList.add('opacity-100');
+            const modalContent = document.getElementById('modalContent');
+            if (modalContent) modalContent.classList.remove('scale-95');
         }
+        return;
+    }
+
+    const wasFav = favIds.includes(id);
+    favIds = wasFav ? favIds.filter(f => f !== id) : [...favIds, id];
+    updateFavoriteIcon(id);
+
+    const result = wasFav ? await removeFavori(userId, id) : await addFavori(userId, id);
+
+    if (!result.success) {
+        favIds = wasFav ? [...favIds, id] : favIds.filter(f => f !== id);
+        updateFavoriteIcon(id);
+        showMessage('Erreur', result.message || 'Une erreur est survenue.', 'error');
     }
 };
 
@@ -354,7 +364,7 @@ function renderPage(page = 1, list = currentList) {
     pageItems.forEach((p) => {
         const typeLabel = (p.type || '').toLowerCase();
         const statutLabel = (p.status || '').toLowerCase();
-        const favoriteIconClass = p.isFavorite ? 'fas fa-heart text-red-500' : 'far fa-heart text-gray-400';
+        const favoriteIconClass = favIds.includes(p.id) ? 'fas fa-heart text-red-500' : 'far fa-heart text-gray-400';
 
         const card = document.createElement('div');
         card.className = 'property-card opacity-0 translate-y-10 transition-all duration-700 ease-out bg-white rounded-2xl shadow-xl overflow-hidden transform hover:-translate-y-2 hover:shadow-2xl';
@@ -662,7 +672,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     setupModalListeners();
-    renderPage(1, currentList);
+    loadProperties();
     attachFilterListeners();
     createScrollTopButton();
 });

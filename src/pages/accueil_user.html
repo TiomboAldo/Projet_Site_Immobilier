@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Espace Premium - Said Africa</title>
+    <link rel="icon" type="image/png" href="/src/assets/images/logo.jpeg">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
@@ -869,6 +870,26 @@
         </div>
     </div>
 
+    <!-- CONFIRM MODAL (déconnexion, etc.) -->
+    <div id="confirmModal" class="fixed inset-0 z-[110] modal-hidden items-center justify-center p-4"
+        style="background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl p-8 text-center">
+            <div id="confirmModalIcon"
+                style="width:64px; height:64px; border-radius:50%; background:#fee2e2; color:#ef4444; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:24px;">
+                <i class="fas fa-sign-out-alt"></i>
+            </div>
+            <h3 id="confirmModalTitle" class="text-xl font-extrabold text-gray-900 mb-2">Déconnexion</h3>
+            <p id="confirmModalMessage" class="text-gray-500 text-sm mb-6">Êtes-vous sûr de vouloir vous déconnecter ?</p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <button onclick="closeConfirmModal()"
+                    class="bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl font-bold transition"
+                    style="border:none; cursor:pointer;">Annuler</button>
+                <button id="confirmModalOkBtn" class="bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold transition"
+                    style="border:none; cursor:pointer;">Déconnexion</button>
+            </div>
+        </div>
+    </div>
+
     <!-- TOAST CONTAINER -->
     <div id="toast-container"></div>
 
@@ -894,9 +915,13 @@
         // HELPERS FETCH
         // ═══════════════════════════════════════════════════════════════════════
         async function apiFetch(url, options = {}) {
+            const token = localStorage.getItem('jwtToken');
             try {
                 const res = await fetch(url, {
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                    },
                     ...options
                 });
                 return await res.json();
@@ -1459,11 +1484,41 @@
             document.getElementById('menuArrow').classList.toggle('rotate-180');
         }
 
+        // ═══════════════════════════════════════════════════════════════════════
+        // MODAL DE CONFIRMATION GÉNÉRIQUE (déconnexion, etc.)
+        // ═══════════════════════════════════════════════════════════════════════
+        function openConfirmModal({ title, message, icon = 'fa-sign-out-alt', confirmLabel = 'Confirmer', onConfirm }) {
+            document.getElementById('confirmModalTitle').textContent = title;
+            document.getElementById('confirmModalMessage').textContent = message;
+            document.getElementById('confirmModalIcon').innerHTML = `<i class="fas ${icon}"></i>`;
+
+            const okBtn = document.getElementById('confirmModalOkBtn');
+            okBtn.textContent = confirmLabel;
+            okBtn.onclick = () => { closeConfirmModal(); onConfirm(); };
+
+            const modal = document.getElementById('confirmModal');
+            modal.classList.remove('modal-hidden');
+            modal.classList.add('modal-visible');
+        }
+
+        function closeConfirmModal() {
+            const modal = document.getElementById('confirmModal');
+            modal.classList.add('modal-hidden');
+            modal.classList.remove('modal-visible');
+        }
+
         function handleLogout() {
-            if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
-                ['isLoggedIn', 'userPrenom', 'userNom', 'userEmail', 'userId', 'userRole', 'userPhoto'].forEach(k => localStorage.removeItem(k));
-                window.location.href = './login.html';
-            }
+            openConfirmModal({
+                title: 'Déconnexion',
+                message: 'Êtes-vous sûr de vouloir vous déconnecter ?',
+                icon: 'fa-sign-out-alt',
+                confirmLabel: 'Déconnexion',
+                onConfirm: () => {
+                    ['isLoggedIn', 'userPrenom', 'userNom', 'userEmail', 'userId', 'userRole', 'userPhoto', 'jwtToken'].forEach(k => localStorage.removeItem(k));
+                    showToast('success', 'À bientôt !', 'Vous avez été déconnecté avec succès.', 1800);
+                    setTimeout(() => { window.location.href = './login.html'; }, 1200);
+                }
+            });
         }
 
         document.addEventListener('click', function (e) {

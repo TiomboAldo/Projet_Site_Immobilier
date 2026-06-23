@@ -104,3 +104,5 @@ D:\Aldo\Mes Projets\Projet Site Immobilier\SaidAfricaBackend\obj\Debug\net10.0\S
 D:\Aldo\Mes Projets\Projet Site Immobilier\SaidAfricaBackend\obj\Debug\net10.0\SaidAfricaBackend.genruntimeconfig.cache
 D:\Aldo\Mes Projets\Projet Site Immobilier\SaidAfricaBackend\obj\Debug\net10.0\ref\SaidAfricaBackend.dll
 D:\Aldo\Mes Projets\Projet Site Immobilier\SaidAfricaBackend\bin\Debug\net10.0\BCrypt.Net-Next.dll
+D:\Aldo\Mes Projets\Projet Site Immobilier\SaidAfricaBackend\obj\Debug\net10.0\SaidAfricaBackend.sourcelink.json
+D:\Aldo\Mes Projets\Projet Site Immobilier\SaidAfricaBackend\obj\Debug\net10.0\staticwebassets.upToDateCheck.txt

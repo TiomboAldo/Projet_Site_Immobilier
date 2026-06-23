@@ -5,6 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title id="pageTitle">Said Africa Détails du Bien</title>
+    <link rel="icon" type="image/png" href="/src/assets/images/logo.jpeg">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/icones/fontawesome/css/all.min.css">
 
@@ -259,11 +260,11 @@
     </footer>
 
 
-    <div id="reservationModal"
+    <div id="loginLockModal"
         class="fixed inset-0 z-[60] bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
 
         <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md m-4 transform scale-95 transition-transform duration-300"
-            id="modalContent">
+            id="loginLockContent">
 
             <div class="text-center">
                 <i class="fas fa-lock text-5xl text-blue-600 mx-auto mb-4"></i>
@@ -274,11 +275,11 @@
             </div>
 
             <div class="flex flex-col space-y-3">
-                <button id="modalLoginBtn"
+                <button id="loginLockLoginBtn"
                     class="w-full bg-blue-600 text-white px-5 py-3 rounded-lg font-semibold hover:bg-blue-700 transition shadow-md">
                     Se Connecter Maintenant
                 </button>
-                <button id="modalCloseBtn"
+                <button id="loginLockCloseBtn"
                     class="w-full bg-red-600 text-white px-5 py-3 rounded-lg font-semibold hover:bg-red-700 transition">
                     Annuler et Continuer la Navigation
                 </button>
@@ -301,33 +302,52 @@
         </div>
     </div>
 
-    <div id="reservationModal"
+    <div id="visitModal"
         class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] hidden items-center justify-center p-4"
-        onclick="window.closeReservationModal(event)">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-8 transform transition-all duration-300 scale-95 opacity-0"
-            id="modalContent" onclick="event.stopPropagation()">
+        onclick="window.closeVisitForm(event)">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-8 transform transition-all duration-300 scale-95 opacity-0 max-h-[90vh] overflow-y-auto"
+            id="visitModalContent" onclick="event.stopPropagation()">
             <div class="flex justify-between items-start border-b pb-3 mb-5">
                 <h3 class="text-2xl font-bold text-gray-900">Réserver une Visite</h3>
-                <button onclick="window.closeReservationModal()" class="text-gray-400 hover:text-gray-700 transition"><i
-                        data-lucide="x" class="w-6 h-6"></i></button>
+                <button onclick="window.closeVisitForm()" class="text-gray-400 hover:text-gray-700 transition">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
             </div>
 
-            <form id="reservationForm">
-                <p class="text-gray-600 mb-4">Vous réservez pour le bien : <span id="modalPropertyTitle"
+            <form id="visitForm">
+                <p class="text-gray-600 mb-4">Vous réservez pour le bien : <span id="visitPropertyTitle"
                         class="font-semibold text-blue-600"></span>
                 </p>
 
                 <div class="space-y-4">
-                    <div>
-                        <label for="fullName" class="block text-sm font-medium text-gray-700 mb-1">Nom et
-                            Prénoms</label>
-                        <input type="text" id="fullName" required
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="visitPrenom" class="block text-sm font-medium text-gray-700 mb-1">Prénom</label>
+                            <input type="text" id="visitPrenom" required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label for="visitNom" class="block text-sm font-medium text-gray-700 mb-1">Nom</label>
+                            <input type="text" id="visitNom" required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
                     </div>
                     <div>
-                        <label for="contactEmail" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <input type="email" id="contactEmail" required
+                        <label for="visitEmail" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="visitEmail" required
                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="visitTelephone" class="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
+                            <input type="tel" id="visitTelephone" required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label for="visitLieu" class="block text-sm font-medium text-gray-700 mb-1">Lieu de résidence</label>
+                            <input type="text" id="visitLieu" required
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
                     </div>
                     <div>
                         <label for="visitDate" class="block text-sm font-medium text-gray-700 mb-1">Date de
@@ -335,33 +355,24 @@
                         <input type="date" id="visitDate" required
                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                     </div>
+                    <div>
+                        <label for="visitMessage" class="block text-sm font-medium text-gray-700 mb-1">Message (optionnel)</label>
+                        <textarea id="visitMessage" rows="3"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 resize-none"></textarea>
+                    </div>
                 </div>
 
                 <button type="submit"
-                    class="mt-6 w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition shadow-lg">Confirmer
-                    la Réservation </button>
+                    class="mt-6 w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition shadow-lg">
+                    Confirmer la Réservation
+                </button>
             </form>
-
         </div>
     </div>
 
 
-    <script>
-        // DONNÉES DES BIENS (doit être recopié car c'est une page séparée)
-        const properties = [
-            { id: 1, title: "Villa de luxe à Douala", type: "villa", status: "vente", price: "350 000 €", beds: 5, baths: 3, size: 400, img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c", gallery: ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c", "/src/assets/images/bien1.jpg", "/src/assets/images/bien2.jpg", "/src/assets/images/bien3.jpg"], description: "Magnifique villa moderne située dans le quartier prisé de Bonapriso, offrant une vue imprennable, une piscine privée et des finitions haut de gamme. Idéal pour une famille exigeante.", features: ["Piscine", "Jardin paysager", "Climatisation centralisée", "Garage double", "Système de sécurité"], location: "Douala, Bonapriso", lat: 4.0401, lng: 9.7208 },
-            { id: 2, title: "Appartement moderne à Yaoundé", type: "appartement", status: "location", price: "900 €/mois", beds: 2, baths: 1, size: 120, img: "https://images.unsplash.com/photo-1570129477492-45c003edd2be", gallery: ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c", "/src/assets/images/bien1.jpg", "/src/assets/images/bien2.jpg", "/src/assets/images/bien3.jpg"], description: "Appartement neuf et lumineux en plein cœur du centre-ville. Proche de toutes commodités et transports.", features: ["Balcon", "Cuisine équipée", "Ascenseur", "Concierge"], location: "Yaoundé, Centre-ville", lat: 3.8666, lng: 11.5172 },
-            { id: 3, title: "Maison familiale à Bonapriso", type: "villa", status: "vente", price: "280 000 €", beds: 4, baths: 2, size: 250, img: "https://images.unsplash.com/photo-1507089947368-19c1da9775ae", gallery: ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c", "/src/assets/images/bien1.jpg", "/src/assets/images/bien2.jpg", "/src/assets/images/bien3.jpg"], description: "Charmante maison de style colonial, parfaite pour une vie de famille tranquille. Grand terrain et potentiel d'extension.", features: ["Grand jardin", "Quartier calme", "Proche écoles"], location: "Douala, Bonapriso", lat: 4.0401, lng: 9.7208 },
-            { id: 4, title: "Studio chic à Bonamoussadi", type: "appartement", status: "location", price: "400 €/mois", beds: 1, baths: 1, size: 45, img: "/src/assets/images/bien8.jpg", gallery: ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c", "/src/assets/images/bien1.jpg", "/src/assets/images/bien2.jpg", "/src/assets/images/bien3.jpg"], description: "Studio meublé avec goût, parfait pour étudiant ou jeune professionnel. Tous frais inclus.", features: ["Meublé", "Internet inclus", "Sécurité 24/7"], location: "Douala, Bonamoussadi", lat: 4.0880, lng: 9.7710 },
-            { id: 5, title: "Duplex à Bonanjo", type: "villa", status: "vente", price: "190 000 €", beds: 3, baths: 2, size: 180, img: "/src/assets/images/bien4.jpg", gallery: ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c", "/src/assets/images/bien1.jpg", "/src/assets/images/bien2.jpg", "/src/assets/images/bien3.jpg"], description: "Beau duplex avec terrasse et finitions modernes. Emplacement idéal pour un accès rapide aux affaires.", features: ["Terrasse", "Vue sur la ville", "Proche commodités"], location: "Douala, Bonanjo", lat: 4.0410, lng: 9.6961 },
-            { id: 6, title: "Terrain constructible à Logpom", type: "terrain", status: "vente", price: "120 000 €", beds: 0, baths: 0, size: 1000, img: "/src/assets/images/bien3.jpg", gallery: ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c", "/src/assets/images/bien1.jpg", "/src/assets/images/bien2.jpg", "/src/assets/images/bien3.jpg"], description: "Vaste terrain titré, prêt à construire. Zone résidentielle en pleine expansion.", features: ["Titre foncier disponible", "Zone viabilisée"], location: "Douala, Logpom", lat: 4.1023, lng: 9.7950 },
-            { id: 7, title: "Appartement cosy à Akwa", type: "appartement", status: "location", price: "700 €/mois", beds: 2, baths: 1, size: 90, img: "/src/assets/images/bien9.jpg", gallery: ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c", "/src/assets/images/bien1.jpg", "/src/assets/images/bien2.jpg", "/src/assets/images/bien3.jpg"], description: "Appartement bien entretenu, idéalement situé dans le quartier animé d'Akwa.", features: ["Lumineux", "Rangement intégré"], location: "Douala, Akwa", lat: 4.0494, lng: 9.7027 },
-            { id: 8, title: "Villa à Bastos", type: "villa", status: "vente", price: "420 000 €", beds: 6, baths: 4, size: 500, img: "https://images.unsplash.com/photo-1568605114967-8130f3a36994", gallery: ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c", "/src/assets/images/bien1.jpg", "/src/assets/images/bien2.jpg", "/src/assets/images/bien3.jpg"], description: "Villa de prestige avec de grands volumes et un espace extérieur magnifique. Parfait pour recevoir.", features: ["Piscine", "Cuisine professionnelle", "Salle de sport"], location: "Yaoundé, Bastos", lat: 3.8821, lng: 11.5185 },
-            { id: 9, title: "Appartement à Bonabéri", type: "appartement", status: "location", price: "800 €/mois", beds: 3, baths: 2, size: 150, img: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267", gallery: ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c", "/src/assets/images/bien1.jpg", "/src/assets/images/bien2.jpg", "/src/assets/images/bien3.jpg"], description: "Spacieux appartement familial dans un immeuble récent et sécurisé.", features: ["3 chambres", "2 salles de bain", "Parking inclus"], location: "Douala, Bonabéri", lat: 4.0850, lng: 9.6631 },
-            { id: 10, title: "Terrain à Kribi", type: "terrain", status: "vente", price: "95 000 €", beds: 0, baths: 0, size: 800, img: "/src/assets/images/bien1.jpg", gallery: ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c", "/src/assets/images/bien1.jpg", "/src/assets/images/bien2.jpg", "/src/assets/images/bien3.jpg"], description: "Terrain proche de la plage, idéal pour un investissement touristique ou une résidence secondaire.", features: ["Proximité mer", "Zone touristique"], location: "Kribi", lat: 2.9467, lng: 9.9167 },
-            { id: 11, title: "Appartement à Bonapriso", type: "appartement", status: "location", price: "450 €/mois", beds: 1, baths: 1, size: 50, img: "/src/assets/images/bien7.jpg", gallery: ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c", "/src/assets/images/bien1.jpg", "/src/assets/images/bien2.jpg", "/src/assets/images/bien3.jpg"], description: "Petit appartement coquet, parfait pour un couple ou une personne seule.", features: ["Quartier recherché", "Petite résidence"], location: "Douala, Bonapriso", lat: 4.0401, lng: 9.7208 },
-            { id: 12, title: "Terrain à Bonamoussadi", type: "terrain", status: "vente", price: "110 000 €", beds: 0, baths: 0, size: 600, img: "https://images.unsplash.com/photo-1599423300746-b62533397364", gallery: ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c", "/src/assets/images/bien1.jpg", "/src/assets/images/bien2.jpg", "/src/assets/images/bien3.jpg"], description: "Terrain en bordure de route, avec accès facile aux grands axes.", features: ["Façade route", "Titre foncier"], location: "Douala, Bonamoussadi", lat: 4.0880, lng: 9.7710 }
-        ];
+    <script type="module">
+        import { getBienById, getBiens, createReservation, normalizeBien } from '../js/api.js';
 
         // ---------- HELPERS ----------
         function escapeHtml(str = '') {
@@ -410,13 +421,19 @@
     </a>
     `;
         }
-        function renderSimilarProperties(currentProperty) {
+        async function renderSimilarProperties(currentProperty) {
             const container = document.getElementById('similar-properties-container');
             if (!container || !currentProperty) return;
 
-            // Filtrer pour les biens similaires (même type et pas le bien actuel), limités à 3
-            const similar = properties
-                .filter(p => p.id !== currentProperty.id && p.type === currentProperty.type)
+            const res = await getBiens({ type: currentProperty.type });
+            if (!res.success) {
+                container.innerHTML = '<p class="text-center text-gray-500 col-span-3">Impossible de charger les biens similaires.</p>';
+                return;
+            }
+
+            const similar = res.data
+                .map(normalizeBien)
+                .filter(p => p.id !== currentProperty.id)
                 .slice(0, 3);
 
             if (similar.length === 0) {
@@ -424,9 +441,7 @@
                 return;
             }
 
-            // Générer le HTML et injecter
             container.innerHTML = similar.map(createPropertyCard).join('');
-            lucide.createIcons(); // Recréer les icônes après injection du HTML
         }
 
         // Fonction pour générer le HTML des détails
@@ -512,7 +527,7 @@
                     </div>
 
                     <div class="space-y-4">
-                        <button onclick="window.openReservationModal(${property.id})" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-all shadow-blue-200 shadow-lg flex items-center justify-center group">
+                        <button onclick="window.openVisitForm(${property.id})" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-all shadow-blue-200 shadow-lg flex items-center justify-center group">
                             <i class="fas fa-calendar-alt mr-2 group-hover:scale-110 transition"></i> Réserver une Visite
                         </button>
                         <a href="https://wa.me/237683862828" class="w-full border-2 border-green-500 text-green-600 hover:bg-green-50 font-bold py-4 rounded-xl transition-all flex items-center justify-center">
@@ -599,16 +614,54 @@
         }
         window.initMap = initMap;
 
-        // --- GESTION DU MODAL DE RÉSERVATION ---
+        // --- GESTION DU MODAL "CONNEXION REQUISE" ---
+        function showLoginLockModal() {
+            const modal = document.getElementById('loginLockModal');
+            const content = document.getElementById('loginLockContent');
+            modal.classList.remove('hidden');
+            void modal.offsetWidth;
+            modal.classList.add('opacity-100');
+            content.classList.remove('scale-95');
+        }
 
-        window.openReservationModal = function (id) {
-            const modal = document.getElementById('reservationModal');
-            const modalContent = document.getElementById('modalContent');
-            const property = properties.find(p => p.id === id);
+        function hideLoginLockModal() {
+            const modal = document.getElementById('loginLockModal');
+            const content = document.getElementById('loginLockContent');
+            modal.classList.remove('opacity-100');
+            content.classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        function setupLoginLockModal() {
+            const loginBtn = document.getElementById('loginLockLoginBtn');
+            const closeBtn = document.getElementById('loginLockCloseBtn');
+            if (loginBtn) {
+                loginBtn.addEventListener('click', () => {
+                    localStorage.setItem('redirectAfterLogin', 'accueil_user.html');
+                    window.location.href = 'login.html';
+                });
+            }
+            if (closeBtn) closeBtn.addEventListener('click', hideLoginLockModal);
+        }
+
+        // --- GESTION DU MODAL DE RÉSERVATION (visite) ---
+        window.openVisitForm = function (id) {
+            const userId = parseInt(localStorage.getItem('userId') || '0', 10);
+            if (!userId) {
+                showLoginLockModal();
+                return;
+            }
+
+            const modal = document.getElementById('visitModal');
+            const modalContent = document.getElementById('visitModalContent');
+            const property = currentProperty;
 
             if (property) {
-                document.getElementById('modalPropertyTitle').textContent = property.title;
-                document.getElementById('reservationForm').dataset.propertyId = id;
+                document.getElementById('visitPropertyTitle').textContent = property.title;
+                document.getElementById('visitForm').dataset.propertyId = id;
+                document.getElementById('visitPrenom').value = localStorage.getItem('userPrenom') || '';
+                document.getElementById('visitNom').value = localStorage.getItem('userNom') || '';
+                document.getElementById('visitEmail').value = localStorage.getItem('userEmail') || '';
             }
 
             modal.classList.remove('hidden');
@@ -618,20 +671,13 @@
                 modalContent.classList.remove('scale-95', 'opacity-0');
                 modalContent.classList.add('scale-100', 'opacity-100');
             }, 10);
-
-            lucide.createIcons();
         };
 
-        // Fonction de fermeture corrigée/simplifiée
-        window.closeReservationModal = function (event) {
-            const modal = document.getElementById('reservationModal');
-            const modalContent = document.getElementById('modalContent');
+        window.closeVisitForm = function (event) {
+            const modal = document.getElementById('visitModal');
+            const modalContent = document.getElementById('visitModalContent');
 
-            // Ne ferme que si 'event' est absent (appel par bouton 'X' ou submit) 
-            // OU si la cible de l'événement est le modal lui-même (click sur le fond)
-            if (event && event.target !== modal) {
-                return;
-            }
+            if (event && event.target !== modal) return;
 
             modalContent.classList.remove('scale-100', 'opacity-100');
             modalContent.classList.add('scale-95', 'opacity-0');
@@ -642,48 +688,74 @@
             }, 300);
         };
 
-
         // ---------- LOGIQUE PRINCIPALE ----------
-        document.addEventListener('DOMContentLoaded', () => {
+        let currentProperty = null;
+
+        async function loadPropertyDetails() {
             const propertyId = localStorage.getItem('selectedPropertyId');
 
-            if (propertyId) {
-                const id = parseInt(propertyId, 10);
-                const selectedProperty = properties.find(p => p.id === id);
-
-                if (selectedProperty) {
-                    renderPropertyDetails(selectedProperty);
-                    renderSimilarProperties(selectedProperty);
-                    // Si l'initialisation de la carte dépend du DOMContentLoaded (pas idéal mais si on ne peut pas modifier la balise script)
-                    if (typeof google === 'object' && typeof google.maps === 'object') {
-                        initMap();
-                    }
-                } else {
-                    renderPropertyDetails(null);
-                }
-            } else {
+            if (!propertyId) {
                 renderPropertyDetails(null);
+                return;
             }
 
-            // Logique de soumission du formulaire de réservation
-            const reservationForm = document.getElementById('reservationForm');
-            if (reservationForm) {
-                reservationForm.addEventListener('submit', function (e) {
+            const id = parseInt(propertyId, 10);
+            const res = await getBienById(id);
+
+            if (!res.success) {
+                renderPropertyDetails(null);
+                return;
+            }
+
+            currentProperty = normalizeBien(res.data);
+            renderPropertyDetails(currentProperty);
+            renderSimilarProperties(currentProperty);
+
+            if (typeof google === 'object' && typeof google.maps === 'object') {
+                initMap();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setupLoginLockModal();
+            loadPropertyDetails();
+
+            const visitForm = document.getElementById('visitForm');
+            if (visitForm) {
+                visitForm.addEventListener('submit', async function (e) {
                     e.preventDefault();
+                    const userId = parseInt(localStorage.getItem('userId') || '0', 10);
+                    const propertyId = parseInt(this.dataset.propertyId, 10);
 
-                    // Utilisation de escapeHtml pour éviter les XSS dans l'alerte
-                    const propertyId = escapeHtml(this.dataset.propertyId);
-                    const fullName = escapeHtml(document.getElementById('fullName').value);
-                    const contactEmail = escapeHtml(document.getElementById('contactEmail').value);
-                    const visitDate = escapeHtml(document.getElementById('visitDate').value);
+                    const btn = this.querySelector('button[type="submit"]');
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = 'Envoi en cours...';
+                    btn.disabled = true;
 
-                    console.log("Réservation Soumise:", { propertyId, fullName, contactEmail, visitDate });
+                    const payload = {
+                        userId,
+                        bienId: propertyId,
+                        prenom: document.getElementById('visitPrenom').value,
+                        nom: document.getElementById('visitNom').value,
+                        email: document.getElementById('visitEmail').value,
+                        telephone: document.getElementById('visitTelephone').value,
+                        lieu: document.getElementById('visitLieu').value,
+                        dateVisite: document.getElementById('visitDate').value,
+                        message: document.getElementById('visitMessage').value,
+                    };
 
-                    alert(`Merci ${fullName} ! Votre demande de visite pour le bien #${propertyId} le ${visitDate} a été enregistrée. Nous vous contacterons par email (${contactEmail}).`);
+                    const result = await createReservation(payload);
 
-                    // Utilise la fonction de fermeture sans passer l'événement
-                    window.closeReservationModal();
-                    this.reset();
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+
+                    if (result.success) {
+                        window.closeVisitForm();
+                        this.reset();
+                        showMessage('Demande envoyée !', result.message || 'Votre demande de visite a été enregistrée.', 'success');
+                    } else {
+                        showMessage('Erreur', result.message || 'Une erreur est survenue.', 'error');
+                    }
                 });
             }
         });

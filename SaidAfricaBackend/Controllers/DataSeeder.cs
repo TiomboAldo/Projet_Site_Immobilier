@@ -4,6 +4,54 @@ namespace SaidAfricaBackend
     {
         public static void Seed(ApplicationDbContext context)
         {
+            FixBlankRoles(context);
+            SeedDemoUsers(context);
+            SeedBiens(context);
+            AssignProprietaires(context);
+        }
+
+        // ─── CORRECTIF : anciens comptes avec un Role vide en base ───────────────
+        private static void FixBlankRoles(ApplicationDbContext context)
+        {
+            var blancs = context.Users.Where(u => string.IsNullOrEmpty(u.Role)).ToList();
+            if (blancs.Count == 0) return;
+
+            foreach (var u in blancs) u.Role = "Client";
+            context.SaveChanges();
+
+            Console.WriteLine($"🔧 {blancs.Count} compte(s) avec un rôle vide corrigé(s) en \"Client\".");
+        }
+
+        // ─── COMPTES DÉMO : un par rôle, pour pouvoir tester chaque acteur ───────
+        private static void SeedDemoUsers(ApplicationDbContext context)
+        {
+            var demoAccounts = new List<User>
+            {
+                new User { Nom = "Mbarga", Prenom = "Paul",    Email = "proprietaire@saidafrica.test", Password = BCrypt.Net.BCrypt.HashPassword("Test1234!"), Role = "Proprietaire",   Region = "Littoral" },
+                new User { Nom = "Ngono",  Prenom = "Alice",   Email = "userindep@saidafrica.test",    Password = BCrypt.Net.BCrypt.HashPassword("Test1234!"), Role = "UserIndep",      Region = "Centre" },
+                new User { Nom = "Fotso",  Prenom = "Jean",    Email = "adminregion@saidafrica.test",  Password = BCrypt.Net.BCrypt.HashPassword("Test1234!"), Role = "AdminRegion",    Region = "Littoral" },
+                new User { Nom = "Biya",   Prenom = "Marthe",  Email = "adminpays@saidafrica.test",    Password = BCrypt.Net.BCrypt.HashPassword("Test1234!"), Role = "AdminPays" },
+                new User { Nom = "Etoo",   Prenom = "Samuel",  Email = "directeur@saidafrica.test",    Password = BCrypt.Net.BCrypt.HashPassword("Test1234!"), Role = "DirecteurProjet" },
+                new User { Nom = "Client", Prenom = "Demo",    Email = "client@saidafrica.test",       Password = BCrypt.Net.BCrypt.HashPassword("Test1234!"), Role = "Client" },
+            };
+
+            int inserted = 0;
+            foreach (var demo in demoAccounts)
+            {
+                if (context.Users.Any(u => u.Email == demo.Email)) continue;
+                context.Users.Add(demo);
+                inserted++;
+            }
+
+            if (inserted == 0) return;
+            context.SaveChanges();
+
+            Console.WriteLine($"✅ {inserted} compte(s) démo inséré(s) (mot de passe commun : Test1234!).");
+        }
+
+        // ─── BIENS DÉMO ───────────────────────────────────────────────────────────
+        private static void SeedBiens(ApplicationDbContext context)
+        {
             // Ne seeder que si la table est vide
             if (context.Biens.Any()) return;
 
@@ -200,6 +248,23 @@ namespace SaidAfricaBackend
             context.SaveChanges();
 
             Console.WriteLine($"✅ {biens.Count} biens insérés en base avec succès.");
+        }
+
+        // ─── RATTACHEMENT : assigne un propriétaire démo aux biens orphelins ─────
+        private static void AssignProprietaires(ApplicationDbContext context)
+        {
+            var sansProprietaire = context.Biens.Where(b => b.ProprietaireId == null).OrderBy(b => b.Id).ToList();
+            if (sansProprietaire.Count == 0) return;
+
+            var proprietaire = context.Users.FirstOrDefault(u => u.Email == "proprietaire@saidafrica.test");
+            var userIndep = context.Users.FirstOrDefault(u => u.Email == "userindep@saidafrica.test");
+            if (proprietaire == null || userIndep == null) return;
+
+            for (int i = 0; i < sansProprietaire.Count; i++)
+                sansProprietaire[i].ProprietaireId = (i % 2 == 0) ? proprietaire.Id : userIndep.Id;
+
+            context.SaveChanges();
+            Console.WriteLine($"✅ {sansProprietaire.Count} bien(s) rattaché(s) à un propriétaire démo.");
         }
     }
 }

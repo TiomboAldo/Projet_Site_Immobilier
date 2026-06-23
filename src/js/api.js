@@ -1,0 +1,73 @@
+// Module API partagé — utilisé par main.js, details.html, etc.
+const API_BASE = 'http://localhost:5257/api';
+
+async function apiFetch(url, options = {}) {
+    const token = localStorage.getItem('jwtToken');
+    try {
+        const res = await fetch(url, {
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            },
+            ...options,
+        });
+        return await res.json();
+    } catch (err) {
+        console.error('API error:', url, err);
+        return { success: false, message: 'Erreur réseau : le serveur ne répond pas.' };
+    }
+}
+
+export function getBiens(params = {}) {
+    const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '');
+    const query = new URLSearchParams(entries).toString();
+    return apiFetch(`${API_BASE}/biens${query ? '?' + query : ''}`);
+}
+
+export function getBienById(id) {
+    return apiFetch(`${API_BASE}/biens/${id}`);
+}
+
+export function createReservation(payload) {
+    return apiFetch(`${API_BASE}/reservations`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    });
+}
+
+export function getFavorisByUser(userId) {
+    return apiFetch(`${API_BASE}/favoris/user/${userId}`);
+}
+
+export function addFavori(userId, bienId) {
+    return apiFetch(`${API_BASE}/favoris`, {
+        method: 'POST',
+        body: JSON.stringify({ userId, bienId }),
+    });
+}
+
+export function removeFavori(userId, bienId) {
+    return apiFetch(`${API_BASE}/favoris/${userId}/${bienId}`, { method: 'DELETE' });
+}
+
+// Adapte un BienDto (champs C# en PascalCase->camelCase) vers le format attendu par le rendu front
+export function normalizeBien(b) {
+    return {
+        id: b.id,
+        title: b.titre,
+        type: b.type,
+        status: b.statut,
+        price: b.prix,
+        beds: b.chambres,
+        baths: b.sallesDeBain,
+        size: b.surface,
+        img: b.imageUrl,
+        gallery: (b.galerie && b.galerie.length) ? b.galerie : [b.imageUrl],
+        location: b.localisation,
+        description: b.description,
+        features: b.equipements || [],
+        standing: b.standing,
+    };
+}
+
+export { API_BASE };

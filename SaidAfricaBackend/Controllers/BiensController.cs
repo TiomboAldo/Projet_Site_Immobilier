@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace SaidAfricaBackend.Controllers
 {
@@ -59,10 +61,13 @@ namespace SaidAfricaBackend.Controllers
             return Ok(new { success = true, data = new BienDto(bien) });
         }
 
-        // ─── POST /api/biens  (Admin/Agent seulement — pour plus tard) ────────
+        // ─── POST /api/biens  (Propriétaire / User indep / Admin uniquement) ──
         [HttpPost]
+        [Authorize(Roles = "Proprietaire,UserIndep,AdminRegion,AdminPays,DirecteurProjet")]
         public async Task<IActionResult> Create([FromBody] CreateBienRequest req)
         {
+            var proprietaireId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
             var bien = new Bien
             {
                 Titre        = req.Titre,
@@ -78,6 +83,7 @@ namespace SaidAfricaBackend.Controllers
                 GalerieUrls  = req.GalerieUrls,
                 Equipements  = req.Equipements,
                 Standing     = req.Standing,
+                ProprietaireId = proprietaireId,
             };
 
             _context.Biens.Add(bien);

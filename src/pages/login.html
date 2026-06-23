@@ -6,6 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Said Africa</title>
+    <link rel="icon" type="image/png" href="/src/assets/images/logo.jpeg">
     <link rel="stylesheet" href="../assets/icones/fontawesome/css/all.min.css">
     <!-- <script src="https://cdn.tailwindcss.com"></script> -->
 
@@ -456,6 +457,7 @@
                     localStorage.setItem('userEmail', result.user.email);
                     localStorage.setItem('userId', result.user.id);
                     localStorage.setItem('userRole', result.user.role || 'Client');
+                    localStorage.setItem('jwtToken', result.token);
 
                     showMessage("Succès !", `Ravi de vous revoir ${result.user.prenom}.`, "success", true);
                     setTimeout(() => {
@@ -490,12 +492,8 @@
          */
         function redirectUserByRole(role) {
             switch (role) {
-                case 'Agent':
-                    window.location.href = 'dashboard_agent.html';
-                    break;
-                case 'Admin':
-                    window.location.href = 'admin_panel.html';
-                    break;
+                // Propriétaire, UserIndep, AdminRegion, AdminPays, DirecteurProjet :
+                // pas encore d'espace dédié, on retombe sur l'espace Client en attendant.
                 case 'Client':
                 default:
                     window.location.href = './accueil_user.html';

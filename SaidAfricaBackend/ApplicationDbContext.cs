@@ -10,6 +10,19 @@ namespace SaidAfricaBackend
         public DbSet<Bien>        Biens        { get; set; }
         public DbSet<Reservation> Reservations { get; set; }
         public DbSet<Favori>      Favoris      { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<User>()
+                .Property(u => u.EstValide)
+                .HasDefaultValue(true);
+
+            modelBuilder.Entity<Bien>()
+                .HasOne(b => b.Proprietaire)
+                .WithMany(u => u.BiensPossedes)
+                .HasForeignKey(b => b.ProprietaireId)
+                .OnDelete(DeleteBehavior.SetNull);
+        }
     }
 
     // ─── UTILISATEUR ──────────────────────────────────────────────────────────
@@ -21,12 +34,19 @@ namespace SaidAfricaBackend
         public string Email    { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
 
-        /// <summary>Rôles possibles : "Client", "Agent", "Admin"</summary>
+        /// <summary>Rôles possibles : "Client", "Proprietaire", "UserIndep", "AdminRegion", "AdminPays", "DirecteurProjet"</summary>
         public string Role     { get; set; } = "Client";
+
+        /// <summary>Validation par un Admin région, requise pour les rôles professionnels (Proprietaire/UserIndep).</summary>
+        public bool EstValide { get; set; } = true;
+
+        /// <summary>Région administrative de rattachement (utile pour AdminRegion et le scoping futur des Biens).</summary>
+        public string? Region { get; set; }
 
         // Navigation
         public ICollection<Reservation> Reservations { get; set; } = new List<Reservation>();
         public ICollection<Favori>      Favoris      { get; set; } = new List<Favori>();
+        public ICollection<Bien>        BiensPossedes { get; set; } = new List<Bien>();
     }
 
     // ─── BIEN IMMOBILIER ──────────────────────────────────────────────────────
@@ -63,7 +83,11 @@ namespace SaidAfricaBackend
         public bool     EstDisponible { get; set; } = true;
         public DateTime DateAjout    { get; set; } = DateTime.UtcNow;
 
+        /// <summary>Propriétaire (User avec rôle Proprietaire/UserIndep/Admin). Nullable : biens historiques sans propriétaire assigné.</summary>
+        public int? ProprietaireId { get; set; }
+
         // Navigation
+        public User?                    Proprietaire { get; set; }
         public ICollection<Reservation> Reservations { get; set; } = new List<Reservation>();
         public ICollection<Favori>      Favoris      { get; set; } = new List<Favori>();
     }

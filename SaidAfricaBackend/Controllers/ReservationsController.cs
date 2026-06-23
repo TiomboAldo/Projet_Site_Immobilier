@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace SaidAfricaBackend.Controllers
 {
@@ -14,24 +16,35 @@ namespace SaidAfricaBackend.Controllers
             _context = context;
         }
 
+        private int CurrentUserId() => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        private bool IsAdmin()
+        {
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            return role is "AdminRegion" or "AdminPays" or "DirecteurProjet";
+        }
+
         // ─── POST /api/reservations ───────────────────────────────────────────
-        // Créer une demande de visite
+        // Créer une demande de visite (pour l'utilisateur authentifié)
         [HttpPost]
+        [Authorize]
         public async Task<IActionResult> Create([FromBody] CreateReservationRequest req)
         {
+            var userId = CurrentUserId();
+
             // Vérifier que le bien existe
             var bien = await _context.Biens.FindAsync(req.BienId);
             if (bien == null)
                 return NotFound(new { success = false, message = "Bien introuvable." });
 
             // Vérifier que l'utilisateur existe
-            var user = await _context.Users.FindAsync(req.UserId);
+            var user = await _context.Users.FindAsync(userId);
             if (user == null)
                 return NotFound(new { success = false, message = "Utilisateur introuvable." });
 
             var reservation = new Reservation
             {
-                UserId     = req.UserId,
+                UserId     = userId,
                 BienId     = req.BienId,
                 Prenom     = req.Prenom,
                 Nom        = req.Nom,
@@ -57,8 +70,12 @@ namespace SaidAfricaBackend.Controllers
         // ─── GET /api/reservations/user/{userId} ──────────────────────────────
         // Récupérer toutes les réservations d'un utilisateur
         [HttpGet("user/{userId}")]
+        [Authorize]
         public async Task<IActionResult> GetByUser(int userId)
         {
+            if (userId != CurrentUserId() && !IsAdmin())
+                return Forbid();
+
             var reservations = await _context.Reservations
                 .Where(r => r.UserId == userId)
                 .Include(r => r.Bien)
@@ -71,6 +88,7 @@ namespace SaidAfricaBackend.Controllers
 
         // ─── GET /api/reservations/{id} ───────────────────────────────────────
         [HttpGet("{id}")]
+        [Authorize]
         public async Task<IActionResult> GetById(int id)
         {
             var r = await _context.Reservations
@@ -80,17 +98,24 @@ namespace SaidAfricaBackend.Controllers
             if (r == null)
                 return NotFound(new { success = false, message = "Réservation introuvable." });
 
+            if (r.UserId != CurrentUserId() && !IsAdmin())
+                return Forbid();
+
             return Ok(new { success = true, data = new ReservationDto(r, r.Bien!.Titre) });
         }
 
         // ─── DELETE /api/reservations/{id} ────────────────────────────────────
         // Annuler une réservation
         [HttpDelete("{id}")]
+        [Authorize]
         public async Task<IActionResult> Cancel(int id)
         {
             var reservation = await _context.Reservations.FindAsync(id);
             if (reservation == null)
                 return NotFound(new { success = false, message = "Réservation introuvable." });
+
+            if (reservation.UserId != CurrentUserId() && !IsAdmin())
+                return Forbid();
 
             reservation.Statut = "Annulée";
             await _context.SaveChangesAsync();

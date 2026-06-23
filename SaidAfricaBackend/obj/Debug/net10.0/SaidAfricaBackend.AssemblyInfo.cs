@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SaidAfricaBackend")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+72da959faaf394679e51ea97b29b8c893a7887a3")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8425a02bff9fbe299b9b213488099ce14f855a0e")]
 [assembly: System.Reflection.AssemblyProductAttribute("SaidAfricaBackend")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SaidAfricaBackend")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

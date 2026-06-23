@@ -1,6 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using BCrypt.Net;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace SaidAfricaBackend.Controllers
 {
@@ -9,10 +13,35 @@ namespace SaidAfricaBackend.Controllers
     public class AuthController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IConfiguration _config;
 
-        public AuthController(ApplicationDbContext context)
+        public AuthController(ApplicationDbContext context, IConfiguration config)
         {
             _context = context;
+            _config = config;
+        }
+
+        private string GenerateJwt(User user)
+        {
+            var claims = new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Role, user.Role),
+            };
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var expires = DateTime.UtcNow.AddMinutes(double.Parse(_config["Jwt:ExpiresMinutes"] ?? "120"));
+
+            var token = new JwtSecurityToken(
+                issuer: _config["Jwt:Issuer"],
+                audience: _config["Jwt:Audience"],
+                claims: claims,
+                expires: expires,
+                signingCredentials: creds);
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
         // --- INSCRIPTION ---
@@ -68,17 +97,21 @@ namespace SaidAfricaBackend.Controllers
                 }
 
                 // 3. Succès !
+                var token = GenerateJwt(user);
+
                 return Ok(new
                 {
                     success = true,
                     message = $"Ravi de vous revoir, {user.Prenom} !",
+                    token,
                     user = new
                     {
                         user.Id,
                         user.Nom,
                         user.Prenom,
                         user.Email,
-                        user.Role   // ← champ Role maintenant incluS
+                        user.Role,
+                        user.EstValide
                     }
                 });
             }

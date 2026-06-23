@@ -1,6 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-
+using System.Security.Claims;
 
 namespace SaidAfricaBackend.Controllers
 {
@@ -15,11 +16,23 @@ namespace SaidAfricaBackend.Controllers
             _context = context;
         }
 
+        private int CurrentUserId() => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        private bool IsAdmin()
+        {
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            return role is "AdminRegion" or "AdminPays" or "DirecteurProjet";
+        }
+
         // ─── GET /api/favoris/user/{userId} ───────────────────────────────────
         // Récupérer tous les favoris d'un utilisateur (avec les détails du bien)
         [HttpGet("user/{userId}")]
+        [Authorize]
         public async Task<IActionResult> GetByUser(int userId)
         {
+            if (userId != CurrentUserId() && !IsAdmin())
+                return Forbid();
+
             var favoris = await _context.Favoris
                 .Where(f => f.UserId == userId)
                 .Include(f => f.Bien)
@@ -38,20 +51,23 @@ namespace SaidAfricaBackend.Controllers
         }
 
         // ─── POST /api/favoris ────────────────────────────────────────────────
-        // Ajouter un bien aux favoris
+        // Ajouter un bien aux favoris (pour l'utilisateur authentifié)
         [HttpPost]
+        [Authorize]
         public async Task<IActionResult> Add([FromBody] AddFavoriRequest req)
         {
+            var userId = CurrentUserId();
+
             // Vérifier qu'il n'est pas déjà en favori
             var exists = await _context.Favoris
-                .AnyAsync(f => f.UserId == req.UserId && f.BienId == req.BienId);
+                .AnyAsync(f => f.UserId == userId && f.BienId == req.BienId);
 
             if (exists)
                 return BadRequest(new { success = false, message = "Ce bien est déjà dans vos favoris." });
 
             var favori = new Favori
             {
-                UserId = req.UserId,
+                UserId = userId,
                 BienId = req.BienId
             };
 
@@ -64,8 +80,12 @@ namespace SaidAfricaBackend.Controllers
         // ─── DELETE /api/favoris/{userId}/{bienId} ────────────────────────────
         // Retirer un bien des favoris
         [HttpDelete("{userId}/{bienId}")]
+        [Authorize]
         public async Task<IActionResult> Remove(int userId, int bienId)
         {
+            if (userId != CurrentUserId() && !IsAdmin())
+                return Forbid();
+
             var favori = await _context.Favoris
                 .FirstOrDefaultAsync(f => f.UserId == userId && f.BienId == bienId);
 
@@ -81,8 +101,12 @@ namespace SaidAfricaBackend.Controllers
         // ─── GET /api/favoris/check/{userId}/{bienId} ─────────────────────────
         // Vérifier si un bien est en favori (utile pour l'état du bouton ❤️)
         [HttpGet("check/{userId}/{bienId}")]
+        [Authorize]
         public async Task<IActionResult> Check(int userId, int bienId)
         {
+            if (userId != CurrentUserId() && !IsAdmin())
+                return Forbid();
+
             var isFav = await _context.Favoris
                 .AnyAsync(f => f.UserId == userId && f.BienId == bienId);
 
