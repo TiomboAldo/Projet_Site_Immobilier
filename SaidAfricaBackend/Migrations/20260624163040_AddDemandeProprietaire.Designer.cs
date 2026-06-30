@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SaidAfricaBackend;
 
@@ -10,9 +11,11 @@ using SaidAfricaBackend;
 namespace SaidAfricaBackend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260624163040_AddDemandeProprietaire")]
+    partial class AddDemandeProprietaire
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -95,37 +98,6 @@ namespace SaidAfricaBackend.Migrations
                     b.ToTable("Biens");
                 });
 
-            modelBuilder.Entity("SaidAfricaBackend.Commentaire", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    b.Property<int>("BienId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<int>("Note")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Texte")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BienId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Commentaires");
-                });
-
             modelBuilder.Entity("SaidAfricaBackend.DemandeProprietaire", b =>
                 {
                     b.Property<int>("Id")
@@ -186,78 +158,6 @@ namespace SaidAfricaBackend.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Favoris");
-                });
-
-            modelBuilder.Entity("SaidAfricaBackend.Notification", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    b.Property<string>("CibleSection")
-                        .HasColumnType("longtext");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<bool>("EstLue")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("Titre")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Notifications");
-                });
-
-            modelBuilder.Entity("SaidAfricaBackend.Recommandation", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    b.Property<int>("BienId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<int>("DestinataireId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("EstLue")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<int>("ExpediteurId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Message")
-                        .HasColumnType("longtext");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BienId");
-
-                    b.HasIndex("DestinataireId");
-
-                    b.HasIndex("ExpediteurId");
-
-                    b.ToTable("Recommandations");
                 });
 
             modelBuilder.Entity("SaidAfricaBackend.Reservation", b =>
@@ -364,25 +264,6 @@ namespace SaidAfricaBackend.Migrations
                     b.Navigation("Proprietaire");
                 });
 
-            modelBuilder.Entity("SaidAfricaBackend.Commentaire", b =>
-                {
-                    b.HasOne("SaidAfricaBackend.Bien", "Bien")
-                        .WithMany()
-                        .HasForeignKey("BienId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SaidAfricaBackend.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Bien");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("SaidAfricaBackend.DemandeProprietaire", b =>
                 {
                     b.HasOne("SaidAfricaBackend.User", "TraiteParAdmin")
@@ -418,44 +299,6 @@ namespace SaidAfricaBackend.Migrations
                     b.Navigation("Bien");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("SaidAfricaBackend.Notification", b =>
-                {
-                    b.HasOne("SaidAfricaBackend.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("SaidAfricaBackend.Recommandation", b =>
-                {
-                    b.HasOne("SaidAfricaBackend.Bien", "Bien")
-                        .WithMany()
-                        .HasForeignKey("BienId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SaidAfricaBackend.User", "Destinataire")
-                        .WithMany()
-                        .HasForeignKey("DestinataireId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SaidAfricaBackend.User", "Expediteur")
-                        .WithMany()
-                        .HasForeignKey("ExpediteurId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Bien");
-
-                    b.Navigation("Destinataire");
-
-                    b.Navigation("Expediteur");
                 });
 
             modelBuilder.Entity("SaidAfricaBackend.Reservation", b =>

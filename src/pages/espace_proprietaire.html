@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Espace Propriétaire - Said Africa</title>
+    <link rel="icon" type="image/png" href="/src/assets/images/logo.jpeg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background-color: #f3f4f6; overflow-x: hidden; display: flex; min-height: 100vh; }
+
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-item.active {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white !important;
+            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4);
+        }
+
+        .hover-lift { transition: all 0.3s ease; }
+        .hover-lift:hover { transform: translateY(-5px); }
+
+        .section-fade {
+            display: none;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        }
+        .section-fade.active { display: block; opacity: 1; transform: translateY(0); }
+
+        .modal-hidden { display: none !important; pointer-events: none; }
+        .modal-visible { display: flex !important; pointer-events: auto; }
+
+        .badge-off {
+            position: absolute; top: 16px; left: 16px; z-index: 20;
+            background: rgba(17,24,39,0.85); color: #fff; font-size: 11px; font-weight: 800;
+            text-transform: uppercase; letter-spacing: 0.05em; padding: 6px 12px; border-radius: 999px;
+        }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group label {
+            display: block; margin-bottom: 8px; font-size: 12px; font-weight: 700;
+            text-transform: uppercase; color: #6b7280; letter-spacing: 0.05em;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 12px 16px; border: none; background-color: #f3f4f6;
+            border-radius: 16px; font-size: 14px; font-weight: 600; color: #1f2937; transition: all 0.3s ease;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none; background-color: #fff; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        .form-group textarea { resize: vertical; min-height: 70px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .form-row { grid-template-columns: 1fr; } }
+
+        .sidebar {
+            position: fixed; left: 0; top: 0; height: 100%; width: 80px; background: white;
+            border-right: 1px solid #f3f4f6; z-index: 50; transition: width 0.3s;
+            display: flex; flex-direction: column; align-items: center; padding: 32px 0; overflow: hidden;
+        }
+        .sidebar:hover { width: 256px; }
+        .sidebar-logo { margin-bottom: 40px; display: flex; align-items: center; gap: 12px; padding: 0 16px; }
+        .sidebar-logo-icon {
+            width: 40px; height: 40px; background: #2563eb; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center; color: white;
+            flex-shrink: 0; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4);
+        }
+        .sidebar-logo-text {
+            font-weight: 800; font-size: 18px; color: #1e3a8a; white-space: nowrap;
+            opacity: 0; transition: opacity 0.3s; text-transform: uppercase;
+        }
+        .sidebar:hover .sidebar-logo-text { opacity: 1; }
+        .sidebar-nav { flex: 1; width: 100%; padding: 0 16px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-nav::-webkit-scrollbar { width: 4px; }
+        .sidebar-nav::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 999px; }
+        .sidebar-item {
+            width: 100%; display: flex; align-items: center; gap: 16px; padding: 12px; border-radius: 12px;
+            color: #6b7280; background: none; border: none; cursor: pointer; transition: all 0.2s; font-family: inherit;
+        }
+        .sidebar-item:hover { background: #2563eb; color: #fff; }
+        .sidebar-item i { width: 24px; font-size: 18px; flex-shrink: 0; }
+        .sidebar-item span { white-space: nowrap; font-weight: 600; opacity: 0; transition: opacity 0.3s; }
+        .sidebar:hover .sidebar-item span { opacity: 1; }
+        .sidebar-footer { width: 100%; padding: 16px; border-top: 1px solid #f3f4f6; display: flex; flex-direction: column; gap: 8px; }
+
+        main { flex: 1; margin-left: 80px; transition: margin-left 0.3s; }
+
+        #toast-container {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999;
+            display: flex; flex-direction: column; gap: 12px; pointer-events: none; align-items: center;
+        }
+        .toast {
+            display: flex; align-items: flex-start; gap: 14px; background: #fff; border-radius: 20px;
+            padding: 18px 22px; box-shadow: 0 20px 60px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.10);
+            min-width: 360px; max-width: 460px; pointer-events: auto; transform: scale(0.85); opacity: 0;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+            border-left: 4px solid transparent; position: relative; overflow: hidden;
+        }
+        .toast.show { transform: scale(1); opacity: 1; }
+        .toast.hide { transform: scale(0.85); opacity: 0; }
+        .toast.toast-success { border-left-color: #10b981; }
+        .toast.toast-error { border-left-color: #ef4444; }
+        .toast.toast-info { border-left-color: #2563eb; }
+        .toast-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 17px; }
+        .toast-success .toast-icon { background: #d1fae5; color: #059669; }
+        .toast-error .toast-icon { background: #fee2e2; color: #dc2626; }
+        .toast-info .toast-icon { background: #dbeafe; color: #2563eb; }
+        .toast-body { flex: 1; }
+        .toast-title { font-weight: 800; font-size: 14px; color: #111827; margin-bottom: 2px; }
+        .toast-msg { font-size: 12px; color: #6b7280; font-weight: 500; line-height: 1.5; }
+        .toast-close { background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 14px; padding: 2px; flex-shrink: 0; transition: color 0.2s; }
+        .toast-close:hover { color: #374151; }
+        .toast-progress { position: absolute; bottom: 0; left: 0; height: 3px; border-radius: 0 0 0 20px; transition: width linear; }
+        .toast-success .toast-progress { background: #10b981; }
+        .toast-error .toast-progress { background: #ef4444; }
+        .toast-info .toast-progress { background: #2563eb; }
+
+        .stat-card {
+            background: white; border-radius: 24px; padding: 28px; border: 1px solid #f3f4f6;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: all 0.3s ease;
+        }
+        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.08); }
+        .stat-icon { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 16px; }
+    </style>
+</head>
+
+<body>
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <div class="sidebar-logo-icon"><i class="fas fa-building-user"></i></div>
+            <span class="sidebar-logo-text">Espace Pro</span>
+        </div>
+        <nav class="sidebar-nav">
+            <button onclick="switchSection('annonces', this)" class="sidebar-item active">
+                <i class="fas fa-house-flag"></i>
+                <span>Mes annonces</span>
+            </button>
+            <button onclick="switchSection('reservations', this)" class="sidebar-item">
+                <i class="fas fa-calendar-check"></i>
+                <span>Réservations reçues</span>
+            </button>
+            <button onclick="switchSection('stats', this)" class="sidebar-item">
+                <i class="fas fa-chart-pie"></i>
+                <span>Statistiques</span>
+            </button>
+            <button onclick="switchSection('notifications', this)" class="sidebar-item">
+                <i class="fas fa-bell"></i>
+                <span>Notifications</span>
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <button onclick="switchToClient()" class="sidebar-item">
+                <i class="fas fa-right-left"></i>
+                <span>Espace Client</span>
+            </button>
+            <button onclick="handleLogout()" class="sidebar-item" style="color: #ef4444;">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Quitter</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main>
+        <header class="glass-effect sticky top-0 z-40 px-8 h-20 flex justify-between items-center border-b border-gray-100" style="display:flex;">
+            <div>
+                <h2 style="font-size:13px; font-weight:800; color:#2563eb; text-transform:uppercase; letter-spacing:0.1em;">Espace Propriétaire</h2>
+                <p id="welcomeName" style="color:#6b7280; font-size:12px;">Chargement...</p>
+            </div>
+            <div style="display:flex; align-items:center; gap:16px;">
+                <button onclick="switchSection('notifications', null)" class="relative"
+                    style="background:#f3f4f6; border:none; width:42px; height:42px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                    <i class="fas fa-bell text-gray-500"></i>
+                    <span id="notifBadge" class="hidden"
+                        style="position:absolute; top:-4px; right:-4px; background:#ef4444; color:#fff; font-size:10px; font-weight:800; min-width:18px; height:18px; border-radius:999px; display:flex; align-items:center; justify-content:center; padding:0 4px;">0</span>
+                </button>
+                <button onclick="openPropertyForm(null)" class="hover-lift"
+                    style="background:#2563eb; color:#fff; font-weight:700; font-size:13px; padding:12px 22px; border-radius:14px; border:none; cursor:pointer; box-shadow:0 10px 15px -3px rgba(37,99,235,0.3);">
+                    <i class="fas fa-plus mr-2"></i> Publier une annonce
+                </button>
+            </div>
+        </header>
+
+        <div class="p-8" style="padding:32px;">
+            <!-- MES ANNONCES -->
+            <section id="section-annonces" class="section-fade active">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
+                    <h1 style="font-size:28px; font-weight:800; color:#111827;">Mes annonces</h1>
+                </div>
+                <div id="myBiensGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:24px;"></div>
+            </section>
+
+            <!-- RESERVATIONS -->
+            <section id="section-reservations" class="section-fade">
+                <h1 style="font-size:28px; font-weight:800; color:#111827; margin-bottom:24px;">Réservations reçues</h1>
+                <div id="reservationsGrid"></div>
+            </section>
+
+            <!-- STATS -->
+            <section id="section-stats" class="section-fade">
+                <h1 style="font-size:28px; font-weight:800; color:#111827; margin-bottom:24px;">Statistiques</h1>
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-6" id="statsCards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:24px;"></div>
+            </section>
+
+            <!-- NOTIFICATIONS -->
+            <section id="section-notifications" class="section-fade">
+                <h1 style="font-size:28px; font-weight:800; color:#111827; margin-bottom:24px;">Notifications</h1>
+                <div id="notificationsGrid" style="display:flex; flex-direction:column; gap:12px;"></div>
+            </section>
+        </div>
+    </main>
+
+    <!-- MODAL : PUBLIER / MODIFIER UNE ANNONCE -->
+    <div id="propertyFormModal" class="fixed inset-0 z-[100] modal-hidden items-center justify-center p-4"
+        style="background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
+        <div class="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden" style="max-height:90vh; display:flex; flex-direction:column;">
+            <div style="background: linear-gradient(135deg, #2563eb, #1d4ed8); padding:28px 32px; position:relative;" class="text-white">
+                <button onclick="closePropertyForm()" class="absolute top-4 right-4" style="border:none; background:rgba(255,255,255,0.15); color:#fff; width:36px; height:36px; border-radius:50%; cursor:pointer;">
+                    <i class="fas fa-times"></i>
+                </button>
+                <h2 id="propertyFormTitle" style="font-size:24px; font-weight:800;">Publier une annonce</h2>
+            </div>
+            <div style="padding:32px; overflow-y:auto;">
+                <form id="propertyForm">
+                    <div class="form-row">
+                        <div class="form-group"><label>Titre</label><input type="text" id="pfTitre" required></div>
+                        <div class="form-group"><label>Standing</label>
+                            <select id="pfStanding">
+                                <option value="Elite">Elite</option>
+                                <option value="Penthouse">Penthouse</option>
+                                <option value="Business">Business</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Type</label>
+                            <select id="pfType">
+                                <option value="villa">Villa</option>
+                                <option value="appartement">Appartement</option>
+                                <option value="terrain">Terrain</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>Statut</label>
+                            <select id="pfStatut">
+                                <option value="vente">À vendre</option>
+                                <option value="location">À louer</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Prix</label><input type="text" id="pfPrix" placeholder="Ex: 120M FCFA" required></div>
+                        <div class="form-group"><label>Localisation</label><input type="text" id="pfLocalisation" required></div>
+                    </div>
+                    <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr;">
+                        <div class="form-group"><label>Chambres</label><input type="number" id="pfChambres" min="0" value="0"></div>
+                        <div class="form-group"><label>Salles de bain</label><input type="number" id="pfSallesDeBain" min="0" value="0"></div>
+                        <div class="form-group"><label>Surface (m²)</label><input type="number" id="pfSurface" min="0" value="0"></div>
+                    </div>
+                    <div class="form-group"><label>Description</label><textarea id="pfDescription"></textarea></div>
+                    <div class="form-group"><label>Image principale (URL)</label><input type="text" id="pfImageUrl" placeholder="https://..."></div>
+                    <div class="form-group"><label>Galerie (URLs séparées par |)</label><textarea id="pfGalerieUrls" placeholder="https://...|https://..."></textarea></div>
+                    <div class="form-group"><label>Équipements (séparés par |)</label><textarea id="pfEquipements" placeholder="Piscine|Jardin|Climatisation"></textarea></div>
+
+                    <button type="submit" class="hover-lift"
+                        style="width:100%; background:#2563eb; color:#fff; font-weight:700; padding:16px; border-radius:16px; border:none; cursor:pointer; margin-top:8px;">
+                        Enregistrer
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONFIRM MODAL -->
+    <div id="confirmModal" class="fixed inset-0 z-[110] modal-hidden items-center justify-center p-4"
+        style="background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl p-8 text-center">
+            <div id="confirmModalIcon"
+                style="width:64px; height:64px; border-radius:50%; background:#fee2e2; color:#ef4444; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:24px;">
+                <i class="fas fa-sign-out-alt"></i>
+            </div>
+            <h3 id="confirmModalTitle" class="text-xl font-extrabold text-gray-900 mb-2">Confirmer</h3>
+            <p id="confirmModalMessage" class="text-gray-500 text-sm mb-6">Êtes-vous sûr ?</p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <button onclick="closeConfirmModal()" style="background:#f3f4f6; color:#374151; padding:12px; border-radius:12px; font-weight:700; border:none; cursor:pointer;">Annuler</button>
+                <button id="confirmModalOkBtn" style="background:#dc2626; color:#fff; padding:12px; border-radius:12px; font-weight:700; border:none; cursor:pointer;">Confirmer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div id="toast-container"></div>
+
+    <script>
+        // ═══════════════════════════════════════════════════════════════════
+        // CONFIG API
+        // ═══════════════════════════════════════════════════════════════════
+        const API = 'http://localhost:5257/api';
+        const getUserId = () => parseInt(localStorage.getItem('userId') || '0');
+
+        let mesBiens = [];
+        let reservations = [];
+        let editingBienId = null;
+
+        async function apiFetch(url, options = {}) {
+            const token = localStorage.getItem('jwtToken');
+            try {
+                const res = await fetch(url, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                    },
+                    ...options
+                });
+                return await res.json();
+            } catch (err) {
+                console.error('API error:', url, err);
+                return { success: false, message: 'Erreur réseau' };
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // CHARGEMENT INITIAL
+        // ═══════════════════════════════════════════════════════════════════
+        async function loadAllData() {
+            const grid = document.getElementById('myBiensGrid');
+            grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:60px 0; color:#9ca3af;"><i class="fas fa-spinner fa-spin" style="font-size:32px;"></i></div>`;
+
+            const biensRes = await apiFetch(`${API}/biens/mine`);
+            if (biensRes.success) {
+                mesBiens = biensRes.data;
+            } else {
+                showToast('error', 'Erreur', biensRes.message || 'Impossible de charger vos annonces.');
+                mesBiens = [];
+            }
+
+            const resaRes = await apiFetch(`${API}/reservations/proprietaire`);
+            if (resaRes.success) reservations = resaRes.data;
+
+            renderAnnonces();
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // RENDU : MES ANNONCES
+        // ═══════════════════════════════════════════════════════════════════
+        function renderAnnonces() {
+            const grid = document.getElementById('myBiensGrid');
+            if (!mesBiens.length) {
+                grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:60px 0; background:#fff; border-radius:24px; border:2px dashed #e5e7eb;">
+                    <i class="fas fa-house-circle-xmark" style="font-size:36px; color:#d1d5db; display:block; margin-bottom:12px;"></i>
+                    <p style="color:#9ca3af; font-weight:600;">Aucune annonce publiée pour l'instant.</p>
+                </div>`;
+                return;
+            }
+
+            grid.innerHTML = mesBiens.map(b => `
+                <div style="background:#fff; border-radius:24px; overflow:hidden; border:1px solid #f3f4f6; box-shadow:0 1px 3px rgba(0,0,0,0.04); position:relative;">
+                    ${!b.estDisponible ? '<span class="badge-off">Désactivée</span>' : ''}
+                    <div style="height:160px; overflow:hidden;">
+                        <img src="${b.imageUrl}" style="width:100%; height:100%; object-fit:cover; ${!b.estDisponible ? 'filter:grayscale(60%); opacity:0.7;' : ''}">
+                    </div>
+                    <div style="padding:20px;">
+                        <h3 style="font-weight:800; color:#111827; margin-bottom:4px;">${escapeHtml(b.titre)}</h3>
+                        <p style="font-size:13px; color:#6b7280; margin-bottom:10px;"><i class="fas fa-map-marker-alt mr-1"></i> ${escapeHtml(b.localisation)}</p>
+                        <p style="font-weight:800; color:#2563eb; margin-bottom:12px;">${escapeHtml(b.prix)}</p>
+                        <div style="display:flex; justify-content:space-between; font-size:11px; color:#9ca3af; font-weight:700; border-top:1px solid #f3f4f6; padding-top:12px; margin-bottom:14px;">
+                            <span><i class="fas fa-eye mr-1"></i>${b.vues} vues</span>
+                            <span><i class="fas fa-ruler-combined mr-1"></i>${b.surface} m²</span>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                            <button onclick="openPropertyForm(${b.id})" style="background:#f3f4f6; color:#374151; padding:10px; border-radius:10px; font-weight:700; font-size:13px; border:none; cursor:pointer;">
+                                <i class="fas fa-pen mr-1"></i> Modifier
+                            </button>
+                            ${b.estDisponible
+                                ? `<button onclick="confirmRetirer(${b.id})" style="background:#fee2e2; color:#dc2626; padding:10px; border-radius:10px; font-weight:700; font-size:13px; border:none; cursor:pointer;"><i class="fas fa-eye-slash mr-1"></i> Retirer</button>`
+                                : `<button onclick="republierBien(${b.id})" style="background:#d1fae5; color:#059669; padding:10px; border-radius:10px; font-weight:700; font-size:13px; border:none; cursor:pointer;"><i class="fas fa-arrow-rotate-left mr-1"></i> Republier</button>`
+                            }
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function escapeHtml(str = '') {
+            return String(str).replace(/[&<>"']/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // FORMULAIRE PUBLIER / MODIFIER
+        // ═══════════════════════════════════════════════════════════════════
+        function openPropertyForm(bienId) {
+            editingBienId = bienId;
+            const form = document.getElementById('propertyForm');
+            form.reset();
+
+            if (bienId) {
+                const b = mesBiens.find(x => x.id === bienId);
+                if (!b) return;
+                document.getElementById('propertyFormTitle').textContent = 'Modifier l\'annonce';
+                document.getElementById('pfTitre').value = b.titre;
+                document.getElementById('pfStanding').value = b.standing;
+                document.getElementById('pfType').value = b.type;
+                document.getElementById('pfStatut').value = b.statut;
+                document.getElementById('pfPrix').value = b.prix;
+                document.getElementById('pfLocalisation').value = b.localisation;
+                document.getElementById('pfChambres').value = b.chambres;
+                document.getElementById('pfSallesDeBain').value = b.sallesDeBain;
+                document.getElementById('pfSurface').value = b.surface;
+                document.getElementById('pfDescription').value = b.description;
+                document.getElementById('pfImageUrl').value = b.imageUrl;
+                document.getElementById('pfGalerieUrls').value = (b.galerie || []).join('|');
+                document.getElementById('pfEquipements').value = (b.equipements || []).join('|');
+            } else {
+                document.getElementById('propertyFormTitle').textContent = 'Publier une annonce';
+            }
+
+            const modal = document.getElementById('propertyFormModal');
+            modal.classList.remove('modal-hidden');
+            modal.classList.add('modal-visible');
+        }
+
+        function closePropertyForm() {
+            const modal = document.getElementById('propertyFormModal');
+            modal.classList.add('modal-hidden');
+            modal.classList.remove('modal-visible');
+            editingBienId = null;
+        }
+
+        document.getElementById('propertyForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const payload = {
+                Titre: document.getElementById('pfTitre').value,
+                Type: document.getElementById('pfType').value,
+                Statut: document.getElementById('pfStatut').value,
+                Prix: document.getElementById('pfPrix').value,
+                Chambres: parseInt(document.getElementById('pfChambres').value) || 0,
+                SallesDeBain: parseInt(document.getElementById('pfSallesDeBain').value) || 0,
+                Surface: parseInt(document.getElementById('pfSurface').value) || 0,
+                Localisation: document.getElementById('pfLocalisation').value,
+                Description: document.getElementById('pfDescription').value,
+                ImageUrl: document.getElementById('pfImageUrl').value,
+                GalerieUrls: document.getElementById('pfGalerieUrls').value,
+                Equipements: document.getElementById('pfEquipements').value,
+                Standing: document.getElementById('pfStanding').value,
+            };
+
+            const btn = this.querySelector('button[type="submit"]');
+            const original = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Enregistrement...';
+            btn.disabled = true;
+
+            let result;
+            if (editingBienId) {
+                payload.EstDisponible = mesBiens.find(b => b.id === editingBienId)?.estDisponible ?? true;
+                result = await apiFetch(`${API}/biens/${editingBienId}`, { method: 'PUT', body: JSON.stringify(payload) });
+            } else {
+                result = await apiFetch(`${API}/biens`, { method: 'POST', body: JSON.stringify(payload) });
+            }
+
+            btn.innerHTML = original;
+            btn.disabled = false;
+
+            if (result.success) {
+                closePropertyForm();
+                showToast('success', editingBienId ? 'Annonce mise à jour !' : 'Annonce publiée !', result.message || '');
+                await loadAllData();
+            } else {
+                showToast('error', 'Erreur', result.message || 'Une erreur est survenue.');
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════════════
+        // RETIRER / REPUBLIER UNE ANNONCE
+        // ═══════════════════════════════════════════════════════════════════
+        function confirmRetirer(bienId) {
+            openConfirmModal({
+                title: 'Retirer cette annonce ?',
+                message: 'Elle ne sera plus visible par les visiteurs. Vous pourrez la republier à tout moment.',
+                icon: 'fa-eye-slash',
+                confirmLabel: 'Retirer',
+                onConfirm: async () => {
+                    const result = await apiFetch(`${API}/biens/${bienId}`, { method: 'DELETE' });
+                    if (result.success) {
+                        showToast('info', 'Annonce retirée', 'Elle n\'est plus visible publiquement.');
+                        await loadAllData();
+                    } else {
+                        showToast('error', 'Erreur', result.message || 'Une erreur est survenue.');
+                    }
+                }
+            });
+        }
+
+        async function republierBien(bienId) {
+            const b = mesBiens.find(x => x.id === bienId);
+            if (!b) return;
+            const payload = {
+                Titre: b.titre, Type: b.type, Statut: b.statut, Prix: b.prix,
+                Chambres: b.chambres, SallesDeBain: b.sallesDeBain, Surface: b.surface,
+                Localisation: b.localisation, Description: b.description, ImageUrl: b.imageUrl,
+                GalerieUrls: (b.galerie || []).join('|'), Equipements: (b.equipements || []).join('|'),
+                Standing: b.standing, EstDisponible: true,
+            };
+            const result = await apiFetch(`${API}/biens/${bienId}`, { method: 'PUT', body: JSON.stringify(payload) });
+            if (result.success) {
+                showToast('success', 'Annonce republiée !', 'Elle est de nouveau visible par les visiteurs.');
+                await loadAllData();
+            } else {
+                showToast('error', 'Erreur', result.message || 'Une erreur est survenue.');
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // RÉSERVATIONS REÇUES
+        // ═══════════════════════════════════════════════════════════════════
+        function renderReservations() {
+            const grid = document.getElementById('reservationsGrid');
+            if (!reservations.length) {
+                grid.innerHTML = `<div style="text-align:center; padding:60px 0; background:#fff; border-radius:24px; border:2px dashed #e5e7eb;">
+                    <i class="fas fa-calendar-xmark" style="font-size:36px; color:#d1d5db; display:block; margin-bottom:12px;"></i>
+                    <p style="color:#9ca3af; font-weight:600;">Aucune demande de visite reçue pour l'instant.</p>
+                </div>`;
+                return;
+            }
+
+            const statutColors = {
+                'En attente': { bg: '#fef3c7', text: '#92400e' },
+                'Confirmée': { bg: '#d1fae5', text: '#065f46' },
+                'Refusée': { bg: '#fee2e2', text: '#991b1b' },
+                'Annulée': { bg: '#f3f4f6', text: '#6b7280' },
+            };
+
+            grid.innerHTML = reservations.map(r => {
+                const d = new Date(r.dateVisite).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+                const c = statutColors[r.statut] || statutColors['En attente'];
+                return `
+                <div style="background:#fff; border-radius:20px; padding:24px; margin-bottom:16px; border:1px solid #f3f4f6;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px;">
+                        <div style="flex:1;">
+                            <h4 style="font-weight:800; color:#111827; font-size:16px;">${escapeHtml(r.bienTitre || ('Bien #' + r.bienId))}</h4>
+                            <p style="font-size:13px; color:#6b7280; margin-top:6px;"><i class="fas fa-user mr-2" style="color:#2563eb;"></i>${escapeHtml(r.prenom)} ${escapeHtml(r.nom)} — ${escapeHtml(r.telephone)}</p>
+                            <p style="font-size:13px; color:#6b7280; margin-top:4px;"><i class="fas fa-calendar-day mr-2" style="color:#2563eb;"></i>Visite souhaitée le <strong>${d}</strong></p>
+                            ${r.message ? `<p style="font-size:12px; color:#9ca3af; margin-top:8px; font-style:italic;">"${escapeHtml(r.message)}"</p>` : ''}
+                        </div>
+                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:10px;">
+                            <span style="font-size:11px; font-weight:800; padding:6px 14px; border-radius:999px; background:${c.bg}; color:${c.text};">${r.statut}</span>
+                            ${r.statut === 'En attente' ? `
+                                <div style="display:flex; gap:8px;">
+                                    <button onclick="updateReservationStatut(${r.id}, 'Confirmée')" style="background:#d1fae5; color:#059669; border:none; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer;">Accepter</button>
+                                    <button onclick="updateReservationStatut(${r.id}, 'Refusée')" style="background:#fee2e2; color:#dc2626; border:none; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer;">Refuser</button>
+                                </div>` : ''}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function updateReservationStatut(id, statut) {
+            const result = await apiFetch(`${API}/reservations/${id}/statut`, { method: 'PUT', body: JSON.stringify({ Statut: statut }) });
+            if (result.success) {
+                showToast(statut === 'Confirmée' ? 'success' : 'info', `Réservation ${statut.toLowerCase()}`, '');
+                const resaRes = await apiFetch(`${API}/reservations/proprietaire`);
+                if (resaRes.success) reservations = resaRes.data;
+                renderReservations();
+            } else {
+                showToast('error', 'Erreur', result.message || 'Une erreur est survenue.');
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // STATISTIQUES
+        // ═══════════════════════════════════════════════════════════════════
+        function renderStats() {
+            const totalBiens = mesBiens.length;
+            const totalVues = mesBiens.reduce((sum, b) => sum + (b.vues || 0), 0);
+            const totalResas = reservations.length;
+            const confirmees = reservations.filter(r => r.statut === 'Confirmée').length;
+            const traitees = reservations.filter(r => r.statut !== 'En attente').length;
+            const taux = traitees ? Math.round((confirmees / traitees) * 100) : 0;
+
+            const cards = [
+                { icon: 'fa-house', bg: '#dbeafe', color: '#2563eb', label: 'Annonces publiées', value: totalBiens },
+                { icon: 'fa-eye', bg: '#ede9fe', color: '#7c3aed', label: 'Vues cumulées', value: totalVues },
+                { icon: 'fa-calendar-check', bg: '#d1fae5', color: '#059669', label: 'Réservations reçues', value: totalResas },
+                { icon: 'fa-percent', bg: '#fef3c7', color: '#d97706', label: 'Taux de confirmation', value: taux + '%' },
+            ];
+
+            document.getElementById('statsCards').innerHTML = cards.map(c => `
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:${c.bg}; color:${c.color};"><i class="fas ${c.icon}"></i></div>
+                    <p style="font-size:28px; font-weight:800; color:#111827; line-height:1;">${c.value}</p>
+                    <p style="font-weight:700; color:#374151; font-size:14px; margin-top:6px;">${c.label}</p>
+                </div>
+            `).join('');
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // NOTIFICATIONS
+        // ═══════════════════════════════════════════════════════════════════
+        const notifIcons = {
+            NouvelleReservation: { icon: 'fa-calendar-plus', bg: '#dbeafe', color: '#2563eb' },
+            ReservationConfirmee: { icon: 'fa-circle-check', bg: '#d1fae5', color: '#059669' },
+            ReservationRefusee: { icon: 'fa-circle-xmark', bg: '#fee2e2', color: '#dc2626' },
+            NouvelleDemandeProprietaire: { icon: 'fa-user-check', bg: '#e0e7ff', color: '#4f46e5' },
+            DemandeValidee: { icon: 'fa-circle-check', bg: '#d1fae5', color: '#059669' },
+            DemandeRefusee: { icon: 'fa-circle-xmark', bg: '#fee2e2', color: '#dc2626' },
+            NouvelleRecommandation: { icon: 'fa-share-nodes', bg: '#e0e7ff', color: '#4f46e5' },
+        };
+
+        async function refreshNotifBadge() {
+            const res = await apiFetch(`${API}/notifications`);
+            if (!res.success) return;
+            const badge = document.getElementById('notifBadge');
+            if (res.data.nonLues > 0) {
+                badge.textContent = res.data.nonLues > 99 ? '99+' : res.data.nonLues;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        async function renderNotifications() {
+            const grid = document.getElementById('notificationsGrid');
+            grid.innerHTML = `<div style="text-align:center; padding:40px 0;"><i class="fas fa-spinner fa-spin" style="color:#2563eb; font-size:24px;"></i></div>`;
+
+            const res = await apiFetch(`${API}/notifications`);
+            if (!res.success) {
+                grid.innerHTML = `<p style="text-align:center; color:#ef4444; padding:40px 0;">Impossible de charger vos notifications.</p>`;
+                return;
+            }
+
+            const notifications = res.data.notifications;
+
+            if (!notifications.length) {
+                grid.innerHTML = `<div style="text-align:center; padding:60px 0; background:#fff; border-radius:24px; border:2px dashed #e5e7eb;">
+                    <i class="fas fa-bell-slash" style="font-size:36px; color:#d1d5db; display:block; margin-bottom:12px;"></i>
+                    <p style="color:#9ca3af; font-weight:600;">Aucune notification pour l'instant.</p>
+                </div>`;
+                return;
+            }
+
+            grid.innerHTML = notifications.map(n => {
+                const c = notifIcons[n.type] || { icon: 'fa-bell', bg: '#f3f4f6', color: '#6b7280' };
+                const d = new Date(n.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                return `
+                <div onclick="${n.cibleSection ? `switchSection('${n.cibleSection}', null)` : ''}" style="background:#fff; border-radius:16px; padding:20px; border:1px solid #f3f4f6; display:flex; gap:16px; ${n.cibleSection ? 'cursor:pointer;' : ''}">
+                    <div style="width:42px; height:42px; border-radius:12px; background:${c.bg}; color:${c.color}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <i class="fas ${c.icon}"></i>
+                    </div>
+                    <div style="flex:1;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            ${!n.estLue ? '<span style="width:8px; height:8px; border-radius:50%; background:#2563eb; display:inline-block;"></span>' : ''}
+                            <h4 style="font-weight:700; color:#111827;">${escapeHtml(n.titre)}</h4>
+                        </div>
+                        <p style="font-size:14px; color:#6b7280; margin-top:4px;">${escapeHtml(n.message)}</p>
+                        <p style="font-size:12px; color:#d1d5db; margin-top:8px;">${d}</p>
+                    </div>
+                    <button onclick="event.stopPropagation(); dismissNotification(${n.id})" style="background:none; border:none; cursor:pointer; color:#d1d5db;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>`;
+            }).join('');
+
+            notifications.filter(n => !n.estLue).forEach(n => apiFetch(`${API}/notifications/${n.id}/lue`, { method: 'PUT' }));
+            setTimeout(refreshNotifBadge, 500);
+        }
+
+        async function dismissNotification(id) {
+            const result = await apiFetch(`${API}/notifications/${id}`, { method: 'DELETE' });
+            if (result.success) {
+                renderNotifications();
+            } else {
+                showToast('error', 'Erreur', result.message || 'Une erreur est survenue.');
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // MODAL DE CONFIRMATION GÉNÉRIQUE
+        // ═══════════════════════════════════════════════════════════════════
+        function openConfirmModal({ title, message, icon = 'fa-question', confirmLabel = 'Confirmer', onConfirm }) {
+            document.getElementById('confirmModalTitle').textContent = title;
+            document.getElementById('confirmModalMessage').textContent = message;
+            document.getElementById('confirmModalIcon').innerHTML = `<i class="fas ${icon}"></i>`;
+
+            const okBtn = document.getElementById('confirmModalOkBtn');
+            okBtn.textContent = confirmLabel;
+            okBtn.onclick = () => { closeConfirmModal(); onConfirm(); };
+
+            const modal = document.getElementById('confirmModal');
+            modal.classList.remove('modal-hidden');
+            modal.classList.add('modal-visible');
+        }
+
+        function closeConfirmModal() {
+            const modal = document.getElementById('confirmModal');
+            modal.classList.add('modal-hidden');
+            modal.classList.remove('modal-visible');
+        }
+
+        function switchToClient() {
+            openConfirmModal({
+                title: 'Basculer vers l\'espace Client',
+                message: 'Voulez-vous vraiment passer à votre espace Client ?',
+                icon: 'fa-right-left',
+                confirmLabel: 'Basculer',
+                onConfirm: () => {
+                    showToast('info', 'Changement d\'espace...', 'Direction votre espace Client.', 1200);
+                    setTimeout(() => { window.location.href = './accueil_user.html'; }, 900);
+                }
+            });
+        }
+
+        function handleLogout() {
+            openConfirmModal({
+                title: 'Déconnexion',
+                message: 'Êtes-vous sûr de vouloir vous déconnecter ?',
+                icon: 'fa-sign-out-alt',
+                confirmLabel: 'Déconnexion',
+                onConfirm: () => {
+                    ['isLoggedIn', 'userPrenom', 'userNom', 'userEmail', 'userId', 'userRole', 'userPhoto', 'jwtToken'].forEach(k => localStorage.removeItem(k));
+                    showToast('success', 'À bientôt !', 'Vous avez été déconnecté avec succès.', 1800);
+                    setTimeout(() => { window.location.href = './login.html'; }, 1200);
+                }
+            });
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // TOAST
+        // ═══════════════════════════════════════════════════════════════════
+        function showToast(type = 'success', title = '', msg = '', duration = 5000) {
+            const icons = { success: 'fa-circle-check', error: 'fa-circle-xmark', info: 'fa-circle-info' };
+            const container = document.getElementById('toast-container');
+            const id = 'toast-' + Date.now();
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.id = id;
+            toast.innerHTML = `
+                <div class="toast-icon"><i class="fa-solid ${icons[type]}"></i></div>
+                <div class="toast-body">
+                    <p class="toast-title">${title}</p>
+                    ${msg ? `<p class="toast-msg">${msg}</p>` : ''}
+                </div>
+                <button class="toast-close" onclick="dismissToast('${id}')"><i class="fas fa-times"></i></button>
+                <div class="toast-progress" id="progress-${id}" style="width:100%;"></div>
+            `;
+            container.appendChild(toast);
+            requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('show')));
+            const prog = document.getElementById(`progress-${id}`);
+            if (prog) {
+                prog.style.transition = `width ${duration}ms linear`;
+                requestAnimationFrame(() => requestAnimationFrame(() => { prog.style.width = '0%'; }));
+            }
+            const timer = setTimeout(() => dismissToast(id), duration);
+            toast._timer = timer;
+        }
+
+        function dismissToast(id) {
+            const toast = document.getElementById(id);
+            if (!toast) return;
+            clearTimeout(toast._timer);
+            toast.classList.remove('show');
+            toast.classList.add('hide');
+            setTimeout(() => toast.remove(), 500);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // NAVIGATION
+        // ═══════════════════════════════════════════════════════════════════
+        function switchSection(id, btn) {
+            document.querySelectorAll('.section-fade').forEach(s => s.classList.remove('active'));
+            const section = document.getElementById(`section-${id}`);
+            if (section) section.classList.add('active');
+            document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+
+            if (id === 'reservations') renderReservations();
+            if (id === 'stats') renderStats();
+            if (id === 'notifications') renderNotifications();
+
+            window.scrollTo(0, 0);
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') { closePropertyForm(); closeConfirmModal(); }
+        });
+
+        // ═══════════════════════════════════════════════════════════════════
+        // INIT
+        // ═══════════════════════════════════════════════════════════════════
+        document.addEventListener('DOMContentLoaded', () => {
+            const prenom = localStorage.getItem('userPrenom') || 'Propriétaire';
+            document.getElementById('welcomeName').textContent = `Bienvenue, ${prenom}`;
+            loadAllData();
+            refreshNotifBadge();
+            setInterval(refreshNotifBadge, 30000);
+        });
+    </script>
+    <script type="module" src="/src/js/main.js"></script>
+</body>
+
+</html>

@@ -50,6 +50,48 @@ export function removeFavori(userId, bienId) {
     return apiFetch(`${API_BASE}/favoris/${userId}/${bienId}`, { method: 'DELETE' });
 }
 
+export function getCommentaires(bienId) {
+    return apiFetch(`${API_BASE}/commentaires?bienId=${bienId}`);
+}
+
+export function createCommentaire(payload) {
+    return apiFetch(`${API_BASE}/commentaires`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    });
+}
+
+export function updateCommentaire(id, payload) {
+    return apiFetch(`${API_BASE}/commentaires/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+    });
+}
+
+export function deleteCommentaire(id) {
+    return apiFetch(`${API_BASE}/commentaires/${id}`, { method: 'DELETE' });
+}
+
+export function recommanderBien(payload) {
+    return apiFetch(`${API_BASE}/recommandations`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    });
+
+}
+
+export function getRecommandationsRecues() {
+    return apiFetch(`${API_BASE}/recommandations/recues`);
+}
+
+export function marquerRecommandationLue(id) {
+    return apiFetch(`${API_BASE}/recommandations/${id}/lue`, { method: 'PUT' });
+}
+
+export function deleteRecommandation(id) {
+    return apiFetch(`${API_BASE}/recommandations/${id}`, { method: 'DELETE' });
+}
+
 // Adapte un BienDto (champs C# en PascalCase->camelCase) vers le format attendu par le rendu front
 export function normalizeBien(b) {
     return {

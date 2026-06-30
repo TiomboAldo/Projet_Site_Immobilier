@@ -160,6 +160,13 @@
                     Bien</h2>
                 <div id="map" class="w-full h-96 rounded-xl shadow-xl border border-gray-200"></div>
             </div>
+
+            <div class="mt-12">
+                <h2 class="text-2xl font-bold text-gray-800 border-b border-blue-600 pb-2 mb-4">Avis & Commentaires</h2>
+                <div id="avis-summary" class="mb-6"></div>
+                <div id="avis-form-container" class="mb-8"></div>
+                <div id="avis-list" class="space-y-4"></div>
+            </div>
         </div>
 
         <div class="max-w-6xl mx-auto mt-16">
@@ -370,9 +377,49 @@
         </div>
     </div>
 
+    <div id="recommendModal"
+        class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] hidden items-center justify-center p-4"
+        onclick="window.closeRecommendForm(event)">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-8 transform transition-all duration-300 scale-95 opacity-0 max-h-[90vh] overflow-y-auto"
+            id="recommendModalContent" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-start border-b pb-3 mb-5">
+                <h3 class="text-2xl font-bold text-gray-900">Recommander ce bien</h3>
+                <button onclick="window.closeRecommendForm()" class="text-gray-400 hover:text-gray-700 transition">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <form id="recommendForm">
+                <p class="text-gray-600 mb-4">Vous recommandez le bien : <span id="recommendPropertyTitle"
+                        class="font-semibold text-blue-600"></span>
+                </p>
+
+                <div class="space-y-4">
+                    <div>
+                        <label for="recommendEmail" class="block text-sm font-medium text-gray-700 mb-1">Email du
+                            destinataire</label>
+                        <input type="email" id="recommendEmail" required placeholder="ami@email.com"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label for="recommendMessage" class="block text-sm font-medium text-gray-700 mb-1">Message
+                            (optionnel)</label>
+                        <textarea id="recommendMessage" rows="3"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 resize-none"></textarea>
+                    </div>
+                </div>
+
+                <button type="submit"
+                    class="mt-6 w-full px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition shadow-lg">
+                    Envoyer la recommandation
+                </button>
+            </form>
+        </div>
+    </div>
+
 
     <script type="module">
-        import { getBienById, getBiens, createReservation, normalizeBien } from '../js/api.js';
+        import { getBienById, getBiens, createReservation, normalizeBien, getCommentaires, createCommentaire, updateCommentaire, deleteCommentaire, recommanderBien } from '../js/api.js';
 
         // ---------- HELPERS ----------
         function escapeHtml(str = '') {
@@ -442,6 +489,144 @@
             }
 
             container.innerHTML = similar.map(createPropertyCard).join('');
+        }
+
+        // ───────────────────────────────────────────────────────────────────────
+        // AVIS & COMMENTAIRES
+        // ───────────────────────────────────────────────────────────────────────
+        let avisData = [];
+
+        function starsHtml(note) {
+            let html = '';
+            for (let i = 1; i <= 5; i++) {
+                html += `<i class="fas fa-star" style="color:${i <= note ? '#f59e0b' : '#e5e7eb'};"></i>`;
+            }
+            return html;
+        }
+
+        function starsPickerHtml(selected = 0) {
+            let html = '<div id="avisStarsPicker" style="display:flex; gap:6px; font-size:22px; cursor:pointer;">';
+            for (let i = 1; i <= 5; i++) {
+                html += `<i class="fas fa-star avis-star" data-value="${i}" style="color:${i <= selected ? '#f59e0b' : '#e5e7eb'};"></i>`;
+            }
+            html += '</div>';
+            return html;
+        }
+
+        async function loadAvis(bienId) {
+            const summaryBox = document.getElementById('avis-summary');
+            const listBox = document.getElementById('avis-list');
+            listBox.innerHTML = '<p class="text-center text-gray-400 py-6"><i class="fas fa-spinner fa-spin"></i></p>';
+
+            const res = await getCommentaires(bienId);
+            if (!res.success) {
+                summaryBox.innerHTML = '';
+                listBox.innerHTML = '<p class="text-gray-500">Impossible de charger les avis.</p>';
+                return;
+            }
+
+            avisData = res.data.commentaires;
+
+            summaryBox.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <div style="font-size:20px;">${starsHtml(Math.round(res.data.moyenne))}</div>
+                    <span class="text-gray-600 font-semibold">${res.data.moyenne || 0} / 5</span>
+                    <span class="text-gray-400 text-sm">(${res.data.total} avis)</span>
+                </div>`;
+
+            renderAvisForm(bienId);
+            renderAvisList();
+        }
+
+        function renderAvisForm(bienId) {
+            const box = document.getElementById('avis-form-container');
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+
+            if (!isLoggedIn) {
+                box.innerHTML = `<p class="text-gray-500 bg-gray-50 p-4 rounded-xl">
+                    <a href="login.html" class="text-blue-600 font-semibold underline">Connectez-vous</a> pour laisser un avis sur ce bien.
+                </p>`;
+                return;
+            }
+
+            const userId = parseInt(localStorage.getItem('userId') || '0', 10);
+            const monAvis = avisData.find(a => a.userId === userId);
+
+            box.innerHTML = `
+                <div class="bg-gray-50 p-6 rounded-xl">
+                    <p class="font-semibold text-gray-700 mb-3">${monAvis ? 'Modifier mon avis' : 'Laisser un avis'}</p>
+                    ${starsPickerHtml(monAvis ? monAvis.note : 0)}
+                    <textarea id="avisTexte" rows="3" placeholder="Partagez votre expérience..."
+                        class="w-full mt-3 px-4 py-2 border border-gray-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 resize-none">${escapeHtml(monAvis ? monAvis.texte : '')}</textarea>
+                    <div class="flex items-center gap-3 mt-3">
+                        <button id="avisSubmitBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition">
+                            ${monAvis ? 'Mettre à jour' : 'Publier'}
+                        </button>
+                        ${monAvis ? '<button id="avisDeleteBtn" class="text-red-500 hover:text-red-700 text-sm font-semibold">Supprimer mon avis</button>' : ''}
+                    </div>
+                </div>`;
+
+            let selectedNote = monAvis ? monAvis.note : 0;
+            box.querySelectorAll('.avis-star').forEach(star => {
+                star.addEventListener('click', () => {
+                    selectedNote = parseInt(star.dataset.value, 10);
+                    box.querySelectorAll('.avis-star').forEach(s => {
+                        s.style.color = parseInt(s.dataset.value, 10) <= selectedNote ? '#f59e0b' : '#e5e7eb';
+                    });
+                });
+            });
+
+            document.getElementById('avisSubmitBtn').addEventListener('click', async () => {
+                if (!selectedNote) {
+                    showMessage('Note requise', 'Veuillez sélectionner une note (1 à 5 étoiles).', 'error');
+                    return;
+                }
+                const payload = { BienId: bienId, Note: selectedNote, Texte: document.getElementById('avisTexte').value };
+                const result = monAvis ? await updateCommentaire(monAvis.id, payload) : await createCommentaire(payload);
+
+                if (result.success) {
+                    showMessage(monAvis ? 'Avis mis à jour' : 'Avis publié', result.message || '', 'success');
+                    loadAvis(bienId);
+                } else {
+                    showMessage('Erreur', result.message || 'Une erreur est survenue.', 'error');
+                }
+            });
+
+            const deleteBtn = document.getElementById('avisDeleteBtn');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', async () => {
+                    const result = await deleteCommentaire(monAvis.id);
+                    if (result.success) {
+                        showMessage('Avis supprimé', '', 'success');
+                        loadAvis(bienId);
+                    } else {
+                        showMessage('Erreur', result.message || 'Une erreur est survenue.', 'error');
+                    }
+                });
+            }
+        }
+
+        function renderAvisList() {
+            const listBox = document.getElementById('avis-list');
+
+            if (avisData.length === 0) {
+                listBox.innerHTML = '<p class="text-gray-400 text-center py-6">Aucun avis pour le moment. Soyez le premier à donner votre avis !</p>';
+                return;
+            }
+
+            listBox.innerHTML = avisData.map(a => `
+                <div class="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="font-semibold text-gray-800">${escapeHtml(a.prenom || '')} ${escapeHtml(a.nom || '')}</span>
+                            ${a.estLocataireVerifie ? '<span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold"><i class="fas fa-badge-check mr-1"></i>Locataire vérifié</span>' : ''}
+                        </div>
+                        <span class="text-xs text-gray-400">${new Date(a.createdAt).toLocaleDateString('fr-FR')}</span>
+                    </div>
+                    <div class="mb-2">${starsHtml(a.note)}</div>
+                    <p class="text-gray-600 text-sm">${escapeHtml(a.texte)}</p>
+                </div>
+            `).join('');
         }
 
         // Fonction pour générer le HTML des détails
@@ -533,6 +718,9 @@
                         <a href="https://wa.me/237683862828" class="w-full border-2 border-green-500 text-green-600 hover:bg-green-50 font-bold py-4 rounded-xl transition-all flex items-center justify-center">
                             <i class="fab fa-whatsapp mr-2 text-xl"></i> Contacter par WhatsApp
                         </a>
+                        <button onclick="window.openRecommendForm(${property.id})" class="w-full border-2 border-indigo-500 text-indigo-600 hover:bg-indigo-50 font-bold py-4 rounded-xl transition-all flex items-center justify-center">
+                            <i class="fas fa-share-nodes mr-2"></i> Recommander à un ami
+                        </button>
                     </div>
                 </div>
             </div>
@@ -688,6 +876,46 @@
             }, 300);
         };
 
+        window.openRecommendForm = function (id) {
+            const userId = parseInt(localStorage.getItem('userId') || '0', 10);
+            if (!userId) {
+                showLoginLockModal();
+                return;
+            }
+
+            const modal = document.getElementById('recommendModal');
+            const modalContent = document.getElementById('recommendModalContent');
+            const property = currentProperty;
+
+            if (property) {
+                document.getElementById('recommendPropertyTitle').textContent = property.title;
+                document.getElementById('recommendForm').dataset.propertyId = id;
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            setTimeout(() => {
+                modalContent.classList.remove('scale-95', 'opacity-0');
+                modalContent.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        };
+
+        window.closeRecommendForm = function (event) {
+            const modal = document.getElementById('recommendModal');
+            const modalContent = document.getElementById('recommendModalContent');
+
+            if (event && event.target !== modal) return;
+
+            modalContent.classList.remove('scale-100', 'opacity-100');
+            modalContent.classList.add('scale-95', 'opacity-0');
+
+            setTimeout(() => {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }, 300);
+        };
+
         // ---------- LOGIQUE PRINCIPALE ----------
         let currentProperty = null;
 
@@ -710,6 +938,7 @@
             currentProperty = normalizeBien(res.data);
             renderPropertyDetails(currentProperty);
             renderSimilarProperties(currentProperty);
+            loadAvis(currentProperty.id);
 
             if (typeof google === 'object' && typeof google.maps === 'object') {
                 initMap();
@@ -753,6 +982,38 @@
                         window.closeVisitForm();
                         this.reset();
                         showMessage('Demande envoyée !', result.message || 'Votre demande de visite a été enregistrée.', 'success');
+                    } else {
+                        showMessage('Erreur', result.message || 'Une erreur est survenue.', 'error');
+                    }
+                });
+            }
+
+            const recommendForm = document.getElementById('recommendForm');
+            if (recommendForm) {
+                recommendForm.addEventListener('submit', async function (e) {
+                    e.preventDefault();
+                    const propertyId = parseInt(this.dataset.propertyId, 10);
+
+                    const btn = this.querySelector('button[type="submit"]');
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = 'Envoi en cours...';
+                    btn.disabled = true;
+
+                    const payload = {
+                        BienId: propertyId,
+                        DestinataireEmail: document.getElementById('recommendEmail').value,
+                        Message: document.getElementById('recommendMessage').value,
+                    };
+
+                    const result = await recommanderBien(payload);
+
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+
+                    if (result.success) {
+                        window.closeRecommendForm();
+                        this.reset();
+                        showMessage('Recommandation envoyée !', result.message || '', 'success');
                     } else {
                         showMessage('Erreur', result.message || 'Une erreur est survenue.', 'error');
                     }

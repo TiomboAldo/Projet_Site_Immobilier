@@ -57,6 +57,15 @@ namespace SaidAfricaBackend.Controllers
             };
 
             _context.Reservations.Add(reservation);
+
+            if (bien.ProprietaireId.HasValue)
+            {
+                NotificationHelper.Creer(_context, bien.ProprietaireId.Value,
+                    "NouvelleReservation", "Nouvelle réservation reçue",
+                    $"{req.Prenom} {req.Nom} a demandé une visite pour « {bien.Titre} ».",
+                    "reservations");
+            }
+
             await _context.SaveChangesAsync();
 
             return Ok(new
@@ -86,8 +95,58 @@ namespace SaidAfricaBackend.Controllers
             return Ok(new { success = true, data = reservations });
         }
 
+        // ─── GET /api/reservations/proprietaire ───────────────────────────────
+        // Réservations reçues sur les biens du propriétaire connecté
+        [HttpGet("proprietaire")]
+        [Authorize(Roles = "Proprietaire,UserIndep,AdminRegion,AdminPays,DirecteurProjet")]
+        public async Task<IActionResult> GetByProprietaire()
+        {
+            var userId = CurrentUserId();
+
+            var reservations = await _context.Reservations
+                .Include(r => r.Bien)
+                .Where(r => r.Bien != null && r.Bien.ProprietaireId == userId)
+                .OrderByDescending(r => r.CreatedAt)
+                .Select(r => new ReservationDto(r, r.Bien!.Titre))
+                .ToListAsync();
+
+            return Ok(new { success = true, data = reservations });
+        }
+
+        // ─── PUT /api/reservations/{id}/statut ────────────────────────────────
+        // Le propriétaire de l'annonce accepte ou refuse une demande de visite
+        [HttpPut("{id:int}/statut")]
+        [Authorize]
+        public async Task<IActionResult> UpdateStatut(int id, [FromBody] UpdateStatutRequest req)
+        {
+            if (req.Statut != "Confirmée" && req.Statut != "Refusée")
+                return BadRequest(new { success = false, message = "Statut invalide. Valeurs acceptées : \"Confirmée\", \"Refusée\"." });
+
+            var reservation = await _context.Reservations
+                .Include(r => r.Bien)
+                .FirstOrDefaultAsync(r => r.Id == id);
+
+            if (reservation == null)
+                return NotFound(new { success = false, message = "Réservation introuvable." });
+
+            if ((reservation.Bien == null || reservation.Bien.ProprietaireId != CurrentUserId()) && !IsAdmin())
+                return Forbid();
+
+            reservation.Statut = req.Statut;
+
+            NotificationHelper.Creer(_context, reservation.UserId,
+                req.Statut == "Confirmée" ? "ReservationConfirmee" : "ReservationRefusee",
+                $"Réservation {req.Statut.ToLower()}",
+                $"Votre demande de visite pour « {reservation.Bien!.Titre} » a été {req.Statut.ToLower()}.",
+                "reservations");
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, message = $"Réservation {req.Statut.ToLower()}.", data = new ReservationDto(reservation, reservation.Bien!.Titre) });
+        }
+
         // ─── GET /api/reservations/{id} ───────────────────────────────────────
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         [Authorize]
         public async Task<IActionResult> GetById(int id)
         {
@@ -171,5 +230,10 @@ namespace SaidAfricaBackend.Controllers
         public string   Lieu       { get; set; } = string.Empty;
         public DateTime DateVisite { get; set; }
         public string?  Message    { get; set; }
+    }
+
+    public class UpdateStatutRequest
+    {
+        public string Statut { get; set; } = string.Empty;
     }
 }

@@ -81,6 +81,38 @@ namespace SaidAfricaBackend.Controllers
             }
         }
 
+        // --- BOOTSTRAP : créer le tout premier compte Admin région ---
+        // Ne fonctionne que si aucun compte admin n'existe encore. Se verrouille
+        // définitivement (403) dès qu'un premier admin a été créé.
+        [HttpPost("bootstrap-admin")]
+        public async Task<IActionResult> BootstrapAdmin([FromBody] BootstrapAdminRequest request)
+        {
+            bool adminExists = await _context.Users.AnyAsync(u =>
+                u.Role == "AdminRegion" || u.Role == "AdminPays" || u.Role == "DirecteurProjet");
+
+            if (adminExists)
+                return StatusCode(403, new { success = false, message = "Un compte administrateur existe déjà. Ce point d'entrée est désactivé." });
+
+            if (await _context.Users.AnyAsync(u => u.Email == request.Email))
+                return BadRequest(new { success = false, message = "Cet email est déjà utilisé." });
+
+            var admin = new User
+            {
+                Nom      = request.Nom,
+                Prenom   = request.Prenom,
+                Email    = request.Email,
+                Password = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                Role     = "AdminRegion",
+                Region   = request.Region,
+                EstValide = true,
+            };
+
+            _context.Users.Add(admin);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, message = "Compte administrateur racine créé. Ce point d'entrée est désormais désactivé." });
+        }
+
         // --- CONNEXION ---
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
@@ -133,7 +165,16 @@ namespace SaidAfricaBackend.Controllers
 
     public class LoginRequest
     {
-        public String Email { get; set; }
-        public String Password { get; set; }
+        public required String Email { get; set; }
+        public required String Password { get; set; }
+    }
+
+    public class BootstrapAdminRequest
+    {
+        public string Nom { get; set; } = string.Empty;
+        public string Prenom { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string Region { get; set; } = string.Empty;
     }
 }

@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Espace Admin Région - Said Africa</title>
+    <link rel="icon" type="image/png" href="/src/assets/images/logo.jpeg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { background-color: #f3f4f6; overflow-x: hidden; display: flex; min-height: 100vh; }
+
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-item.active {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white !important;
+            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4);
+        }
+
+        .hover-lift { transition: all 0.3s ease; }
+        .hover-lift:hover { transform: translateY(-5px); }
+
+        .section-fade {
+            display: none;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        }
+        .section-fade.active { display: block; opacity: 1; transform: translateY(0); }
+
+        .modal-hidden { display: none !important; pointer-events: none; }
+        .modal-visible { display: flex !important; pointer-events: auto; }
+
+        .filter-btn.active {
+            background: #2563eb !important;
+            color: #fff !important;
+        }
+
+        .sidebar {
+            position: fixed; left: 0; top: 0; height: 100%; width: 80px; background: white;
+            border-right: 1px solid #f3f4f6; z-index: 50; transition: width 0.3s;
+            display: flex; flex-direction: column; align-items: center; padding: 32px 0; overflow: hidden;
+        }
+        .sidebar:hover { width: 256px; }
+        .sidebar-logo { margin-bottom: 40px; display: flex; align-items: center; gap: 12px; padding: 0 16px; }
+        .sidebar-logo-icon {
+            width: 40px; height: 40px; background: #2563eb; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center; color: white;
+            flex-shrink: 0; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4);
+        }
+        .sidebar-logo-text {
+            font-weight: 800; font-size: 18px; color: #1e3a8a; white-space: nowrap;
+            opacity: 0; transition: opacity 0.3s; text-transform: uppercase;
+        }
+        .sidebar:hover .sidebar-logo-text { opacity: 1; }
+        .sidebar-nav { flex: 1; width: 100%; padding: 0 16px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-nav::-webkit-scrollbar { width: 4px; }
+        .sidebar-nav::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 999px; }
+        .sidebar-item {
+            width: 100%; display: flex; align-items: center; gap: 16px; padding: 12px; border-radius: 12px;
+            color: #6b7280; background: none; border: none; cursor: pointer; transition: all 0.2s; font-family: inherit;
+        }
+        .sidebar-item:hover { background: #2563eb; color: #fff; }
+        .sidebar-item i { width: 24px; font-size: 18px; flex-shrink: 0; }
+        .sidebar-item span { white-space: nowrap; font-weight: 600; opacity: 0; transition: opacity 0.3s; }
+        .sidebar:hover .sidebar-item span { opacity: 1; }
+        .sidebar-footer { width: 100%; padding: 16px; border-top: 1px solid #f3f4f6; display: flex; flex-direction: column; gap: 8px; }
+
+        main { flex: 1; margin-left: 80px; transition: margin-left 0.3s; }
+
+        #toast-container {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999;
+            display: flex; flex-direction: column; gap: 12px; pointer-events: none; align-items: center;
+        }
+        .toast {
+            display: flex; align-items: flex-start; gap: 14px; background: #fff; border-radius: 20px;
+            padding: 18px 22px; box-shadow: 0 20px 60px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.10);
+            min-width: 360px; max-width: 460px; pointer-events: auto; transform: scale(0.85); opacity: 0;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+            border-left: 4px solid transparent; position: relative; overflow: hidden;
+        }
+        .toast.show { transform: scale(1); opacity: 1; }
+        .toast.hide { transform: scale(0.85); opacity: 0; }
+        .toast.toast-success { border-left-color: #10b981; }
+        .toast.toast-error { border-left-color: #ef4444; }
+        .toast.toast-info { border-left-color: #2563eb; }
+        .toast-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 17px; }
+        .toast-success .toast-icon { background: #d1fae5; color: #059669; }
+        .toast-error .toast-icon { background: #fee2e2; color: #dc2626; }
+        .toast-info .toast-icon { background: #dbeafe; color: #2563eb; }
+        .toast-body { flex: 1; }
+        .toast-title { font-weight: 800; font-size: 14px; color: #111827; margin-bottom: 2px; }
+        .toast-msg { font-size: 12px; color: #6b7280; font-weight: 500; line-height: 1.5; }
+        .toast-close { background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 14px; padding: 2px; flex-shrink: 0; transition: color 0.2s; }
+        .toast-close:hover { color: #374151; }
+        .toast-progress { position: absolute; bottom: 0; left: 0; height: 3px; border-radius: 0 0 0 20px; transition: width linear; }
+        .toast-success .toast-progress { background: #10b981; }
+        .toast-error .toast-progress { background: #ef4444; }
+        .toast-info .toast-progress { background: #2563eb; }
+
+        .stat-card {
+            background: white; border-radius: 24px; padding: 28px; border: 1px solid #f3f4f6;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: all 0.3s ease;
+        }
+        .stat-icon { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 16px; }
+    </style>
+</head>
+
+<body>
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <div class="sidebar-logo-icon"><i class="fas fa-shield-halved"></i></div>
+            <span class="sidebar-logo-text">Admin Région</span>
+        </div>
+        <nav class="sidebar-nav">
+            <button onclick="switchSection('demandes', this)" class="sidebar-item active">
+                <i class="fas fa-user-check"></i>
+                <span>Demandes Propriétaire</span>
+            </button>
+            <button onclick="switchSection('notifications', this)" class="sidebar-item">
+                <i class="fas fa-bell"></i>
+                <span>Notifications</span>
+            </button>
+        </nav>
+        <div class="sidebar-footer">
+            <button onclick="handleLogout()" class="sidebar-item" style="color: #ef4444;">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Quitter</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main>
+        <header class="glass-effect sticky top-0 z-40 px-8 h-20 flex justify-between items-center border-b border-gray-100" style="display:flex;">
+            <div>
+                <h2 style="font-size:13px; font-weight:800; color:#2563eb; text-transform:uppercase; letter-spacing:0.1em;">Espace Administration</h2>
+                <p id="welcomeName" style="color:#6b7280; font-size:12px;">Chargement...</p>
+            </div>
+            <div style="display:flex; align-items:center; gap:16px;">
+                <button onclick="switchSection('notifications', null)" class="relative"
+                    style="background:#f3f4f6; border:none; width:42px; height:42px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                    <i class="fas fa-bell text-gray-500"></i>
+                    <span id="notifBadge" class="hidden"
+                        style="position:absolute; top:-4px; right:-4px; background:#ef4444; color:#fff; font-size:10px; font-weight:800; min-width:18px; height:18px; border-radius:999px; display:flex; align-items:center; justify-content:center; padding:0 4px;">0</span>
+                </button>
+                <div id="regionBadge" style="background:#eff6ff; color:#2563eb; font-weight:700; font-size:12px; padding:8px 16px; border-radius:999px;"></div>
+            </div>
+        </header>
+
+        <div class="p-8" style="padding:32px;">
+            <!-- DEMANDES -->
+            <section id="section-demandes" class="section-fade active">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:16px;">
+                    <h1 style="font-size:28px; font-weight:800; color:#111827;">Demandes de passage au statut Propriétaire</h1>
+                </div>
+
+                <div style="display:flex; gap:10px; margin-bottom:24px; flex-wrap:wrap;">
+                    <button class="filter-btn active" data-statut="En attente" onclick="filterDemandes('En attente', this)"
+                        style="background:#fff; border:1px solid #e5e7eb; color:#374151; font-weight:700; font-size:13px; padding:10px 18px; border-radius:12px; cursor:pointer;">En attente</button>
+                    <button class="filter-btn" data-statut="Validée" onclick="filterDemandes('Validée', this)"
+                        style="background:#fff; border:1px solid #e5e7eb; color:#374151; font-weight:700; font-size:13px; padding:10px 18px; border-radius:12px; cursor:pointer;">Validées</button>
+                    <button class="filter-btn" data-statut="Refusée" onclick="filterDemandes('Refusée', this)"
+                        style="background:#fff; border:1px solid #e5e7eb; color:#374151; font-weight:700; font-size:13px; padding:10px 18px; border-radius:12px; cursor:pointer;">Refusées</button>
+                    <button class="filter-btn" data-statut="" onclick="filterDemandes('', this)"
+                        style="background:#fff; border:1px solid #e5e7eb; color:#374151; font-weight:700; font-size:13px; padding:10px 18px; border-radius:12px; cursor:pointer;">Toutes</button>
+                </div>
+
+                <div id="demandesGrid"></div>
+            </section>
+
+            <!-- NOTIFICATIONS -->
+            <section id="section-notifications" class="section-fade">
+                <h1 style="font-size:28px; font-weight:800; color:#111827; margin-bottom:24px;">Notifications</h1>
+                <div id="notificationsGrid" style="display:flex; flex-direction:column; gap:12px;"></div>
+            </section>
+        </div>
+    </main>
+
+    <!-- CONFIRM MODAL -->
+    <div id="confirmModal" class="fixed inset-0 z-[110] modal-hidden items-center justify-center p-4"
+        style="background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl p-8 text-center">
+            <div id="confirmModalIcon"
+                style="width:64px; height:64px; border-radius:50%; background:#fee2e2; color:#ef4444; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:24px;">
+                <i class="fas fa-question"></i>
+            </div>
+            <h3 id="confirmModalTitle" class="text-xl font-extrabold text-gray-900 mb-2">Confirmer</h3>
+            <p id="confirmModalMessage" class="text-gray-500 text-sm mb-6">Êtes-vous sûr ?</p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <button onclick="closeConfirmModal()" style="background:#f3f4f6; color:#374151; padding:12px; border-radius:12px; font-weight:700; border:none; cursor:pointer;">Annuler</button>
+                <button id="confirmModalOkBtn" style="background:#dc2626; color:#fff; padding:12px; border-radius:12px; font-weight:700; border:none; cursor:pointer;">Confirmer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div id="toast-container"></div>
+
+    <script>
+        // ═══════════════════════════════════════════════════════════════════
+        // CONFIG API
+        // ═══════════════════════════════════════════════════════════════════
+        const API = 'http://localhost:5257/api';
+
+        let demandes = [];
+        let currentFilter = 'En attente';
+
+        async function apiFetch(url, options = {}) {
+            const token = localStorage.getItem('jwtToken');
+            try {
+                const res = await fetch(url, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                    },
+                    ...options
+                });
+                return await res.json();
+            } catch (err) {
+                console.error('API error:', url, err);
+                return { success: false, message: 'Erreur réseau' };
+            }
+        }
+
+        function escapeHtml(str = '') {
+            return String(str).replace(/[&<>"']/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // CHARGEMENT & RENDU DES DEMANDES
+        // ═══════════════════════════════════════════════════════════════════
+        async function loadDemandes(statut) {
+            const grid = document.getElementById('demandesGrid');
+            grid.innerHTML = `<div style="text-align:center; padding:60px 0; color:#9ca3af;"><i class="fas fa-spinner fa-spin" style="font-size:32px;"></i></div>`;
+
+            const query = statut ? `?statut=${encodeURIComponent(statut)}` : '';
+            const res = await apiFetch(`${API}/demandesproprietaire${query}`);
+
+            if (!res.success) {
+                grid.innerHTML = `<div style="text-align:center; padding:60px 0; color:#ef4444;">${escapeHtml(res.message || 'Impossible de charger les demandes.')}</div>`;
+                return;
+            }
+
+            demandes = res.data;
+            renderDemandes();
+        }
+
+        function renderDemandes() {
+            const grid = document.getElementById('demandesGrid');
+
+            if (!demandes.length) {
+                grid.innerHTML = `<div style="text-align:center; padding:60px 0; background:#fff; border-radius:24px; border:2px dashed #e5e7eb;">
+                    <i class="fas fa-inbox" style="font-size:36px; color:#d1d5db; display:block; margin-bottom:12px;"></i>
+                    <p style="color:#9ca3af; font-weight:600;">Aucune demande pour ce filtre.</p>
+                </div>`;
+                return;
+            }
+
+            const statutColors = {
+                'En attente': { bg: '#fef3c7', text: '#92400e' },
+                'Validée': { bg: '#d1fae5', text: '#065f46' },
+                'Refusée': { bg: '#fee2e2', text: '#991b1b' },
+            };
+
+            grid.innerHTML = demandes.map(d => {
+                const c = statutColors[d.statut] || statutColors['En attente'];
+                const date = new Date(d.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+                return `
+                <div style="background:#fff; border-radius:20px; padding:24px; margin-bottom:16px; border:1px solid #f3f4f6;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+                        <div style="flex:1; min-width:240px;">
+                            <h4 style="font-weight:800; color:#111827; font-size:16px;">${escapeHtml(d.prenom || '')} ${escapeHtml(d.nom || '')}</h4>
+                            <p style="font-size:13px; color:#6b7280; margin-top:6px;"><i class="fas fa-envelope mr-2" style="color:#2563eb;"></i>${escapeHtml(d.email || '')}</p>
+                            <p style="font-size:13px; color:#6b7280; margin-top:4px;"><i class="fas fa-map-marker-alt mr-2" style="color:#2563eb;"></i>Région : <strong>${escapeHtml(d.region)}</strong></p>
+                            <p style="font-size:12px; color:#9ca3af; margin-top:4px;"><i class="fas fa-calendar-day mr-2"></i>Soumise le ${date}</p>
+                            ${d.message ? `<p style="font-size:12px; color:#9ca3af; margin-top:8px; font-style:italic;">"${escapeHtml(d.message)}"</p>` : ''}
+                        </div>
+                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:10px;">
+                            <span style="font-size:11px; font-weight:800; padding:6px 14px; border-radius:999px; background:${c.bg}; color:${c.text};">${d.statut}</span>
+                            ${d.statut === 'En attente' ? `
+                                <div style="display:flex; gap:8px;">
+                                    <button onclick="confirmTraiter(${d.id}, 'valider')" style="background:#d1fae5; color:#059669; border:none; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer;">Valider</button>
+                                    <button onclick="confirmTraiter(${d.id}, 'rejeter')" style="background:#fee2e2; color:#dc2626; border:none; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer;">Refuser</button>
+                                </div>` : ''}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function filterDemandes(statut, btn) {
+            currentFilter = statut;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            loadDemandes(statut);
+        }
+
+        function confirmTraiter(id, action) {
+            const isValider = action === 'valider';
+            openConfirmModal({
+                title: isValider ? 'Valider cette demande ?' : 'Refuser cette demande ?',
+                message: isValider
+                    ? 'Le compte passera au statut Propriétaire et pourra publier des annonces.'
+                    : 'Le compte restera Client. Il pourra soumettre une nouvelle demande plus tard.',
+                icon: isValider ? 'fa-circle-check' : 'fa-circle-xmark',
+                confirmLabel: isValider ? 'Valider' : 'Refuser',
+                onConfirm: async () => {
+                    const result = await apiFetch(`${API}/demandesproprietaire/${id}/${action}`, { method: 'PUT' });
+                    if (result.success) {
+                        showToast(isValider ? 'success' : 'info', isValider ? 'Demande validée' : 'Demande refusée', result.message || '');
+                        await loadDemandes(currentFilter);
+                    } else {
+                        showToast('error', 'Erreur', result.message || 'Une erreur est survenue.');
+                    }
+                }
+            });
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // MODAL DE CONFIRMATION GÉNÉRIQUE
+        // ═══════════════════════════════════════════════════════════════════
+        function openConfirmModal({ title, message, icon = 'fa-question', confirmLabel = 'Confirmer', onConfirm }) {
+            document.getElementById('confirmModalTitle').textContent = title;
+            document.getElementById('confirmModalMessage').textContent = message;
+            document.getElementById('confirmModalIcon').innerHTML = `<i class="fas ${icon}"></i>`;
+
+            const okBtn = document.getElementById('confirmModalOkBtn');
+            okBtn.textContent = confirmLabel;
+            okBtn.onclick = () => { closeConfirmModal(); onConfirm(); };
+
+            const modal = document.getElementById('confirmModal');
+            modal.classList.remove('modal-hidden');
+            modal.classList.add('modal-visible');
+        }
+
+        function closeConfirmModal() {
+            const modal = document.getElementById('confirmModal');
+            modal.classList.add('modal-hidden');
+            modal.classList.remove('modal-visible');
+        }
+
+        function handleLogout() {
+            openConfirmModal({
+                title: 'Déconnexion',
+                message: 'Êtes-vous sûr de vouloir vous déconnecter ?',
+                icon: 'fa-sign-out-alt',
+                confirmLabel: 'Déconnexion',
+                onConfirm: () => {
+                    ['isLoggedIn', 'userPrenom', 'userNom', 'userEmail', 'userId', 'userRole', 'userPhoto', 'jwtToken'].forEach(k => localStorage.removeItem(k));
+                    showToast('success', 'À bientôt !', 'Vous avez été déconnecté avec succès.', 1800);
+                    setTimeout(() => { window.location.href = './login.html'; }, 1200);
+                }
+            });
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // TOAST
+        // ═══════════════════════════════════════════════════════════════════
+        function showToast(type = 'success', title = '', msg = '', duration = 5000) {
+            const icons = { success: 'fa-circle-check', error: 'fa-circle-xmark', info: 'fa-circle-info' };
+            const container = document.getElementById('toast-container');
+            const id = 'toast-' + Date.now();
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.id = id;
+            toast.innerHTML = `
+                <div class="toast-icon"><i class="fa-solid ${icons[type]}"></i></div>
+                <div class="toast-body">
+                    <p class="toast-title">${title}</p>
+                    ${msg ? `<p class="toast-msg">${msg}</p>` : ''}
+                </div>
+                <button class="toast-close" onclick="dismissToast('${id}')"><i class="fas fa-times"></i></button>
+                <div class="toast-progress" id="progress-${id}" style="width:100%;"></div>
+            `;
+            container.appendChild(toast);
+            requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('show')));
+            const prog = document.getElementById(`progress-${id}`);
+            if (prog) {
+                prog.style.transition = `width ${duration}ms linear`;
+                requestAnimationFrame(() => requestAnimationFrame(() => { prog.style.width = '0%'; }));
+            }
+            const timer = setTimeout(() => dismissToast(id), duration);
+            toast._timer = timer;
+        }
+
+        function dismissToast(id) {
+            const toast = document.getElementById(id);
+            if (!toast) return;
+            clearTimeout(toast._timer);
+            toast.classList.remove('show');
+            toast.classList.add('hide');
+            setTimeout(() => toast.remove(), 500);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // NAVIGATION
+        // ═══════════════════════════════════════════════════════════════════
+        function switchSection(id, btn) {
+            document.querySelectorAll('.section-fade').forEach(s => s.classList.remove('active'));
+            const section = document.getElementById(`section-${id}`);
+            if (section) section.classList.add('active');
+            document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            if (id === 'notifications') renderNotifications();
+            window.scrollTo(0, 0);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // NOTIFICATIONS
+        // ═══════════════════════════════════════════════════════════════════
+        const notifIcons = {
+            NouvelleReservation: { icon: 'fa-calendar-plus', bg: '#dbeafe', color: '#2563eb' },
+            ReservationConfirmee: { icon: 'fa-circle-check', bg: '#d1fae5', color: '#059669' },
+            ReservationRefusee: { icon: 'fa-circle-xmark', bg: '#fee2e2', color: '#dc2626' },
+            NouvelleDemandeProprietaire: { icon: 'fa-user-check', bg: '#e0e7ff', color: '#4f46e5' },
+            DemandeValidee: { icon: 'fa-circle-check', bg: '#d1fae5', color: '#059669' },
+            DemandeRefusee: { icon: 'fa-circle-xmark', bg: '#fee2e2', color: '#dc2626' },
+            NouvelleRecommandation: { icon: 'fa-share-nodes', bg: '#e0e7ff', color: '#4f46e5' },
+        };
+
+        async function refreshNotifBadge() {
+            const res = await apiFetch(`${API}/notifications`);
+            if (!res.success) return;
+            const badge = document.getElementById('notifBadge');
+            if (res.data.nonLues > 0) {
+                badge.textContent = res.data.nonLues > 99 ? '99+' : res.data.nonLues;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        async function renderNotifications() {
+            const grid = document.getElementById('notificationsGrid');
+            grid.innerHTML = `<div style="text-align:center; padding:40px 0;"><i class="fas fa-spinner fa-spin" style="color:#2563eb; font-size:24px;"></i></div>`;
+
+            const res = await apiFetch(`${API}/notifications`);
+            if (!res.success) {
+                grid.innerHTML = `<p style="text-align:center; color:#ef4444; padding:40px 0;">Impossible de charger vos notifications.</p>`;
+                return;
+            }
+
+            const notifications = res.data.notifications;
+
+            if (!notifications.length) {
+                grid.innerHTML = `<div style="text-align:center; padding:60px 0; background:#fff; border-radius:24px; border:2px dashed #e5e7eb;">
+                    <i class="fas fa-bell-slash" style="font-size:36px; color:#d1d5db; display:block; margin-bottom:12px;"></i>
+                    <p style="color:#9ca3af; font-weight:600;">Aucune notification pour l'instant.</p>
+                </div>`;
+                return;
+            }
+
+            grid.innerHTML = notifications.map(n => {
+                const c = notifIcons[n.type] || { icon: 'fa-bell', bg: '#f3f4f6', color: '#6b7280' };
+                const d = new Date(n.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                return `
+                <div onclick="${n.cibleSection ? `switchSection('${n.cibleSection}', null)` : ''}" style="background:#fff; border-radius:16px; padding:20px; border:1px solid #f3f4f6; display:flex; gap:16px; ${n.cibleSection ? 'cursor:pointer;' : ''}">
+                    <div style="width:42px; height:42px; border-radius:12px; background:${c.bg}; color:${c.color}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <i class="fas ${c.icon}"></i>
+                    </div>
+                    <div style="flex:1;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            ${!n.estLue ? '<span style="width:8px; height:8px; border-radius:50%; background:#2563eb; display:inline-block;"></span>' : ''}
+                            <h4 style="font-weight:700; color:#111827;">${escapeHtml(n.titre)}</h4>
+                        </div>
+                        <p style="font-size:14px; color:#6b7280; margin-top:4px;">${escapeHtml(n.message)}</p>
+                        <p style="font-size:12px; color:#d1d5db; margin-top:8px;">${d}</p>
+                    </div>
+                    <button onclick="event.stopPropagation(); dismissNotification(${n.id})" style="background:none; border:none; cursor:pointer; color:#d1d5db;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>`;
+            }).join('');
+
+            notifications.filter(n => !n.estLue).forEach(n => apiFetch(`${API}/notifications/${n.id}/lue`, { method: 'PUT' }));
+            setTimeout(refreshNotifBadge, 500);
+        }
+
+        async function dismissNotification(id) {
+            const result = await apiFetch(`${API}/notifications/${id}`, { method: 'DELETE' });
+            if (result.success) {
+                renderNotifications();
+            } else {
+                showToast('error', 'Erreur', result.message || 'Une erreur est survenue.');
+            }
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') { closeConfirmModal(); }
+        });
+
+        // ═══════════════════════════════════════════════════════════════════
+        // INIT
+        // ═══════════════════════════════════════════════════════════════════
+        document.addEventListener('DOMContentLoaded', () => {
+            const prenom = localStorage.getItem('userPrenom') || 'Admin';
+            const role = localStorage.getItem('userRole') || '';
+            document.getElementById('welcomeName').textContent = `Bienvenue, ${prenom}`;
+            document.getElementById('regionBadge').textContent = role === 'AdminRegion' ? 'Admin Région' : role;
+            loadDemandes(currentFilter);
+            refreshNotifBadge();
+            setInterval(refreshNotifBadge, 30000);
+        });
+    </script>
+    <script type="module" src="/src/js/main.js"></script>
+</body>
+
+</html>

@@ -465,14 +465,10 @@
 
                         if (pendingAction) {
                             localStorage.removeItem('redirectAfterLogin');
-
-                            // Comme on est dans login.html (dans le dossier pages), 
-                            // on appelle directement le fichier qui est à côté de nous.
-                            // Si c'est 'accueil_user.html', il ira au bon endroit.
                             window.location.href = pendingAction;
 
                         } else {
-                            // Redirection classique si aucune action n'était en attente
+                      
                             redirectUserByRole(result.user.role);
                         }
                     }, 2500);
@@ -492,8 +488,15 @@
          */
         function redirectUserByRole(role) {
             switch (role) {
-                // Propriétaire, UserIndep, AdminRegion, AdminPays, DirecteurProjet :
-                // pas encore d'espace dédié, on retombe sur l'espace Client en attendant.
+                case 'Proprietaire':
+                case 'UserIndep':
+                    window.location.href = './espace_proprietaire.html';
+                    break;
+                case 'AdminRegion':
+                case 'AdminPays':
+                case 'DirecteurProjet':
+                    window.location.href = './espace_admin_region.html';
+                    break;
                 case 'Client':
                 default:
                     window.location.href = './accueil_user.html';

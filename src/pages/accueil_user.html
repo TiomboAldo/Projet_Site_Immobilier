@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Espace Premium - Said Africa</title>
+    <title>Espace Client - Said Africa</title>
     <link rel="icon" type="image/png" href="/src/assets/images/logo.jpeg">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -260,7 +260,12 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
+
+        .sidebar-nav::-webkit-scrollbar { width: 4px; }
+        .sidebar-nav::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 999px; }
 
         .sidebar-item {
             width: 100%;
@@ -525,8 +530,24 @@
                 <i class="fas fa-heart"></i>
                 <span>Favoris</span>
             </button>
+            <button onclick="switchSection('recommandations', this)" class="sidebar-item">
+                <i class="fas fa-share-nodes"></i>
+                <span>Recommandations</span>
+            </button>
+            <button onclick="switchSection('notifications', this)" class="sidebar-item">
+                <i class="fas fa-bell"></i>
+                <span>Notifications</span>
+            </button>
+            <button onclick="switchSection('devenir-proprietaire', this)" class="sidebar-item">
+                <i class="fas fa-key"></i>
+                <span>Devenir Propriétaire</span>
+            </button>
         </nav>
         <div class="sidebar-footer">
+            <button id="switchToProprietaireBtn" onclick="switchToProprietaire()" class="sidebar-item" style="display:none;">
+                <i class="fas fa-right-left"></i>
+                <span>Espace Propriétaire</span>
+            </button>
             <button onclick="switchSection('settings', this)" class="sidebar-item">
                 <i class="fas fa-user-cog"></i>
                 <span>Paramètres</span>
@@ -553,6 +574,12 @@
                         style="outline:none;">
                     <i class="fas fa-search absolute right-4 top-3 text-gray-400 text-xs"></i>
                 </div>
+                <button onclick="switchSection('notifications', null)" class="relative"
+                    style="background:#f3f4f6; border:none; width:42px; height:42px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                    <i class="fas fa-bell text-gray-500"></i>
+                    <span id="notifBadge" class="hidden"
+                        style="position:absolute; top:-4px; right:-4px; background:#ef4444; color:#fff; font-size:10px; font-weight:800; min-width:18px; height:18px; border-radius:999px; display:flex; align-items:center; justify-content:center; padding:0 4px;">0</span>
+                </button>
                 <div class="flex items-center gap-4 border-l pl-6 relative">
                     <div class="text-right hidden sm:block">
                         <p id="userNameDisplay" class="font-bold text-gray-800 text-sm">Chargement...</p>
@@ -655,6 +682,28 @@
             <section id="section-favoris" class="section-fade">
                 <h2 class="text-3xl font-extrabold text-gray-900 mb-8">Mes Favoris ❤️</h2>
                 <div id="favoritesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </section>
+
+            <!-- RECOMMANDATIONS REÇUES -->
+            <section id="section-recommandations" class="section-fade">
+                <h2 class="text-3xl font-extrabold text-gray-900 mb-2">Recommandations reçues</h2>
+                <p class="text-gray-400 text-sm mb-8">Des biens que d'autres utilisateurs vous ont recommandés.</p>
+                <div id="recommandationsGrid" class="space-y-4"></div>
+            </section>
+
+            <!-- NOTIFICATIONS -->
+            <section id="section-notifications" class="section-fade">
+                <h2 class="text-3xl font-extrabold text-gray-900 mb-2">Notifications</h2>
+                <p class="text-gray-400 text-sm mb-8">Toutes les réponses et nouvelles requêtes qui vous concernent.</p>
+                <div id="notificationsGrid" class="space-y-3"></div>
+            </section>
+
+            <!-- DEVENIR PROPRIÉTAIRE -->
+            <section id="section-devenir-proprietaire" class="section-fade">
+                <h2 class="text-3xl font-extrabold text-gray-900 mb-2">Devenir Propriétaire</h2>
+                <p class="text-gray-400 text-sm mb-8">Proposez vos propres biens à la location ou à la vente sur Said Africa.</p>
+
+                <div id="demandeStatusBox" class="max-w-2xl"></div>
             </section>
 
             <!-- DASHBOARD -->
@@ -1176,6 +1225,143 @@
         }
 
         // ═══════════════════════════════════════════════════════════════════════
+        // RECOMMANDATIONS REÇUES
+        // ═══════════════════════════════════════════════════════════════════════
+        async function renderRecommandations() {
+            const grid = document.getElementById('recommandationsGrid');
+            grid.innerHTML = `<div class="text-center py-10"><i class="fas fa-spinner fa-spin text-blue-600 text-2xl"></i></div>`;
+
+            const res = await apiFetch(`${API}/recommandations/recues`);
+            if (!res.success) {
+                grid.innerHTML = `<p class="text-center text-red-400 py-10">Impossible de charger vos recommandations.</p>`;
+                return;
+            }
+
+            const recommandations = res.data;
+
+            if (!recommandations.length) {
+                grid.innerHTML = `<div class="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-100">
+                    <i class="fas fa-share-nodes text-4xl text-gray-200 mb-4 block"></i>
+                    <p class="text-gray-400 font-semibold">Aucune recommandation reçue pour l'instant.</p>
+                </div>`;
+                return;
+            }
+
+            grid.innerHTML = recommandations.map(r => {
+                const d = new Date(r.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+                return `
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex gap-4">
+                    <img src="${r.bienImageUrl || ''}" class="w-24 h-24 object-cover rounded-xl flex-shrink-0">
+                    <div class="flex-1">
+                        <h4 class="font-extrabold text-gray-800 text-lg">${r.bienTitre || 'Bien #' + r.bienId}</h4>
+                        <p class="text-sm text-gray-500 mt-1">
+                            <i class="fas fa-map-marker-alt mr-2 text-blue-400"></i>${r.bienLocalisation || ''} — <span class="font-semibold text-blue-600">${r.bienPrix || ''}</span>
+                        </p>
+                        <p class="text-sm text-gray-500 mt-2">
+                            <i class="fas fa-share-nodes mr-2 text-indigo-500"></i>Recommandé par <strong>${r.expediteurPrenom || ''} ${r.expediteurNom || ''}</strong> · ${d}
+                        </p>
+                        ${r.message ? `<p class="text-xs text-gray-400 mt-2 italic">"${r.message}"</p>` : ''}
+                        <div class="flex gap-3 mt-3">
+                            <button onclick="openModal(${r.bienId})" class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg font-semibold" style="border:none;cursor:pointer;">Voir le bien</button>
+                            <button onclick="dismissRecommandation(${r.id})" class="text-xs text-red-400 hover:text-red-600 font-semibold transition" style="background:none;border:none;cursor:pointer;">Supprimer</button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            recommandations.filter(r => !r.estLue).forEach(r => apiFetch(`${API}/recommandations/${r.id}/lue`, { method: 'PUT' }));
+        }
+
+        async function dismissRecommandation(id) {
+            const result = await apiFetch(`${API}/recommandations/${id}`, { method: 'DELETE' });
+            if (result.success) {
+                renderRecommandations();
+            } else {
+                showToast('error', 'Erreur', result.message || 'Une erreur est survenue.');
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // NOTIFICATIONS
+        // ═══════════════════════════════════════════════════════════════════════
+        const notifIcons = {
+            NouvelleReservation: { icon: 'fa-calendar-plus', bg: '#dbeafe', color: '#2563eb' },
+            ReservationConfirmee: { icon: 'fa-circle-check', bg: '#d1fae5', color: '#059669' },
+            ReservationRefusee: { icon: 'fa-circle-xmark', bg: '#fee2e2', color: '#dc2626' },
+            NouvelleDemandeProprietaire: { icon: 'fa-user-check', bg: '#e0e7ff', color: '#4f46e5' },
+            DemandeValidee: { icon: 'fa-circle-check', bg: '#d1fae5', color: '#059669' },
+            DemandeRefusee: { icon: 'fa-circle-xmark', bg: '#fee2e2', color: '#dc2626' },
+            NouvelleRecommandation: { icon: 'fa-share-nodes', bg: '#e0e7ff', color: '#4f46e5' },
+        };
+
+        async function refreshNotifBadge() {
+            const res = await apiFetch(`${API}/notifications`);
+            if (!res.success) return;
+            const badge = document.getElementById('notifBadge');
+            if (res.data.nonLues > 0) {
+                badge.textContent = res.data.nonLues > 99 ? '99+' : res.data.nonLues;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        async function renderNotifications() {
+            const grid = document.getElementById('notificationsGrid');
+            grid.innerHTML = `<div class="text-center py-10"><i class="fas fa-spinner fa-spin text-blue-600 text-2xl"></i></div>`;
+
+            const res = await apiFetch(`${API}/notifications`);
+            if (!res.success) {
+                grid.innerHTML = `<p class="text-center text-red-400 py-10">Impossible de charger vos notifications.</p>`;
+                return;
+            }
+
+            const notifications = res.data.notifications;
+
+            if (!notifications.length) {
+                grid.innerHTML = `<div class="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-100">
+                    <i class="fas fa-bell-slash text-4xl text-gray-200 mb-4 block"></i>
+                    <p class="text-gray-400 font-semibold">Aucune notification pour l'instant.</p>
+                </div>`;
+                return;
+            }
+
+            grid.innerHTML = notifications.map(n => {
+                const c = notifIcons[n.type] || { icon: 'fa-bell', bg: '#f3f4f6', color: '#6b7280' };
+                const d = new Date(n.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                return `
+                <div onclick="${n.cibleSection ? `switchSection('${n.cibleSection}', null)` : ''}" class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex gap-4 ${n.cibleSection ? 'cursor-pointer hover:shadow-md' : ''}" style="transition:box-shadow 0.2s;">
+                    <div style="width:42px; height:42px; border-radius:12px; background:${c.bg}; color:${c.color}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <i class="fas ${c.icon}"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2">
+                            ${!n.estLue ? '<span style="width:8px; height:8px; border-radius:50%; background:#2563eb; display:inline-block;"></span>' : ''}
+                            <h4 class="font-bold text-gray-800">${n.titre}</h4>
+                        </div>
+                        <p class="text-sm text-gray-500 mt-1">${n.message}</p>
+                        <p class="text-xs text-gray-300 mt-2">${d}</p>
+                    </div>
+                    <button onclick="event.stopPropagation(); dismissNotification(${n.id})" class="text-gray-300 hover:text-red-500 transition" style="background:none; border:none; cursor:pointer;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>`;
+            }).join('');
+
+            notifications.filter(n => !n.estLue).forEach(n => apiFetch(`${API}/notifications/${n.id}/lue`, { method: 'PUT' }));
+            setTimeout(refreshNotifBadge, 500);
+        }
+
+        async function dismissNotification(id) {
+            const result = await apiFetch(`${API}/notifications/${id}`, { method: 'DELETE' });
+            if (result.success) {
+                renderNotifications();
+            } else {
+                showToast('error', 'Erreur', result.message || 'Une erreur est survenue.');
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
         // MODAL BIEN
         // ═══════════════════════════════════════════════════════════════════════
         function openModal(id) {
@@ -1422,6 +1608,89 @@
         }
 
         // ═══════════════════════════════════════════════════════════════════════
+        // DEVENIR PROPRIÉTAIRE — demande de passage de statut
+        // ═══════════════════════════════════════════════════════════════════════
+        function demandeFormHtml() {
+            return `
+                <div class="bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm">
+                    <form id="demandeProprietaireForm">
+                        <div class="form-group">
+                            <label>Région où vous proposez vos biens</label>
+                            <input type="text" id="demandeRegion" placeholder="Ex: Littoral, Centre, Ouest..." required>
+                        </div>
+                        <div class="form-group">
+                            <label>Message (optionnel)</label>
+                            <textarea id="demandeMessage" placeholder="Parlez-nous de votre projet..."></textarea>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-bold transition" style="border:none; cursor:pointer;">
+                            Envoyer ma demande
+                        </button>
+                    </form>
+                </div>`;
+        }
+
+        function demandeStatusBadgeHtml(demande) {
+            const styles = {
+                'En attente': { bg: '#fef3c7', color: '#d97706', icon: 'fa-hourglass-half', text: 'Votre demande est en attente de validation par l\'administration régionale.' },
+                'Validée':    { bg: '#d1fae5', color: '#059669', icon: 'fa-circle-check',    text: 'Votre demande a été validée ! Vous êtes maintenant Propriétaire.' },
+                'Refusée':    { bg: '#fee2e2', color: '#dc2626', icon: 'fa-circle-xmark',    text: 'Votre demande a été refusée. Vous pouvez en soumettre une nouvelle.' },
+            };
+            const s = styles[demande.statut] || styles['En attente'];
+            return `
+                <div class="bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm text-center">
+                    <div style="width:64px; height:64px; border-radius:50%; background:${s.bg}; color:${s.color}; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; font-size:24px;">
+                        <i class="fas ${s.icon}"></i>
+                    </div>
+                    <p class="font-bold text-gray-800 mb-2">${demande.statut}</p>
+                    <p class="text-gray-500 text-sm mb-2">${s.text}</p>
+                    <p class="text-gray-300 text-xs">Région demandée : ${demande.region}</p>
+                </div>`;
+        }
+
+        async function renderDemandeProprietaire() {
+            const box = document.getElementById('demandeStatusBox');
+            box.innerHTML = `<div class="text-center py-10"><i class="fas fa-spinner fa-spin text-blue-600 text-2xl"></i></div>`;
+
+            const res = await apiFetch(`${API}/demandesproprietaire/mine`);
+            const demandes = res.success ? res.data : [];
+            const derniere = demandes[0]; // déjà triées par date décroissante côté API
+
+            if (derniere && derniere.statut !== 'Refusée') {
+                box.innerHTML = demandeStatusBadgeHtml(derniere);
+                return;
+            }
+
+            box.innerHTML = (derniere ? demandeStatusBadgeHtml(derniere) : '') + demandeFormHtml();
+
+            const form = document.getElementById('demandeProprietaireForm');
+            form.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const btn = this.querySelector('button[type="submit"]');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = 'Envoi en cours...';
+                btn.disabled = true;
+
+                const result = await apiFetch(`${API}/demandesproprietaire`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        Region: document.getElementById('demandeRegion').value,
+                        Message: document.getElementById('demandeMessage').value,
+                    })
+                });
+
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+
+                if (result.success) {
+                    showToast('success', 'Demande envoyée !', result.message);
+                    renderDemandeProprietaire();
+                } else {
+                    showToast('error', 'Erreur', result.message || 'Une erreur est survenue.');
+                }
+            });
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
         // NAVIGATION
         // ═══════════════════════════════════════════════════════════════════════
         function switchSection(id, btn) {
@@ -1435,6 +1704,9 @@
             if (id === 'accueil') filterProperties(currentFilter, null);
             if (id === 'reservations') renderReservations();
             if (id === 'dashboard') renderDashboard();
+            if (id === 'devenir-proprietaire') renderDemandeProprietaire();
+            if (id === 'recommandations') renderRecommandations();
+            if (id === 'notifications') renderNotifications();
 
             document.getElementById('userDropdown').classList.add('hidden');
             loadUserProfile();
@@ -1461,6 +1733,23 @@
             if (document.getElementById('editPrenom')) document.getElementById('editPrenom').value = prenom;
             if (document.getElementById('editNom')) document.getElementById('editNom').value = nom;
             if (document.getElementById('editEmail')) document.getElementById('editEmail').value = email;
+
+            const role = localStorage.getItem('userRole');
+            const switchBtn = document.getElementById('switchToProprietaireBtn');
+            if (switchBtn) switchBtn.style.display = (role === 'Proprietaire' || role === 'UserIndep') ? 'flex' : 'none';
+        }
+
+        function switchToProprietaire() {
+            openConfirmModal({
+                title: 'Basculer vers l\'espace Propriétaire',
+                message: 'Voulez-vous vraiment passer à votre espace Propriétaire ?',
+                icon: 'fa-right-left',
+                confirmLabel: 'Basculer',
+                onConfirm: () => {
+                    showToast('info', 'Changement d\'espace...', 'Direction votre espace Propriétaire.', 1200);
+                    setTimeout(() => { window.location.href = './espace_proprietaire.html'; }, 900);
+                }
+            });
         }
 
         function saveProfile() {
@@ -1537,6 +1826,8 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadUserProfile();
             loadAllData(); // ← charge tout depuis l'API
+            refreshNotifBadge();
+            setInterval(refreshNotifBadge, 30000);
         });
     </script>
     <script type="module" src="/src/js/main.js"></script>
