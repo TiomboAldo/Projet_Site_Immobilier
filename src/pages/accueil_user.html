@@ -7,6 +7,8 @@
     <title>Espace Client - Said Africa</title>
     <link rel="icon" type="image/png" href="/src/assets/images/logo.jpeg">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
@@ -63,6 +65,13 @@
             background-color: #eff6ff !important;
         }
 
+        .chmb-btn { transition: all 0.15s; }
+        .chmb-btn:hover { border-color: #93c5fd !important; color: #2563eb !important; }
+        #fType:focus, #fStatut:focus, #fPrixMin:focus, #fPrixMax:focus {
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+        }
+
         .modal-hidden {
             display: none !important;
             pointer-events: none;
@@ -98,6 +107,21 @@
         .fav-btn:hover {
             transform: scale(1.15);
         }
+
+        .msg-bubble-client {
+            max-width: 72%; padding: 10px 16px; border-radius: 18px;
+            font-size: 13px; font-weight: 500; line-height: 1.5; word-break: break-word;
+        }
+        .msg-mine-client  { background: #2563eb; color: #fff; border-bottom-right-radius: 4px; align-self: flex-end; }
+        .msg-other-client { background: #f3f4f6; color: #111827; border-bottom-left-radius: 4px; align-self: flex-start; }
+
+        .client-conv-item {
+            padding: 12px 14px; border-radius: 16px; background: #fff;
+            border: 1px solid #f3f4f6; cursor: pointer; display: flex;
+            align-items: center; gap: 10px; transition: all 0.2s;
+        }
+        .client-conv-item:hover { background: #f8fafc; }
+        .client-conv-item.active { background: #eff6ff; border-color: #bfdbfe; }
 
         .fav-btn:active {
             transform: scale(0.85);
@@ -324,6 +348,39 @@
             min-height: 100vh;
         }
 
+        /* ─── Responsive Mobile ──────────────────────────────────────────── */
+        .sidebar-backdrop {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5); z-index: 49;
+            backdrop-filter: blur(2px); transition: opacity 0.3s;
+        }
+        .mobile-menu-btn { display: none; }
+
+        @media (max-width: 767px) {
+            .sidebar {
+                transform: translateX(-100%);
+                width: 256px !important;
+                transition: transform 0.3s ease, width 0s;
+                z-index: 51;
+            }
+            .sidebar:hover { width: 256px !important; }
+            .sidebar.mobile-open { transform: translateX(0); }
+            .sidebar.mobile-open .sidebar-logo-text,
+            .sidebar.mobile-open .sidebar-item span { opacity: 1; }
+            .sidebar-backdrop.visible { display: block; }
+            main { margin-left: 0 !important; }
+            .mobile-menu-btn { display: flex !important; }
+            .hide-mobile { display: none !important; }
+            .show-mobile { display: inline !important; }
+            #filterSection > div:last-child { overflow: hidden; max-height: 0; transition: max-height 0.4s ease; }
+            #filterSection > div:last-child.filters-open { max-height: 600px; }
+            .filters-toggle { display: flex !important; }
+        }
+        @media (min-width: 768px) {
+            .filters-toggle { display: none !important; }
+            #filterSection > div:last-child { max-height: none !important; overflow: visible !important; }
+        }
+
         /* ── TOAST ─────────────────────────────────────────────────────── */
         #toast-container {
             position: fixed;
@@ -507,8 +564,11 @@
 </head>
 
 <body>
+    <!-- Backdrop mobile -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
     <!-- SIDEBAR -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
         <div class="sidebar-logo">
             <div class="sidebar-logo-icon"><i class="fas fa-crown"></i></div>
             <span class="sidebar-logo-text">Said Premium</span>
@@ -530,9 +590,17 @@
                 <i class="fas fa-heart"></i>
                 <span>Favoris</span>
             </button>
+            <button onclick="switchSection('carte', this)" class="sidebar-item">
+                <i class="fas fa-map-location-dot"></i>
+                <span>Carte</span>
+            </button>
             <button onclick="switchSection('recommandations', this)" class="sidebar-item">
                 <i class="fas fa-share-nodes"></i>
                 <span>Recommandations</span>
+            </button>
+            <button onclick="switchSection('messagerie', this)" class="sidebar-item" id="sidebarMessagerieClient">
+                <i class="fas fa-comments"></i>
+                <span>Messagerie</span>
             </button>
             <button onclick="switchSection('notifications', this)" class="sidebar-item">
                 <i class="fas fa-bell"></i>
@@ -562,16 +630,24 @@
     <!-- MAIN -->
     <main>
         <header
-            class="glass-effect sticky top-0 z-40 px-8 h-20 flex justify-between items-center border-b border-gray-100">
-            <div>
-                <h2 class="text-sm font-bold text-blue-600 uppercase tracking-widest">Espace Privilège</h2>
-                <p class="text-gray-500 text-xs">Accès exclusif aux biens de standing</p>
+            class="glass-effect sticky top-0 z-40 px-4 md:px-8 h-16 md:h-20 flex justify-between items-center border-b border-gray-100" style="gap:12px;">
+            <div class="flex items-center gap-3">
+                <!-- Hamburger mobile -->
+                <button class="mobile-menu-btn" onclick="openSidebar()"
+                    style="width:40px;height:40px;background:#f3f4f6;border:none;border-radius:10px;cursor:pointer;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="fas fa-bars text-gray-600"></i>
+                </button>
+                <div>
+                    <h2 class="text-xs md:text-sm font-bold text-blue-600 uppercase tracking-widest hide-mobile">Espace Privilège</h2>
+                    <p class="text-gray-500 text-xs hide-mobile">Accès exclusif aux biens de standing</p>
+                </div>
             </div>
-            <div class="flex items-center gap-6">
+            <div class="flex items-center gap-3 md:gap-6">
                 <div class="relative hidden sm:block">
-                    <input type="text" placeholder="Rechercher une ville..."
+                    <input type="text" id="searchInput" placeholder="Rechercher ville, titre..."
                         class="bg-gray-100 border-none rounded-full px-6 py-2 text-sm w-64 focus:ring-2 focus:ring-blue-500"
-                        style="outline:none;">
+                        style="outline:none;"
+                        oninput="filters.q=this.value.trim();applyFilters()">
                     <i class="fas fa-search absolute right-4 top-3 text-gray-400 text-xs"></i>
                 </div>
                 <button onclick="switchSection('notifications', null)" class="relative"
@@ -646,36 +722,156 @@
                 </div>
 
                 <div class="mb-10" id="filterSection">
+                    <!-- Standing pills -->
                     <h3 class="text-2xl font-bold text-gray-800 mb-6">Parcourir par Standing</h3>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <button onclick="filterProperties('all', this)"
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                        <button onclick="filters.standing='all';applyFilters(this,'standing')"
                             class="standing-filter active bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-blue-600 transition text-center"
                             style="cursor:pointer;">
                             <i class="fas fa-th-large text-blue-600 text-2xl mb-2 block"></i>
                             <p class="font-bold text-sm">Tous les biens</p>
                         </button>
-                        <button onclick="filterProperties('Elite', this)"
+                        <button onclick="filters.standing='Elite';applyFilters(this,'standing')"
                             class="standing-filter bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-blue-600 transition text-center"
                             style="cursor:pointer;">
                             <i class="fas fa-gem text-gray-400 text-2xl mb-2 block"></i>
                             <p class="font-bold text-sm">Elite Luxe</p>
                         </button>
-                        <button onclick="filterProperties('Penthouse', this)"
+                        <button onclick="filters.standing='Penthouse';applyFilters(this,'standing')"
                             class="standing-filter bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-blue-600 transition text-center"
                             style="cursor:pointer;">
                             <i class="fas fa-building text-gray-400 text-2xl mb-2 block"></i>
                             <p class="font-bold text-sm">Penthouse</p>
                         </button>
-                        <button onclick="filterProperties('Business', this)"
+                        <button onclick="filters.standing='Business';applyFilters(this,'standing')"
                             class="standing-filter bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-blue-600 transition text-center"
                             style="cursor:pointer;">
                             <i class="fas fa-briefcase text-gray-400 text-2xl mb-2 block"></i>
                             <p class="font-bold text-sm">Business</p>
                         </button>
                     </div>
+
+                    <!-- Panneau filtres avancés -->
+                    <div style="background:#fff;border-radius:24px;border:1px solid #e5e7eb;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,0.04);">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+                            <h4 style="font-size:14px;font-weight:800;color:#374151;display:flex;align-items:center;gap:8px;cursor:pointer;" onclick="toggleFiltersPanel()">
+                                <i class="fas fa-sliders" style="color:#2563eb;"></i> Filtres avancés
+                                <span id="activeFiltersCount" style="display:none;background:#2563eb;color:#fff;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;"></span>
+                                <i class="fas fa-chevron-down filters-toggle" id="filtersChevron" style="font-size:11px;color:#9ca3af;margin-left:4px;transition:transform 0.3s;"></i>
+                            </h4>
+                            <button onclick="resetAdvancedFilters()" style="font-size:12px;font-weight:700;color:#6b7280;background:none;border:1px solid #e5e7eb;border-radius:8px;padding:6px 14px;cursor:pointer;transition:all 0.2s;"
+                                onmouseover="this.style.borderColor='#2563eb';this.style.color='#2563eb'" onmouseout="this.style.borderColor='#e5e7eb';this.style.color='#6b7280'">
+                                <i class="fas fa-rotate-left" style="margin-right:4px;"></i>Effacer
+                            </button>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;">
+                            <!-- Type de bien -->
+                            <div>
+                                <label style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">Type de bien</label>
+                                <select id="fType" onchange="filters.type=this.value;applyFilters()"
+                                    style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:13px;font-weight:600;color:#374151;background:#f9fafb;outline:none;cursor:pointer;appearance:none;background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22 fill=%22%236b7280%22><path fill-rule=%22evenodd%22 d=%22M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z%22 clip-rule=%22evenodd%22/></svg>');background-repeat:no-repeat;background-position:right 12px center;background-size:16px;">
+                                    <option value="">Tous les types</option>
+                                    <option value="Villa">Villa</option>
+                                    <option value="Appartement">Appartement</option>
+                                    <option value="Bureau">Bureau</option>
+                                    <option value="Studio">Studio</option>
+                                    <option value="Terrain">Terrain</option>
+                                    <option value="Duplex">Duplex</option>
+                                </select>
+                            </div>
+
+                            <!-- Statut -->
+                            <div>
+                                <label style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">Transaction</label>
+                                <select id="fStatut" onchange="filters.statut=this.value;applyFilters()"
+                                    style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:13px;font-weight:600;color:#374151;background:#f9fafb;outline:none;cursor:pointer;appearance:none;background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22 fill=%22%236b7280%22><path fill-rule=%22evenodd%22 d=%22M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z%22 clip-rule=%22evenodd%22/></svg>');background-repeat:no-repeat;background-position:right 12px center;background-size:16px;">
+                                    <option value="">Location &amp; Vente</option>
+                                    <option value="location">Location</option>
+                                    <option value="vente">Vente</option>
+                                </select>
+                            </div>
+
+                            <!-- Chambres min -->
+                            <div>
+                                <label style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">Chambres minimum</label>
+                                <div style="display:flex;gap:6px;">
+                                    <button class="chmb-btn active" data-v="0" onclick="setChambreMin(0,this)" style="flex:1;padding:9px 4px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:12px;font-weight:700;background:#f9fafb;cursor:pointer;">Tout</button>
+                                    <button class="chmb-btn" data-v="1" onclick="setChambreMin(1,this)" style="flex:1;padding:9px 4px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:12px;font-weight:700;background:#f9fafb;cursor:pointer;">1+</button>
+                                    <button class="chmb-btn" data-v="2" onclick="setChambreMin(2,this)" style="flex:1;padding:9px 4px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:12px;font-weight:700;background:#f9fafb;cursor:pointer;">2+</button>
+                                    <button class="chmb-btn" data-v="3" onclick="setChambreMin(3,this)" style="flex:1;padding:9px 4px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:12px;font-weight:700;background:#f9fafb;cursor:pointer;">3+</button>
+                                    <button class="chmb-btn" data-v="4" onclick="setChambreMin(4,this)" style="flex:1;padding:9px 4px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:12px;font-weight:700;background:#f9fafb;cursor:pointer;">4+</button>
+                                </div>
+                            </div>
+
+                            <!-- Surface min -->
+                            <div>
+                                <label style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">
+                                    Surface min &mdash; <span id="surfaceVal" style="color:#2563eb;">Toutes</span>
+                                </label>
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <input type="range" id="fSurface" min="0" max="1000" step="50" value="0"
+                                        oninput="filters.surfaceMin=parseInt(this.value)||0;document.getElementById('surfaceVal').textContent=this.value>0?this.value+'m²':'Toutes';applyFilters()"
+                                        style="flex:1;accent-color:#2563eb;cursor:pointer;">
+                                </div>
+                            </div>
+
+                            <!-- Prix min -->
+                            <div>
+                                <label style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">Prix minimum (FCFA)</label>
+                                <input type="number" id="fPrixMin" placeholder="ex : 500000" min="0"
+                                    oninput="filters.prixMin=parseInt(this.value)||null;applyFilters()"
+                                    style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:13px;font-weight:600;color:#374151;background:#f9fafb;outline:none;">
+                            </div>
+
+                            <!-- Prix max -->
+                            <div>
+                                <label style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:6px;">Prix maximum (FCFA)</label>
+                                <input type="number" id="fPrixMax" placeholder="ex : 5000000" min="0"
+                                    oninput="filters.prixMax=parseInt(this.value)||null;applyFilters()"
+                                    style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:13px;font-weight:600;color:#374151;background:#f9fafb;outline:none;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Compteur + tri -->
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+                    <p id="resultCount" style="font-size:13px;font-weight:700;color:#6b7280;"></p>
                 </div>
 
                 <div id="premiumGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </section>
+
+            <!-- CARTE INTERACTIVE -->
+            <section id="section-carte" class="section-fade">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+                    <div>
+                        <h2 style="font-size:1.8rem; font-weight:800; color:#111827; margin:0;">Biens sur la carte</h2>
+                        <p style="font-size:14px; color:#6b7280; margin-top:4px;" id="carteCount">Chargement…</p>
+                    </div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <select id="carteTypeFilter" onchange="filterCarteMarkers()"
+                            style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:13px; font-weight:600; color:#374151; background:#fff; cursor:pointer;">
+                            <option value="">Tous les types</option>
+                            <option value="villa">Villa</option>
+                            <option value="appartement">Appartement</option>
+                            <option value="terrain">Terrain</option>
+                        </select>
+                        <select id="carteStatutFilter" onchange="filterCarteMarkers()"
+                            style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:13px; font-weight:600; color:#374151; background:#fff; cursor:pointer;">
+                            <option value="">Vente & Location</option>
+                            <option value="vente">À vendre</option>
+                            <option value="location">À louer</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- Carte Leaflet -->
+                <div id="clientMap" style="height:520px; border-radius:18px; overflow:hidden; border:2px solid #e5e7eb; box-shadow:0 4px 24px rgba(0,0,0,0.08);"></div>
+                <p style="font-size:12px; color:#9ca3af; margin-top:10px; text-align:center;">
+                    <i class="fas fa-info-circle" style="margin-right:4px;"></i>
+                    Seuls les biens dont le propriétaire a défini la position GPS apparaissent sur la carte.
+                </p>
             </section>
 
             <!-- FAVORIS -->
@@ -689,6 +885,40 @@
                 <h2 class="text-3xl font-extrabold text-gray-900 mb-2">Recommandations reçues</h2>
                 <p class="text-gray-400 text-sm mb-8">Des biens que d'autres utilisateurs vous ont recommandés.</p>
                 <div id="recommandationsGrid" class="space-y-4"></div>
+            </section>
+
+            <!-- MESSAGERIE CLIENT -->
+            <section id="section-messagerie" class="section-fade">
+                <h2 class="text-3xl font-extrabold text-gray-900 mb-2">Messagerie</h2>
+                <p class="text-gray-400 text-sm mb-6">Vos échanges avec les propriétaires.</p>
+                <div style="display:flex; gap:20px; height:580px;">
+                    <!-- Liste conversations -->
+                    <div id="clientConvList" style="width:280px; flex-shrink:0; display:flex; flex-direction:column; gap:8px; overflow-y:auto;"></div>
+                    <!-- Thread -->
+                    <div style="flex:1; display:flex; flex-direction:column; background:#fff; border-radius:24px; overflow:hidden; border:1px solid #f3f4f6; box-shadow:0 1px 8px rgba(0,0,0,0.04);">
+                        <div id="clientThreadHeader" style="padding:18px 24px; border-bottom:1px solid #f3f4f6; display:none; align-items:center; gap:12px;">
+                            <div id="clientThreadAvatar" style="width:40px; height:40px; border-radius:12px; background:#dbeafe; color:#2563eb; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; flex-shrink:0;"></div>
+                            <div>
+                                <p id="clientThreadNom" style="font-weight:800; color:#111827; font-size:15px;"></p>
+                                <p id="clientThreadBien" style="font-size:12px; color:#6b7280;"></p>
+                            </div>
+                        </div>
+                        <div id="clientThreadMessages" style="flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:10px;"></div>
+                        <div id="clientThreadEmpty" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#9ca3af; gap:12px;">
+                            <i class="fas fa-comments" style="font-size:40px; color:#e5e7eb;"></i>
+                            <p style="font-weight:600; font-size:14px;">Sélectionnez une conversation</p>
+                        </div>
+                        <div id="clientMsgInputBar" style="padding:14px 18px; border-top:1px solid #f3f4f6; display:none; gap:10px; align-items:center;">
+                            <input id="clientMsgText" type="text" placeholder="Écrire un message…"
+                                style="flex:1; padding:11px 16px; border:none; background:#f3f4f6; border-radius:14px; font-size:14px; font-weight:600; color:#111827; outline:none;"
+                                onkeydown="if(event.key==='Enter') sendClientMessage()">
+                            <button id="clientMsgSendBtn" onclick="sendClientMessage()"
+                                style="background:#2563eb; color:#fff; border:none; padding:11px 18px; border-radius:14px; font-weight:700; cursor:pointer; font-size:13px; flex-shrink:0;">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- NOTIFICATIONS -->
@@ -919,6 +1149,56 @@
         </div>
     </div>
 
+    <!-- MODAL : CONTACTER LE PROPRIÉTAIRE (depuis les cartes) -->
+    <div id="clientContactModal"
+        class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[150] hidden items-center justify-center p-4"
+        onclick="if(event.target===this) fermerContactClient()">
+        <div id="clientContactContent"
+            class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all duration-300 scale-95 opacity-0">
+            <!-- Header -->
+            <div class="bg-gradient-to-br from-blue-600 to-blue-800 px-6 py-5 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+                        <i class="fas fa-comments text-white"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-white font-extrabold text-sm">Contacter le propriétaire</h3>
+                        <p id="clientContactBienTitre" class="text-blue-200 text-xs truncate max-w-[200px]"></p>
+                    </div>
+                </div>
+                <button onclick="fermerContactClient()" class="text-white/70 hover:text-white transition text-lg">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <!-- Corps -->
+            <div id="clientContactForm" class="p-6">
+                <p class="text-sm text-gray-500 mb-4">Présentez-vous et posez votre question. Le propriétaire vous répondra dans la messagerie.</p>
+                <textarea id="clientContactMsg" rows="5"
+                    placeholder="Bonjour, je suis intéressé par ce bien et j'aimerais…"
+                    class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                    onkeydown="if(event.ctrlKey && event.key==='Enter') envoyerContactClient()"></textarea>
+                <p class="text-xs text-gray-400 mt-1 mb-4">Ctrl+Entrée pour envoyer</p>
+                <div id="clientContactFeedback" class="hidden text-sm font-semibold mb-3"></div>
+                <button onclick="envoyerContactClient()" id="clientContactSendBtn"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm"
+                    style="border:none; cursor:pointer;">
+                    <i class="fas fa-paper-plane"></i> Envoyer
+                </button>
+            </div>
+            <!-- Succès -->
+            <div id="clientContactSuccess" class="hidden px-6 pb-6 text-center">
+                <div class="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-check-circle text-green-500 text-2xl"></i>
+                </div>
+                <p class="font-extrabold text-gray-800 mb-1">Message envoyé !</p>
+                <p class="text-gray-500 text-sm mb-4">Consultez votre messagerie pour suivre la conversation.</p>
+                <button onclick="fermerContactClient()"
+                    class="bg-gray-100 text-gray-700 font-bold px-6 py-2 rounded-xl hover:bg-gray-200 transition text-sm"
+                    style="border:none; cursor:pointer;">Fermer</button>
+            </div>
+        </div>
+    </div>
+
     <!-- CONFIRM MODAL (déconnexion, etc.) -->
     <div id="confirmModal" class="fixed inset-0 z-[110] modal-hidden items-center justify-center p-4"
         style="background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
@@ -954,11 +1234,38 @@
         // ═══════════════════════════════════════════════════════════════════════
         // ÉTAT GLOBAL (remplace les données hardcodées)
         // ═══════════════════════════════════════════════════════════════════════
-        let properties = [];   // chargé depuis GET /api/biens
-        let favIds = [];   // chargé depuis GET /api/favoris/user/{id}
-        let reservations = [];   // chargé depuis GET /api/reservations/user/{id}
+        let properties = [];
+        let favIds = [];
+        let reservations = [];
         let currentPropertyId = null;
         let currentFilter = 'all';
+
+        // Filtres avancés
+        let filters = {
+            standing: 'all',
+            type: '',
+            statut: '',
+            q: '',
+            prixMin: null,
+            prixMax: null,
+            surfaceMin: 0,
+            chambresMin: 0,
+        };
+
+        function parsePrix(str) {
+            if (!str) return 0;
+            const n = parseFloat(String(str).replace(/[^\d,\.]/g, '').replace(',', '.'));
+            return isNaN(n) ? 0 : n;
+        }
+
+        // ── Messagerie client ──
+        let clientConversations  = [];
+        let clientActiveConv     = null;  // { autreUserId, bienId, nom }
+        let clientMsgPolling     = null;
+
+        // ── Contact rapide depuis carte ──
+        let _ccBienId    = null;
+        let _ccProprioId = null;
 
         // ═══════════════════════════════════════════════════════════════════════
         // HELPERS FETCH
@@ -1009,7 +1316,11 @@
                     statut: b.statut,
                     chambres: b.chambres,
                     sdb: b.sallesDeBain,
-                    equipements: b.equipements || []
+                    equipements: b.equipements || [],
+                    proprietaireId: b.proprietaireId ?? null,
+                    lat: b.latitude  ?? null,
+                    lng: b.longitude ?? null,
+                    status: b.statut,
                 }));
             } else {
                 showToast('error', 'Erreur', 'Impossible de charger les biens.');
@@ -1031,7 +1342,7 @@
             }
 
             // Render initial
-            filterProperties(currentFilter, document.querySelector('.standing-filter'));
+            applyFilters();
         }
 
         // ═══════════════════════════════════════════════════════════════════════
@@ -1113,30 +1424,170 @@
                         <span><i class="fas fa-expand mr-1"></i>${p.size}m²</span>
                         <span><i class="fas fa-map-marker-alt mr-1"></i>${p.location}</span>
                     </div>
-                    <button onclick="openModal(${p.id})" class="w-full mt-4 bg-gray-900 text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-600 transition" style="border:none; cursor:pointer;">
-                        Voir le bien
-                    </button>
+                    <div class="flex gap-2 mt-4">
+                        <button onclick="openModal(${p.id})" class="flex-1 bg-gray-900 text-white py-3 rounded-xl font-bold text-sm hover:bg-blue-600 transition" style="border:none; cursor:pointer;">
+                            Voir le bien
+                        </button>
+                        ${p.proprietaireId ? `
+                        <button onclick="ouvrirContactClient(event, ${p.id}, ${p.proprietaireId}, '${(p.title || '').replace(/'/g, "\\'")}')"
+                            title="Contacter le propriétaire"
+                            style="width:44px; flex-shrink:0; background:#eff6ff; border:2px solid #bfdbfe; border-radius:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#2563eb; transition:all 0.2s;"
+                            onmouseover="this.style.background='#dbeafe'" onmouseout="this.style.background='#eff6ff'">
+                            <i class="fas fa-comments" style="font-size:16px;"></i>
+                        </button>` : ''}
+                    </div>
                 </div>
             </div>`;
         }
 
         // ═══════════════════════════════════════════════════════════════════════
-        // FILTRE PROPRIÉTÉS
+        // FILTRES AVANCÉS
         // ═══════════════════════════════════════════════════════════════════════
-        function filterProperties(filter, btn) {
-            currentFilter = filter;
-            document.querySelectorAll('.standing-filter').forEach(b => b.classList.remove('active'));
-            if (btn) btn.classList.add('active');
-            const filtered = filter === 'all' ? properties : properties.filter(p => p.standing === filter);
+        function applyFilters(btn, filterGroup) {
+            // Mettre à jour le bouton standing actif si applicable
+            if (filterGroup === 'standing') {
+                document.querySelectorAll('.standing-filter').forEach(b => b.classList.remove('active'));
+                if (btn) btn.classList.add('active');
+            }
+
+            let filtered = [...properties];
+
+            // Standing
+            if (filters.standing && filters.standing !== 'all')
+                filtered = filtered.filter(p => p.standing === filters.standing);
+
+            // Type
+            if (filters.type)
+                filtered = filtered.filter(p => p.type?.toLowerCase() === filters.type.toLowerCase());
+
+            // Statut (location / vente)
+            if (filters.statut)
+                filtered = filtered.filter(p => p.statut?.toLowerCase() === filters.statut.toLowerCase());
+
+            // Texte libre (titre ou localisation)
+            if (filters.q) {
+                const q = filters.q.toLowerCase();
+                filtered = filtered.filter(p =>
+                    p.title?.toLowerCase().includes(q) ||
+                    p.location?.toLowerCase().includes(q)
+                );
+            }
+
+            // Prix min
+            if (filters.prixMin)
+                filtered = filtered.filter(p => parsePrix(p.price) >= filters.prixMin);
+
+            // Prix max
+            if (filters.prixMax)
+                filtered = filtered.filter(p => parsePrix(p.price) <= filters.prixMax);
+
+            // Surface min
+            if (filters.surfaceMin > 0)
+                filtered = filtered.filter(p => (p.size || 0) >= filters.surfaceMin);
+
+            // Chambres min
+            if (filters.chambresMin > 0)
+                filtered = filtered.filter(p => (p.chambres || 0) >= filters.chambresMin);
+
+            // Mettre à jour le badge de filtres actifs
+            const activeCount = [
+                filters.standing !== 'all' ? 1 : 0,
+                filters.type ? 1 : 0,
+                filters.statut ? 1 : 0,
+                filters.q ? 1 : 0,
+                filters.prixMin ? 1 : 0,
+                filters.prixMax ? 1 : 0,
+                filters.surfaceMin > 0 ? 1 : 0,
+                filters.chambresMin > 0 ? 1 : 0,
+            ].reduce((a, b) => a + b, 0);
+
+            const badge = document.getElementById('activeFiltersCount');
+            if (badge) {
+                if (activeCount > 0) {
+                    badge.textContent = activeCount;
+                    badge.style.display = 'inline-block';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+
+            // Compteur de résultats
+            const countEl = document.getElementById('resultCount');
+            if (countEl) {
+                countEl.textContent = filtered.length === 0
+                    ? 'Aucun bien ne correspond'
+                    : `${filtered.length} bien${filtered.length > 1 ? 's' : ''} trouvé${filtered.length > 1 ? 's' : ''}`;
+            }
+
+            // Rendu
             const grid = document.getElementById('premiumGrid');
             if (!filtered.length) {
                 grid.innerHTML = `<div class="col-span-full text-center py-20 text-gray-400">
                     <i class="fas fa-search text-4xl mb-4 block opacity-30"></i>
-                    <p class="font-semibold">Aucun bien dans cette catégorie.</p>
+                    <p class="font-semibold">Aucun bien ne correspond aux filtres.</p>
+                    <button onclick="resetAdvancedFilters()" style="margin-top:16px;padding:10px 20px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:13px;">
+                        <i class="fas fa-rotate-left" style="margin-right:6px;"></i>Effacer les filtres
+                    </button>
                 </div>`;
                 return;
             }
             grid.innerHTML = filtered.map(p => buildCard(p)).join('');
+        }
+
+        function filterProperties(filter, btn) {
+            filters.standing = filter || 'all';
+            applyFilters(btn, 'standing');
+        }
+
+        function setChambreMin(val, btn) {
+            filters.chambresMin = val;
+            document.querySelectorAll('.chmb-btn').forEach(b => {
+                b.classList.remove('active');
+                b.style.background = '#f9fafb';
+                b.style.borderColor = '#e5e7eb';
+                b.style.color = '#374151';
+            });
+            btn.classList.add('active');
+            btn.style.background = '#2563eb';
+            btn.style.borderColor = '#2563eb';
+            btn.style.color = '#fff';
+            applyFilters();
+        }
+
+        function resetAdvancedFilters() {
+            filters = { standing: 'all', type: '', statut: '', q: '', prixMin: null, prixMax: null, surfaceMin: 0, chambresMin: 0 };
+            // Réinitialiser les contrôles
+            const si = document.getElementById('searchInput');
+            if (si) si.value = '';
+            const ft = document.getElementById('fType');
+            if (ft) ft.value = '';
+            const fs = document.getElementById('fStatut');
+            if (fs) fs.value = '';
+            const sur = document.getElementById('fSurface');
+            if (sur) sur.value = 0;
+            const sv = document.getElementById('surfaceVal');
+            if (sv) sv.textContent = 'Toutes';
+            const pMin = document.getElementById('fPrixMin');
+            if (pMin) pMin.value = '';
+            const pMax = document.getElementById('fPrixMax');
+            if (pMax) pMax.value = '';
+            document.querySelectorAll('.chmb-btn').forEach(b => {
+                b.classList.remove('active');
+                b.style.background = '#f9fafb';
+                b.style.borderColor = '#e5e7eb';
+                b.style.color = '#374151';
+            });
+            const firstChmb = document.querySelector('.chmb-btn[data-v="0"]');
+            if (firstChmb) {
+                firstChmb.classList.add('active');
+                firstChmb.style.background = '#2563eb';
+                firstChmb.style.borderColor = '#2563eb';
+                firstChmb.style.color = '#fff';
+            }
+            document.querySelectorAll('.standing-filter').forEach(b => b.classList.remove('active'));
+            const firstStanding = document.querySelector('.standing-filter');
+            if (firstStanding) firstStanding.classList.add('active');
+            applyFilters();
         }
 
         // ═══════════════════════════════════════════════════════════════════════
@@ -1691,6 +2142,28 @@
         }
 
         // ═══════════════════════════════════════════════════════════════════════
+        // SIDEBAR MOBILE
+        // ═══════════════════════════════════════════════════════════════════════
+        function openSidebar() {
+            document.getElementById('sidebar').classList.add('mobile-open');
+            document.getElementById('sidebarBackdrop').classList.add('visible');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('mobile-open');
+            document.getElementById('sidebarBackdrop').classList.remove('visible');
+            document.body.style.overflow = '';
+        }
+        function toggleFiltersPanel() {
+            if (window.innerWidth >= 768) return;
+            const panel = document.querySelector('#filterSection > div:last-child');
+            const chevron = document.getElementById('filtersChevron');
+            if (!panel) return;
+            panel.classList.toggle('filters-open');
+            if (chevron) chevron.style.transform = panel.classList.contains('filters-open') ? 'rotate(180deg)' : '';
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
         // NAVIGATION
         // ═══════════════════════════════════════════════════════════════════════
         function switchSection(id, btn) {
@@ -1699,19 +2172,339 @@
             if (section) section.classList.add('active');
             document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
             if (btn) btn.classList.add('active');
+            closeSidebar();
 
             if (id === 'favoris') renderFavorites();
-            if (id === 'accueil') filterProperties(currentFilter, null);
+            if (id === 'accueil') applyFilters();
             if (id === 'reservations') renderReservations();
             if (id === 'dashboard') renderDashboard();
             if (id === 'devenir-proprietaire') renderDemandeProprietaire();
             if (id === 'recommandations') renderRecommandations();
             if (id === 'notifications') renderNotifications();
+            if (id === 'messagerie') initClientMessagerie();
+            if (id === 'carte') initClientMap();
+
+            if (id !== 'messagerie' && clientMsgPolling) {
+                clearInterval(clientMsgPolling);
+                clientMsgPolling = null;
+            }
 
             document.getElementById('userDropdown').classList.add('hidden');
             loadUserProfile();
             window.scrollTo(0, 0);
         }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // CARTE INTERACTIVE (Leaflet)
+        // ═══════════════════════════════════════════════════════════════════════
+        let _clientMap     = null;
+        let _carteMarkers  = [];   // { marker, bien }
+        let _carteAllBiens = [];
+
+        function initClientMap() {
+            // N'initialiser qu'une seule fois
+            if (!_clientMap) {
+                _clientMap = L.map('clientMap').setView([3.848, 11.502], 6);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© <a href="https://www.openstreetmap.org">OpenStreetMap</a>',
+                    maxZoom: 19
+                }).addTo(_clientMap);
+            }
+            setTimeout(() => _clientMap.invalidateSize(), 150);
+            buildCarteMarkers();
+        }
+
+        function buildCarteMarkers() {
+            // Effacer anciens markers
+            _carteMarkers.forEach(m => _clientMap.removeLayer(m.marker));
+            _carteMarkers = [];
+
+            const biens = properties.filter(p => p.lat && p.lng);
+            _carteAllBiens = biens;
+
+            const typeF   = (document.getElementById('carteTypeFilter')   || {}).value || '';
+            const statutF = (document.getElementById('carteStatutFilter') || {}).value || '';
+
+            const filtered = biens.filter(p =>
+                (!typeF   || p.type   === typeF) &&
+                (!statutF || p.status === statutF)
+            );
+
+            const countEl = document.getElementById('carteCount');
+            if (countEl) countEl.textContent = `${filtered.length} bien${filtered.length > 1 ? 's' : ''} localisé${filtered.length > 1 ? 's' : ''}`;
+
+            filtered.forEach(p => {
+                const icon = L.divIcon({
+                    className: '',
+                    html: `<div style="
+                        background:${p.status === 'vente' ? '#2563eb' : '#10b981'};
+                        color:#fff; border-radius:20px; padding:4px 10px;
+                        font-size:11px; font-weight:800; white-space:nowrap;
+                        box-shadow:0 2px 8px rgba(0,0,0,0.25);
+                        border:2px solid #fff; cursor:pointer;">
+                        ${p.status === 'vente' ? 'Vente' : 'Location'}
+                    </div>`,
+                    iconAnchor: [30, 12]
+                });
+
+                const marker = L.marker([p.lat, p.lng], { icon }).addTo(_clientMap);
+
+                const imgHtml = p.img
+                    ? `<img src="${p.img}" style="width:100%;height:120px;object-fit:cover;display:block;">`
+                    : `<div style="width:100%;height:80px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;"><i class="fas fa-home" style="color:#9ca3af;font-size:24px;"></i></div>`;
+
+                marker.bindPopup(`
+                    <div style="width:220px;overflow:hidden;border-radius:8px;font-family:inherit;">
+                        ${imgHtml}
+                        <div style="padding:10px;">
+                            <div style="font-weight:800;font-size:13px;color:#111827;margin-bottom:4px;line-height:1.3;">${p.title || 'Bien'}</div>
+                            <div style="font-size:11px;color:#6b7280;margin-bottom:6px;">
+                                <i class="fas fa-location-dot" style="color:#2563eb;margin-right:3px;"></i>${p.location || ''}
+                            </div>
+                            <div style="font-size:13px;font-weight:800;color:#2563eb;margin-bottom:8px;">${p.price || ''}</div>
+                            <a href="./details.html?id=${p.id}"
+                               style="display:block;text-align:center;background:#2563eb;color:#fff;border-radius:8px;padding:7px;font-size:12px;font-weight:700;text-decoration:none;">
+                               Voir le bien
+                            </a>
+                        </div>
+                    </div>`, { maxWidth: 240, minWidth: 220 });
+
+                _carteMarkers.push({ marker, bien: p });
+            });
+
+            // Auto-zoom sur les markers si au moins un
+            if (filtered.length > 0) {
+                const group = L.featureGroup(filtered.map(p =>
+                    L.marker([p.lat, p.lng])
+                ));
+                _clientMap.fitBounds(group.getBounds().pad(0.15));
+            }
+        }
+
+        function filterCarteMarkers() {
+            buildCarteMarkers();
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // MESSAGERIE CLIENT
+        // ═══════════════════════════════════════════════════════════════════════
+        async function initClientMessagerie() {
+            await loadClientConversations();
+            if (!clientMsgPolling) {
+                clientMsgPolling = setInterval(loadClientConversations, 15000);
+            }
+        }
+
+        async function loadClientConversations() {
+            try {
+                const token = localStorage.getItem('jwtToken');
+                if (!token) return;
+                const res = await fetch(`${API}/messages/conversations`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    clientConversations = data.data || [];
+                    renderClientConvList();
+                    // badge sidebar
+                    const totalUnread = clientConversations.reduce((s, c) => s + (c.nonLus || 0), 0);
+                    const badge = document.getElementById('sidebarMessagerieClient');
+                    if (badge) {
+                        let dot = badge.querySelector('.msg-badge-dot');
+                        if (totalUnread > 0) {
+                            if (!dot) {
+                                dot = document.createElement('span');
+                                dot.className = 'msg-badge-dot';
+                                dot.style.cssText = 'position:absolute;top:4px;right:4px;width:8px;height:8px;background:#ef4444;border-radius:50%;';
+                                badge.style.position = 'relative';
+                                badge.appendChild(dot);
+                            }
+                        } else if (dot) dot.remove();
+                    }
+                }
+            } catch (e) { console.error('loadClientConversations:', e); }
+        }
+
+        function renderClientConvList() {
+            const list = document.getElementById('clientConvList');
+            if (!list) return;
+            if (!clientConversations.length) {
+                list.innerHTML = `<div style="text-align:center;color:#94a3b8;padding:40px 16px;font-size:14px;">
+                    <i class="fa-regular fa-comment-dots" style="font-size:32px;margin-bottom:10px;display:block;"></i>
+                    Aucune conversation pour l'instant.
+                </div>`;
+                return;
+            }
+            list.innerHTML = clientConversations.map(c => {
+                const isActive = clientActiveConv && clientActiveConv.autreUserId === c.autreUserId && clientActiveConv.bienId === c.bienId;
+                const time = c.dernierMessageAt ? new Date(c.dernierMessageAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
+                return `<div class="client-conv-item${isActive ? ' active' : ''}"
+                    onclick="loadClientThread(${c.autreUserId}, ${c.bienId ?? 'null'}, true)"
+                    style="padding:14px 16px;cursor:pointer;border-bottom:1px solid #f1f5f9;display:flex;gap:10px;align-items:center;transition:background 0.15s;${isActive ? 'background:#eff6ff;' : ''}">
+                    <div style="width:40px;height:40px;border-radius:50%;background:#2563eb22;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;color:#2563eb;">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <span style="font-weight:600;font-size:14px;color:#1e293b;">${c.autreUserNom || 'Propriétaire'}</span>
+                            <span style="font-size:11px;color:#94a3b8;">${time}</span>
+                        </div>
+                        <div style="font-size:12px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">${c.bienTitre || ''}</div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px;">
+                            <span style="font-size:12px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;">${c.dernierMessage || ''}</span>
+                            ${c.nonLus > 0 ? `<span style="background:#2563eb;color:#fff;border-radius:999px;font-size:10px;font-weight:700;padding:1px 7px;">${c.nonLus}</span>` : ''}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function loadClientThread(autreUserId, bienId, scrollBottom = true) {
+            clientActiveConv = { autreUserId, bienId };
+            renderClientConvList(); // highlight active
+            const header = document.getElementById('clientThreadHeader');
+            const msgs   = document.getElementById('clientThreadMessages');
+            const empty  = document.getElementById('clientThreadEmpty');
+            const bar    = document.getElementById('clientMsgInputBar');
+            if (empty) empty.style.display = 'none';
+            if (bar) bar.style.display = 'flex';
+
+            try {
+                const token = localStorage.getItem('jwtToken');
+                const url = `${API}/messages/${autreUserId}${bienId ? '?bienId=' + bienId : ''}`;
+                const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+                if (!data.success || !msgs) return;
+
+                const thread = data.data || [];
+                const conv = clientConversations.find(c => c.autreUserId === autreUserId && c.bienId === bienId);
+                if (header) {
+                    header.style.display = 'flex';
+                    header.innerHTML = `
+                        <div style="width:36px;height:36px;border-radius:50%;background:#2563eb22;display:flex;align-items:center;justify-content:center;color:#2563eb;">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <div style="margin-left:10px;">
+                            <div style="font-weight:700;font-size:15px;color:#1e293b;">${conv?.autreUserNom || 'Propriétaire'}</div>
+                            ${conv?.bienTitre ? `<div style="font-size:12px;color:#64748b;">${conv.bienTitre}</div>` : ''}
+                        </div>`;
+                }
+
+                msgs.innerHTML = thread.map(m => {
+                    const mine = m.estMoi;
+                    return `<div style="display:flex;justify-content:${mine ? 'flex-end' : 'flex-start'};margin-bottom:8px;">
+                        <div class="${mine ? 'msg-bubble-client msg-mine-client' : 'msg-bubble-client msg-other-client'}" style="max-width:70%;">
+                            <div style="font-size:14px;">${m.contenu.replace(/</g,'&lt;')}</div>
+                            <div style="font-size:10px;opacity:0.6;margin-top:4px;text-align:${mine ? 'right' : 'left'};">
+                                ${new Date(m.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                ${mine ? (m.estLu ? ' ✓✓' : ' ✓') : ''}
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+
+                if (scrollBottom) msgs.scrollTop = msgs.scrollHeight;
+                // rafraîchir le badge
+                await loadClientConversations();
+            } catch (e) { console.error('loadClientThread:', e); }
+        }
+
+        async function sendClientMessage() {
+            if (!clientActiveConv) return;
+            const input = document.getElementById('clientMsgText');
+            const btn   = document.getElementById('clientMsgSendBtn');
+            const text  = input ? input.value.trim() : '';
+            if (!text) return;
+            input.value = '';
+            if (btn) btn.disabled = true;
+            try {
+                const { sendMessage } = await import('../js/api.js');
+                const res = await sendMessage(clientActiveConv.autreUserId, clientActiveConv.bienId, text);
+                if (res && res.success) {
+                    await loadClientThread(clientActiveConv.autreUserId, clientActiveConv.bienId, true);
+                } else {
+                    input.value = text;
+                    showToast('error', 'Erreur', res?.message || 'Impossible d\'envoyer le message.');
+                }
+            } catch (e) {
+                input.value = text;
+                showToast('error', 'Erreur', 'Impossible d\'envoyer le message.');
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        // ─── Modal de premier contact (depuis la carte de bien) ────────────────
+        function ouvrirContactClient(event, bienId, proprietaireId, titre) {
+            if (event) event.stopPropagation();
+            const token = localStorage.getItem('jwtToken');
+            if (!token) {
+                showToast('warning', 'Connexion requise', 'Connectez-vous pour contacter un propriétaire.');
+                return;
+            }
+            _ccBienId  = bienId;
+            _ccProprioId = proprietaireId;
+            const modal = document.getElementById('clientContactModal');
+            const form    = document.getElementById('clientContactForm');
+            const success = document.getElementById('clientContactSuccess');
+            const feedback = document.getElementById('clientContactFeedback');
+            const msgArea  = document.getElementById('clientContactMsg');
+            const titleEl  = document.getElementById('clientContactBienTitre');
+            if (titleEl) titleEl.textContent = titre || '';
+            if (form)    { form.style.display = 'block'; form.classList.remove('hidden'); }
+            if (success) { success.style.display = 'none'; success.classList.add('hidden'); }
+            if (feedback) { feedback.textContent = ''; feedback.classList.add('hidden'); }
+            if (msgArea) msgArea.value = '';
+            const sendBtn = document.getElementById('clientContactSendBtn');
+            if (sendBtn) { sendBtn.disabled = false; sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer'; }
+            if (modal)   { modal.style.display = 'flex'; modal.classList.remove('hidden'); }
+            // animate in
+            const content = document.getElementById('clientContactContent');
+            if (content) setTimeout(() => { content.style.transform = 'scale(1)'; content.style.opacity = '1'; }, 10);
+            setTimeout(() => { if (msgArea) msgArea.focus(); }, 100);
+        }
+
+        function fermerContactClient() {
+            const modal   = document.getElementById('clientContactModal');
+            const content = document.getElementById('clientContactContent');
+            if (content) { content.style.transform = 'scale(0.95)'; content.style.opacity = '0'; }
+            setTimeout(() => {
+                if (modal) { modal.style.display = 'none'; modal.classList.add('hidden'); }
+            }, 200);
+        }
+
+        async function envoyerContactClient() {
+            const msgArea  = document.getElementById('clientContactMsg');
+            const sendBtn  = document.getElementById('clientContactSendBtn');
+            const feedback = document.getElementById('clientContactFeedback');
+            const form     = document.getElementById('clientContactForm');
+            const success  = document.getElementById('clientContactSuccess');
+            const text = msgArea ? msgArea.value.trim() : '';
+            if (!text) {
+                if (feedback) { feedback.textContent = 'Veuillez écrire un message.'; feedback.style.color = '#ef4444'; feedback.classList.remove('hidden'); }
+                return;
+            }
+            if (sendBtn) { sendBtn.disabled = true; sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi…'; }
+            try {
+                const { sendMessage } = await import('../js/api.js');
+                const res = await sendMessage(_ccProprioId, _ccBienId, text);
+                if (res && res.success) {
+                    if (form) { form.style.display = 'none'; form.classList.add('hidden'); }
+                    if (success) { success.style.display = 'block'; success.classList.remove('hidden'); }
+                    setTimeout(fermerContactClient, 2000);
+                } else {
+                    if (feedback) { feedback.textContent = res?.message || 'Erreur lors de l\'envoi.'; feedback.style.color = '#ef4444'; feedback.classList.remove('hidden'); }
+                    if (sendBtn) { sendBtn.disabled = false; sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer'; }
+                }
+            } catch (e) {
+                if (feedback) { feedback.textContent = 'Erreur réseau.'; feedback.style.color = '#ef4444'; feedback.classList.remove('hidden'); }
+                if (sendBtn) { sendBtn.disabled = false; sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer'; }
+            }
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') fermerContactClient();
+        });
 
         // ═══════════════════════════════════════════════════════════════════════
         // PROFIL
@@ -1824,8 +2617,15 @@
         // INIT — chargement des données au démarrage
         // ═══════════════════════════════════════════════════════════════════════
         document.addEventListener('DOMContentLoaded', () => {
+            // Initialiser le bouton "Tout" des chambres
+            const firstChmb = document.querySelector('.chmb-btn[data-v="0"]');
+            if (firstChmb) {
+                firstChmb.style.background = '#2563eb';
+                firstChmb.style.borderColor = '#2563eb';
+                firstChmb.style.color = '#fff';
+            }
             loadUserProfile();
-            loadAllData(); // ← charge tout depuis l'API
+            loadAllData();
             refreshNotifBadge();
             setInterval(refreshNotifBadge, 30000);
         });

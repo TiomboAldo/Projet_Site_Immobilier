@@ -7,6 +7,8 @@
     <title>Espace Propriétaire - Said Africa</title>
     <link rel="icon" type="image/png" href="/src/assets/images/logo.jpeg">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
@@ -99,6 +101,28 @@
 
         main { flex: 1; margin-left: 80px; transition: margin-left 0.3s; }
 
+        /* ─── Responsive Mobile ──────────────────────────────────────── */
+        .sidebar-backdrop {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5); z-index: 49; backdrop-filter: blur(2px);
+        }
+        .mobile-menu-btn { display: none; }
+        @media (max-width: 767px) {
+            .sidebar { transform: translateX(-100%); width: 256px !important; transition: transform 0.3s ease, width 0s; z-index: 51; }
+            .sidebar:hover { width: 256px !important; }
+            .sidebar.mobile-open { transform: translateX(0); }
+            .sidebar.mobile-open .sidebar-logo-text,
+            .sidebar.mobile-open .sidebar-item span { opacity: 1; }
+            .sidebar-backdrop.visible { display: block; }
+            main { margin-left: 0 !important; }
+            .mobile-menu-btn { display: flex !important; }
+            .hide-mobile { display: none !important; }
+            .show-mobile { display: inline !important; }
+        }
+        @media (min-width: 768px) {
+            .show-mobile { display: none !important; }
+        }
+
         #toast-container {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999;
             display: flex; flex-direction: column; gap: 12px; pointer-events: none; align-items: center;
@@ -166,8 +190,9 @@
 </head>
 
 <body>
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
     <!-- SIDEBAR -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
         <div class="sidebar-logo">
             <div class="sidebar-logo-icon"><i class="fas fa-building-user"></i></div>
             <span class="sidebar-logo-text">Espace Pro</span>
@@ -212,21 +237,27 @@
 
     <!-- MAIN -->
     <main>
-        <header class="glass-effect sticky top-0 z-40 px-8 h-20 flex justify-between items-center border-b border-gray-100" style="display:flex;">
-            <div>
-                <h2 style="font-size:13px; font-weight:800; color:#2563eb; text-transform:uppercase; letter-spacing:0.1em;">Espace Propriétaire</h2>
-                <p id="welcomeName" style="color:#6b7280; font-size:12px;">Chargement...</p>
+        <header class="glass-effect sticky top-0 z-40 px-4 md:px-8 h-16 md:h-20 flex justify-between items-center border-b border-gray-100" style="display:flex;gap:12px;">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <button class="mobile-menu-btn" onclick="openSidebar()"
+                    style="width:40px;height:40px;background:#f3f4f6;border:none;border-radius:10px;cursor:pointer;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="fas fa-bars" style="color:#374151;"></i>
+                </button>
+                <div>
+                    <h2 class="hide-mobile" style="font-size:13px; font-weight:800; color:#2563eb; text-transform:uppercase; letter-spacing:0.1em;">Espace Propriétaire</h2>
+                    <p id="welcomeName" style="color:#6b7280; font-size:12px;">Chargement...</p>
+                </div>
             </div>
-            <div style="display:flex; align-items:center; gap:16px;">
+            <div style="display:flex; align-items:center; gap:10px;">
                 <button onclick="switchSection('notifications', null)" class="relative"
-                    style="background:#f3f4f6; border:none; width:42px; height:42px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                    style="background:#f3f4f6; border:none; width:42px; height:42px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center;flex-shrink:0;">
                     <i class="fas fa-bell text-gray-500"></i>
                     <span id="notifBadge" class="hidden"
                         style="position:absolute; top:-4px; right:-4px; background:#ef4444; color:#fff; font-size:10px; font-weight:800; min-width:18px; height:18px; border-radius:999px; display:flex; align-items:center; justify-content:center; padding:0 4px;">0</span>
                 </button>
                 <button onclick="openPropertyForm(null)" class="hover-lift"
-                    style="background:#2563eb; color:#fff; font-weight:700; font-size:13px; padding:12px 22px; border-radius:14px; border:none; cursor:pointer; box-shadow:0 10px 15px -3px rgba(37,99,235,0.3);">
-                    <i class="fas fa-plus mr-2"></i> Publier une annonce
+                    style="background:#2563eb; color:#fff; font-weight:700; font-size:12px; padding:10px 16px; border-radius:12px; border:none; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3);white-space:nowrap;">
+                    <i class="fas fa-plus" style="margin-right:6px;"></i><span class="hide-mobile">Publier une annonce</span><span style="display:none;" class="show-mobile">Publier</span>
                 </button>
             </div>
         </header>
@@ -414,6 +445,28 @@
                         <div class="form-group"><label>Prix</label><input type="text" id="pfPrix" placeholder="Ex: 120M FCFA" required></div>
                         <div class="form-group"><label>Localisation</label><input type="text" id="pfLocalisation" required></div>
                     </div>
+                    <!-- SÉLECTEUR DE POSITION GPS -->
+                    <div class="form-group">
+                        <label>Position sur la carte <span style="font-weight:400;color:#9ca3af;font-size:12px;">(cliquer pour placer le bien — optionnel)</span></label>
+                        <input type="hidden" id="pfLatitude">
+                        <input type="hidden" id="pfLongitude">
+                        <div id="pickMap" style="height:220px; border-radius:14px; overflow:hidden; border:2px solid #e5e7eb; position:relative;">
+                            <div id="pickMapPlaceholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f9fafb;z-index:10;gap:8px;cursor:pointer;"
+                                onclick="initPickMap()">
+                                <i class="fas fa-map-location-dot" style="font-size:28px;color:#9ca3af;"></i>
+                                <p style="font-size:13px;color:#6b7280;font-weight:600;">Cliquer pour ouvrir la carte</p>
+                                <p style="font-size:11px;color:#9ca3af;">Douala, Yaoundé, Kribi…</p>
+                            </div>
+                            <div id="pickMapContainer" style="height:100%;display:none;"></div>
+                        </div>
+                        <div id="pickMapCoords" style="font-size:12px;color:#64748b;margin-top:6px;display:none;">
+                            <i class="fas fa-location-dot" style="color:#2563eb;margin-right:4px;"></i>
+                            <span id="pickMapCoordsText"></span>
+                            <button type="button" onclick="clearPickMap()" style="margin-left:10px;color:#ef4444;background:none;border:none;cursor:pointer;font-size:11px;font-weight:700;">
+                                <i class="fas fa-times"></i> Effacer
+                            </button>
+                        </div>
+                    </div>
                     <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr;">
                         <div class="form-group"><label>Chambres</label><input type="number" id="pfChambres" min="0" value="0"></div>
                         <div class="form-group"><label>Salles de bain</label><input type="number" id="pfSallesDeBain" min="0" value="0"></div>
@@ -422,17 +475,27 @@
                     <div class="form-group"><label>Description</label><textarea id="pfDescription"></textarea></div>
                     <!-- IMAGE PRINCIPALE -->
                     <div class="form-group">
-                        <label>Image principale</label>
+                        <label>Image principale (couverture)</label>
                         <input type="hidden" id="pfImageUrl">
-                        <div id="mainImgZone" onclick="document.getElementById('mainImgFile').click()"
-                            style="border:2px dashed #d1d5db; border-radius:14px; padding:28px; text-align:center; cursor:pointer; transition:border-color 0.2s; background:#fafafa;"
-                            onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#d1d5db'">
-                            <div id="mainImgPreview" style="display:none; margin-bottom:10px;">
-                                <img id="mainImgThumb" style="max-height:160px; border-radius:10px; object-fit:cover;">
+                        <div id="mainImgZone"
+                            style="border:2px dashed #d1d5db; border-radius:14px; padding:24px; text-align:center; cursor:pointer; transition:border-color 0.2s, background 0.2s; background:#fafafa; position:relative;"
+                            onclick="document.getElementById('mainImgFile').click()"
+                            ondragover="event.preventDefault(); this.style.borderColor='#2563eb'; this.style.background='#eff6ff';"
+                            ondragleave="this.style.borderColor='#d1d5db'; this.style.background='#fafafa';"
+                            ondrop="event.preventDefault(); this.style.borderColor='#d1d5db'; this.style.background='#fafafa'; uploadMainImage(event.dataTransfer.files[0]);">
+                            <div id="mainImgPreview" style="position:relative; display:none;">
+                                <img id="mainImgThumb" style="max-height:200px; width:100%; border-radius:10px; object-fit:cover;">
+                                <button type="button" onclick="event.stopPropagation(); clearMainImage()"
+                                    style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.55); color:#fff; border:none; border-radius:50%; width:28px; height:28px; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                <div style="position:absolute; bottom:8px; left:8px; background:rgba(37,99,235,0.85); color:#fff; font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px;">
+                                    <i class="fas fa-star" style="margin-right:4px; font-size:9px;"></i>Couverture
+                                </div>
                             </div>
                             <div id="mainImgPlaceholder">
-                                <i class="fas fa-cloud-upload-alt" style="font-size:28px; color:#9ca3af; display:block; margin-bottom:8px;"></i>
-                                <p style="font-size:13px; color:#6b7280; font-weight:600;">Cliquer pour choisir une image</p>
+                                <i class="fas fa-cloud-upload-alt" style="font-size:32px; color:#9ca3af; display:block; margin-bottom:8px;"></i>
+                                <p style="font-size:13px; color:#4b5563; font-weight:600;">Cliquer ou glisser-déposer une image</p>
                                 <p style="font-size:11px; color:#9ca3af; margin-top:4px;">JPG, PNG, WEBP — max 10 Mo</p>
                             </div>
                             <div id="mainImgLoader" style="display:none;">
@@ -445,19 +508,23 @@
 
                     <!-- GALERIE -->
                     <div class="form-group">
-                        <label>Galerie (jusqu'à 6 photos)</label>
+                        <label>Galerie de photos <span style="font-weight:400; color:#9ca3af; font-size:12px;">(jusqu'à 8 photos — glisser pour réordonner)</span></label>
                         <input type="hidden" id="pfGalerieUrls">
-                        <div id="galerieZone" onclick="document.getElementById('galerieFiles').click()"
-                            style="border:2px dashed #d1d5db; border-radius:14px; padding:20px; text-align:center; cursor:pointer; transition:border-color 0.2s; background:#fafafa;"
-                            onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#d1d5db'">
-                            <div id="galeriePreviews" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:10px;"></div>
+                        <div id="galeriePreviews" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:10px;"></div>
+                        <div id="galerieZone"
+                            style="border:2px dashed #d1d5db; border-radius:14px; padding:20px; text-align:center; cursor:pointer; transition:border-color 0.2s, background 0.2s; background:#fafafa;"
+                            onclick="document.getElementById('galerieFiles').click()"
+                            ondragover="event.preventDefault(); this.style.borderColor='#2563eb'; this.style.background='#eff6ff';"
+                            ondragleave="this.style.borderColor='#d1d5db'; this.style.background='#fafafa';"
+                            ondrop="event.preventDefault(); this.style.borderColor='#d1d5db'; this.style.background='#fafafa'; uploadGalerieImages(event.dataTransfer.files);">
                             <div id="galeriePlaceholder">
                                 <i class="fas fa-images" style="font-size:24px; color:#9ca3af; display:block; margin-bottom:6px;"></i>
-                                <p style="font-size:13px; color:#6b7280; font-weight:600;">Ajouter des photos à la galerie</p>
+                                <p style="font-size:13px; color:#4b5563; font-weight:600;">Cliquer ou glisser-déposer des photos</p>
+                                <p style="font-size:11px; color:#9ca3af; margin-top:2px;">Plusieurs fichiers acceptés</p>
                             </div>
-                            <div id="galerieLoader" style="display:none;">
-                                <i class="fas fa-spinner fa-spin" style="font-size:20px; color:#2563eb;"></i>
-                                <p style="font-size:13px; color:#2563eb; margin-top:6px; font-weight:600;">Upload en cours…</p>
+                            <div id="galerieLoader" style="display:none; align-items:center; gap:10px; justify-content:center;">
+                                <i class="fas fa-spinner fa-spin" style="font-size:18px; color:#2563eb;"></i>
+                                <span id="galerieLoaderText" style="font-size:13px; color:#2563eb; font-weight:600;">Upload en cours…</span>
                             </div>
                         </div>
                         <input type="file" id="galerieFiles" accept="image/*" multiple style="display:none;" onchange="uploadGalerieImages(this.files)">
@@ -578,11 +645,20 @@
             const res = await fetch(CLOUDINARY_URL, { method: 'POST', body: fd });
             if (!res.ok) throw new Error('Upload échoué');
             const data = await res.json();
-            return data.secure_url;
+            // Optimisation automatique : format + qualité auto pour chargement rapide
+            return data.secure_url.replace('/upload/', '/upload/f_auto,q_auto,w_1200/');
+        }
+
+        function validateImageFile(file) {
+            const MAX_MB = 10;
+            const allowed = ['image/jpeg','image/png','image/webp','image/gif'];
+            if (!allowed.includes(file.type)) { showToast('error','Format invalide','Utilisez JPG, PNG ou WEBP.'); return false; }
+            if (file.size > MAX_MB * 1024 * 1024) { showToast('error','Fichier trop lourd',`Max ${MAX_MB} Mo par image.`); return false; }
+            return true;
         }
 
         async function uploadMainImage(file) {
-            if (!file) return;
+            if (!file || !validateImageFile(file)) return;
             const loader = document.getElementById('mainImgLoader');
             const placeholder = document.getElementById('mainImgPlaceholder');
             const preview = document.getElementById('mainImgPreview');
@@ -594,63 +670,222 @@
                 document.getElementById('pfImageUrl').value = url;
                 document.getElementById('mainImgThumb').src = url;
                 preview.style.display = 'block';
+                showToast('success', 'Photo uploadée', 'Image de couverture définie.');
             } catch (e) {
                 placeholder.style.display = 'block';
-                alert("Erreur lors de l'upload. Vérifiez votre connexion.");
+                showToast('error', 'Erreur upload', 'Vérifiez votre connexion et réessayez.');
             } finally {
                 loader.style.display = 'none';
             }
         }
 
+        // ═══════════════════════════════════════════════════════════════════════
+        // SÉLECTEUR DE POSITION GPS (Leaflet)
+        // ═══════════════════════════════════════════════════════════════════════
+        let _pickMap = null;
+        let _pickMarker = null;
+
+        function initPickMap() {
+            const placeholder = document.getElementById('pickMapPlaceholder');
+            const container   = document.getElementById('pickMapContainer');
+            if (!placeholder || !container) return;
+            placeholder.style.display = 'none';
+            container.style.display   = 'block';
+
+            if (_pickMap) { _pickMap.invalidateSize(); return; }
+
+            // Centre par défaut : Cameroun
+            _pickMap = L.map('pickMapContainer').setView([3.848, 11.502], 6);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap',
+                maxZoom: 19
+            }).addTo(_pickMap);
+
+            // Restaurer marqueur existant si coordonnées déjà définies
+            const latVal = document.getElementById('pfLatitude').value;
+            const lngVal = document.getElementById('pfLongitude').value;
+            if (latVal && lngVal) {
+                const lat = parseFloat(latVal), lng = parseFloat(lngVal);
+                _pickMarker = L.marker([lat, lng]).addTo(_pickMap);
+                _pickMap.setView([lat, lng], 13);
+                showPickCoords(lat, lng);
+            }
+
+            _pickMap.on('click', function(e) {
+                const { lat, lng } = e.latlng;
+                if (_pickMarker) _pickMap.removeLayer(_pickMarker);
+                _pickMarker = L.marker([lat, lng]).addTo(_pickMap);
+                document.getElementById('pfLatitude').value  = lat.toFixed(6);
+                document.getElementById('pfLongitude').value = lng.toFixed(6);
+                showPickCoords(lat, lng);
+            });
+
+            setTimeout(() => _pickMap.invalidateSize(), 100);
+        }
+
+        function showPickCoords(lat, lng) {
+            const coordsBar  = document.getElementById('pickMapCoords');
+            const coordsText = document.getElementById('pickMapCoordsText');
+            if (coordsBar)  coordsBar.style.display  = 'block';
+            if (coordsText) coordsText.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        }
+
+        function clearPickMap() {
+            document.getElementById('pfLatitude').value  = '';
+            document.getElementById('pfLongitude').value = '';
+            document.getElementById('pickMapCoords').style.display = 'none';
+            if (_pickMarker && _pickMap) { _pickMap.removeLayer(_pickMarker); _pickMarker = null; }
+        }
+
+        function resetPickMap() {
+            clearPickMap();
+            // Remettre le placeholder et masquer la carte
+            const placeholder = document.getElementById('pickMapPlaceholder');
+            const container   = document.getElementById('pickMapContainer');
+            if (placeholder) placeholder.style.display = 'flex';
+            if (container)   container.style.display   = 'none';
+            // Détruire la carte pour qu'elle soit recréée proprement à la prochaine ouverture
+            if (_pickMap) { _pickMap.remove(); _pickMap = null; _pickMarker = null; }
+        }
+
+        function prefillPickMap(lat, lng) {
+            if (!lat || !lng) return;
+            document.getElementById('pfLatitude').value  = lat;
+            document.getElementById('pfLongitude').value = lng;
+            // Ouvrir directement la carte avec le marqueur existant
+            const placeholder = document.getElementById('pickMapPlaceholder');
+            const container   = document.getElementById('pickMapContainer');
+            if (placeholder) placeholder.style.display = 'none';
+            if (container)   container.style.display   = 'block';
+            if (!_pickMap) {
+                _pickMap = L.map('pickMapContainer').setView([lat, lng], 13);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap', maxZoom: 19
+                }).addTo(_pickMap);
+                _pickMap.on('click', function(e) {
+                    const { lat: la, lng: ln } = e.latlng;
+                    if (_pickMarker) _pickMap.removeLayer(_pickMarker);
+                    _pickMarker = L.marker([la, ln]).addTo(_pickMap);
+                    document.getElementById('pfLatitude').value  = la.toFixed(6);
+                    document.getElementById('pfLongitude').value = ln.toFixed(6);
+                    showPickCoords(la, ln);
+                });
+            }
+            if (_pickMarker) _pickMap.removeLayer(_pickMarker);
+            _pickMarker = L.marker([lat, lng]).addTo(_pickMap);
+            setTimeout(() => _pickMap.invalidateSize(), 100);
+            showPickCoords(lat, lng);
+        }
+
+        function clearMainImage() {
+            document.getElementById('pfImageUrl').value = '';
+            document.getElementById('mainImgThumb').src = '';
+            document.getElementById('mainImgPreview').style.display = 'none';
+            document.getElementById('mainImgPlaceholder').style.display = 'block';
+            document.getElementById('mainImgFile').value = '';
+        }
+
         let galerieUrls = [];
+        let galerieDragSrcIdx = null;
 
         async function uploadGalerieImages(files) {
-            if (!files.length) return;
-            const loader = document.getElementById('galerieLoader');
+            if (!files || !files.length) return;
+            const MAX = 8;
+            const remaining = MAX - galerieUrls.length;
+            if (remaining <= 0) { showToast('warning','Galerie complète',`Maximum ${MAX} photos.`); return; }
+            const toUpload = Array.from(files).filter(validateImageFile).slice(0, remaining);
+            if (!toUpload.length) return;
+
+            const loader    = document.getElementById('galerieLoader');
+            const loaderTxt = document.getElementById('galerieLoaderText');
             const placeholder = document.getElementById('galeriePlaceholder');
-            loader.style.display = 'block';
+            loader.style.display = 'flex';
             placeholder.style.display = 'none';
-            const toUpload = Array.from(files).slice(0, 6 - galerieUrls.length);
-            for (const file of toUpload) {
+
+            for (let i = 0; i < toUpload.length; i++) {
+                if (loaderTxt) loaderTxt.textContent = `Upload ${i + 1} / ${toUpload.length}…`;
                 try {
-                    const url = await uploadToCloudinary(file);
+                    const url = await uploadToCloudinary(toUpload[i]);
                     galerieUrls.push(url);
-                } catch (e) { /* skip failed */ }
+                    renderGaleriePreviews();
+                } catch (e) { showToast('error','Erreur','Une photo n\'a pas pu être uploadée.'); }
             }
+
             document.getElementById('pfGalerieUrls').value = galerieUrls.join('|');
-            renderGaleriePreviews();
             loader.style.display = 'none';
-            if (galerieUrls.length < 6) placeholder.style.display = 'block';
+            if (galerieUrls.length < MAX) placeholder.style.display = 'block';
+            showToast('success','Photos ajoutées',`${galerieUrls.length} photo(s) dans la galerie.`);
         }
 
         function renderGaleriePreviews() {
             const container = document.getElementById('galeriePreviews');
+            if (!container) return;
             container.innerHTML = galerieUrls.map((url, i) => `
-                <div style="position:relative; width:80px; height:80px;">
-                    <img src="${url}" style="width:80px; height:80px; object-fit:cover; border-radius:8px;">
-                    <button type="button" onclick="removeGalerieImage(${i})"
-                        style="position:absolute; top:-6px; right:-6px; width:20px; height:20px; border-radius:50%;
-                               background:#ef4444; color:#fff; border:none; cursor:pointer; font-size:11px; font-weight:800;
-                               display:flex; align-items:center; justify-content:center; line-height:1;">×</button>
+                <div draggable="true"
+                    ondragstart="galerieDragSrcIdx=${i}; this.style.opacity='0.4';"
+                    ondragend="this.style.opacity='1';"
+                    ondragover="event.preventDefault(); this.style.outline='2px solid #2563eb'; this.style.outlineOffset='-2px';"
+                    ondragleave="this.style.outline='none';"
+                    ondrop="event.preventDefault(); this.style.outline='none'; moveGalerieDrop(${i});"
+                    onmouseover="this.querySelector('.gal-overlay').style.opacity='1'; this.querySelector('.gal-btns').style.opacity='1';"
+                    onmouseout="this.querySelector('.gal-overlay').style.opacity='0'; this.querySelector('.gal-btns').style.opacity='0';"
+                    style="position:relative; width:110px; height:110px; border-radius:12px; overflow:hidden; flex-shrink:0; box-shadow:0 2px 8px #0001; cursor:grab;">
+                    <img src="${url}" style="width:100%; height:100%; object-fit:cover; display:block; pointer-events:none;">
+                    <!-- Gradient overlay (déco, pointer-events:none) -->
+                    <div class="gal-overlay" style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.6) 0%,transparent 55%);opacity:0;transition:opacity 0.18s;pointer-events:none;"></div>
+                    <!-- Boutons cliquables par-dessus -->
+                    <div class="gal-btns" style="position:absolute;inset:0;opacity:0;transition:opacity 0.18s;">
+                        <button type="button" title="Supprimer" onclick="removeGalerieImage(${i})"
+                            style="position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:rgba(239,68,68,0.9);color:#fff;border:none;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <button type="button" title="Définir comme couverture" onclick="setGalerieAsCover(${i})"
+                            style="position:absolute;bottom:6px;left:50%;transform:translateX(-50%);background:rgba(37,99,235,0.92);color:#fff;border:none;border-radius:20px;font-size:10px;font-weight:700;padding:3px 8px;cursor:pointer;white-space:nowrap;">
+                            <i class="fas fa-star" style="margin-right:3px;font-size:8px;"></i>Couverture
+                        </button>
+                    </div>
+                    ${i === 0 ? '<div style="position:absolute;top:6px;left:6px;background:#2563eb;color:#fff;font-size:9px;font-weight:800;padding:2px 7px;border-radius:20px;pointer-events:none;"><i class="fas fa-star" style="margin-right:2px;"></i>1ère</div>' : ''}
                 </div>`).join('');
+        }
+
+        function moveGalerieDrop(targetIdx) {
+            if (galerieDragSrcIdx === null || galerieDragSrcIdx === targetIdx) return;
+            const moved = galerieUrls.splice(galerieDragSrcIdx, 1)[0];
+            galerieUrls.splice(targetIdx, 0, moved);
+            galerieDragSrcIdx = null;
+            document.getElementById('pfGalerieUrls').value = galerieUrls.join('|');
+            renderGaleriePreviews();
+        }
+
+        function setGalerieAsCover(index) {
+            const newCover = galerieUrls[index];
+            const oldCover = document.getElementById('pfImageUrl').value;
+            // Swap: met l'ancienne couverture dans la galerie, la photo choisie devient couverture
+            galerieUrls.splice(index, 1);
+            if (oldCover) galerieUrls.unshift(oldCover);
+            document.getElementById('pfImageUrl').value = newCover;
+            document.getElementById('mainImgThumb').src = newCover;
+            document.getElementById('mainImgPreview').style.display = 'block';
+            document.getElementById('mainImgPlaceholder').style.display = 'none';
+            document.getElementById('pfGalerieUrls').value = galerieUrls.join('|');
+            renderGaleriePreviews();
+            showToast('success','Couverture définie','Cette photo est maintenant l\'image principale.');
         }
 
         function removeGalerieImage(index) {
             galerieUrls.splice(index, 1);
             document.getElementById('pfGalerieUrls').value = galerieUrls.join('|');
             renderGaleriePreviews();
-            if (galerieUrls.length < 6) document.getElementById('galeriePlaceholder').style.display = 'block';
+            if (galerieUrls.length < 8) document.getElementById('galeriePlaceholder').style.display = 'block';
         }
 
         function resetImageFields() {
-            document.getElementById('pfImageUrl').value = '';
-            document.getElementById('mainImgThumb').src = '';
-            document.getElementById('mainImgPreview').style.display = 'none';
-            document.getElementById('mainImgPlaceholder').style.display = 'block';
+            clearMainImage();
             galerieUrls = [];
             document.getElementById('pfGalerieUrls').value = '';
             document.getElementById('galeriePreviews').innerHTML = '';
             document.getElementById('galeriePlaceholder').style.display = 'block';
+            resetPickMap();
         }
 
         function prefillImageFields(bien) {
@@ -663,7 +898,8 @@
             galerieUrls = bien.galerie || [];
             document.getElementById('pfGalerieUrls').value = galerieUrls.join('|');
             renderGaleriePreviews();
-            if (galerieUrls.length < 6) document.getElementById('galeriePlaceholder').style.display = 'block';
+            if (galerieUrls.length < 8) document.getElementById('galeriePlaceholder').style.display = 'block';
+            if (bien.lat && bien.lng) prefillPickMap(bien.lat, bien.lng);
         }
 
         let mesBiens = [];
@@ -962,6 +1198,8 @@
                 GalerieUrls: document.getElementById('pfGalerieUrls').value,
                 Equipements: document.getElementById('pfEquipements').value,
                 Standing: document.getElementById('pfStanding').value,
+                Latitude:  document.getElementById('pfLatitude').value  ? parseFloat(document.getElementById('pfLatitude').value)  : null,
+                Longitude: document.getElementById('pfLongitude').value ? parseFloat(document.getElementById('pfLongitude').value) : null,
             };
 
             const btn = this.querySelector('button[type="submit"]');
@@ -1260,6 +1498,20 @@
         }
 
         // ═══════════════════════════════════════════════════════════════════
+        // SIDEBAR MOBILE
+        // ═══════════════════════════════════════════════════════════════════
+        function openSidebar() {
+            document.getElementById('sidebar').classList.add('mobile-open');
+            document.getElementById('sidebarBackdrop').classList.add('visible');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('mobile-open');
+            document.getElementById('sidebarBackdrop').classList.remove('visible');
+            document.body.style.overflow = '';
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
         // NAVIGATION
         // ═══════════════════════════════════════════════════════════════════
         function switchSection(id, btn) {
@@ -1268,6 +1520,7 @@
             if (section) section.classList.add('active');
             document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
             if (btn) btn.classList.add('active');
+            closeSidebar();
 
             if (id === 'reservations') renderReservations();
             if (id === 'stats')        renderStats();

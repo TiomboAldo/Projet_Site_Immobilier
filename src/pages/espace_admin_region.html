@@ -77,6 +77,24 @@
 
         main { flex: 1; margin-left: 80px; transition: margin-left 0.3s; }
 
+        /* ─── Responsive Mobile ──────────────────────────────────────── */
+        .sidebar-backdrop {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5); z-index: 49; backdrop-filter: blur(2px);
+        }
+        .mobile-menu-btn { display: none; }
+        @media (max-width: 767px) {
+            .sidebar { transform: translateX(-100%); width: 256px !important; transition: transform 0.3s ease, width 0s; z-index: 51; }
+            .sidebar:hover { width: 256px !important; }
+            .sidebar.mobile-open { transform: translateX(0); }
+            .sidebar.mobile-open .sidebar-logo-text,
+            .sidebar.mobile-open .sidebar-item span { opacity: 1; }
+            .sidebar-backdrop.visible { display: block; }
+            main { margin-left: 0 !important; }
+            .mobile-menu-btn { display: flex !important; }
+            .hide-mobile { display: none !important; }
+        }
+
         #toast-container {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999;
             display: flex; flex-direction: column; gap: 12px; pointer-events: none; align-items: center;
@@ -120,8 +138,9 @@
 </head>
 
 <body>
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
     <!-- SIDEBAR -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
         <div class="sidebar-logo">
             <div class="sidebar-logo-icon"><i class="fas fa-shield-halved"></i></div>
             <span class="sidebar-logo-text">Admin Région</span>
@@ -154,19 +173,25 @@
 
     <!-- MAIN -->
     <main>
-        <header class="glass-effect sticky top-0 z-40 px-8 h-20 flex justify-between items-center border-b border-gray-100" style="display:flex;">
-            <div>
-                <h2 style="font-size:13px; font-weight:800; color:#2563eb; text-transform:uppercase; letter-spacing:0.1em;">Espace Administration</h2>
-                <p id="welcomeName" style="color:#6b7280; font-size:12px;">Chargement...</p>
+        <header class="glass-effect sticky top-0 z-40 px-4 md:px-8 h-16 md:h-20 flex justify-between items-center border-b border-gray-100" style="display:flex;gap:12px;">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <button class="mobile-menu-btn" onclick="openSidebar()"
+                    style="width:40px;height:40px;background:#f3f4f6;border:none;border-radius:10px;cursor:pointer;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="fas fa-bars" style="color:#374151;"></i>
+                </button>
+                <div>
+                    <h2 class="hide-mobile" style="font-size:13px; font-weight:800; color:#2563eb; text-transform:uppercase; letter-spacing:0.1em;">Espace Administration</h2>
+                    <p id="welcomeName" style="color:#6b7280; font-size:12px;">Chargement...</p>
+                </div>
             </div>
-            <div style="display:flex; align-items:center; gap:16px;">
+            <div style="display:flex; align-items:center; gap:10px;">
                 <button onclick="switchSection('notifications', null)" class="relative"
-                    style="background:#f3f4f6; border:none; width:42px; height:42px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                    style="background:#f3f4f6; border:none; width:42px; height:42px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center;flex-shrink:0;">
                     <i class="fas fa-bell text-gray-500"></i>
                     <span id="notifBadge" class="hidden"
                         style="position:absolute; top:-4px; right:-4px; background:#ef4444; color:#fff; font-size:10px; font-weight:800; min-width:18px; height:18px; border-radius:999px; display:flex; align-items:center; justify-content:center; padding:0 4px;">0</span>
                 </button>
-                <div id="regionBadge" style="background:#eff6ff; color:#2563eb; font-weight:700; font-size:12px; padding:8px 16px; border-radius:999px;"></div>
+                <div id="regionBadge" class="hide-mobile" style="background:#eff6ff; color:#2563eb; font-weight:700; font-size:12px; padding:8px 16px; border-radius:999px;"></div>
             </div>
         </header>
 
@@ -834,6 +859,20 @@
         }
 
         // ═══════════════════════════════════════════════════════════════════
+        // SIDEBAR MOBILE
+        // ═══════════════════════════════════════════════════════════════════
+        function openSidebar() {
+            document.getElementById('sidebar').classList.add('mobile-open');
+            document.getElementById('sidebarBackdrop').classList.add('visible');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('mobile-open');
+            document.getElementById('sidebarBackdrop').classList.remove('visible');
+            document.body.style.overflow = '';
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
         // NAVIGATION
         // ═══════════════════════════════════════════════════════════════════
         function switchSection(id, btn) {
@@ -842,6 +881,7 @@
             if (section) section.classList.add('active');
             document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
             if (btn) btn.classList.add('active');
+            closeSidebar();
             if (id === 'notifications') renderNotifications();
             if (id === 'proprietaires') renderProprietaires();
             if (id === 'biens')         renderBiens();
