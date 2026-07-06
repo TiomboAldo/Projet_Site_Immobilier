@@ -112,6 +112,10 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: all 0.3s ease;
         }
         .stat-icon { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 16px; }
+        @keyframes popIn {
+            from { transform: scale(0.88); opacity: 0; }
+            to   { transform: scale(1);    opacity: 1; }
+        }
     </style>
 </head>
 
@@ -125,7 +129,15 @@
         <nav class="sidebar-nav">
             <button onclick="switchSection('demandes', this)" class="sidebar-item active">
                 <i class="fas fa-user-check"></i>
-                <span>Demandes Propriétaire</span>
+                <span>Demandes en attente</span>
+            </button>
+            <button onclick="switchSection('proprietaires', this)" class="sidebar-item">
+                <i class="fas fa-user-tie"></i>
+                <span>Mes Propriétaires</span>
+            </button>
+            <button onclick="switchSection('biens', this)" class="sidebar-item">
+                <i class="fas fa-house-circle-xmark"></i>
+                <span>Biens à modérer</span>
             </button>
             <button onclick="switchSection('notifications', this)" class="sidebar-item">
                 <i class="fas fa-bell"></i>
@@ -179,6 +191,18 @@
                 <div id="demandesGrid"></div>
             </section>
 
+            <!-- MES PROPRIETAIRES -->
+            <section id="section-proprietaires" class="section-fade">
+                <h1 style="font-size:28px; font-weight:800; color:#111827; margin-bottom:24px;">Mes Propriétaires</h1>
+                <div id="proprietairesGrid"></div>
+            </section>
+
+            <!-- BIENS A MODERER -->
+            <section id="section-biens" class="section-fade">
+                <h1 style="font-size:28px; font-weight:800; color:#111827; margin-bottom:24px;">Biens à modérer</h1>
+                <div id="biensGrid"></div>
+            </section>
+
             <!-- NOTIFICATIONS -->
             <section id="section-notifications" class="section-fade">
                 <h1 style="font-size:28px; font-weight:800; color:#111827; margin-bottom:24px;">Notifications</h1>
@@ -204,6 +228,95 @@
         </div>
     </div>
 
+    <!-- MODAL DÉTAILS BIEN (ADMIN) -->
+    <div id="adminDetailsModal"
+         class="fixed inset-0 z-[200] hidden items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+         onclick="if(event.target===this) closeDetailsAdmin()">
+        <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+             style="animation: popIn 0.25s cubic-bezier(0.175,0.885,0.32,1.275);">
+            <!-- Header gradient -->
+            <div class="bg-gradient-to-br from-blue-600 to-blue-800 px-6 pt-6 pb-8 relative flex-shrink-0">
+                <button onclick="closeDetailsAdmin()"
+                    class="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/20 text-white flex items-center justify-center hover:bg-white/30 transition border-none cursor-pointer text-base">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="flex items-start gap-4">
+                    <div id="adImg" class="w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 border-2 border-white/30">
+                        <img id="adMainImg" class="w-full h-full object-cover" src="" alt="">
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h3 id="adTitre" class="text-lg font-extrabold text-white leading-tight"></h3>
+                        <p id="adLocalisation" class="text-sm text-blue-200 mt-1 flex items-center gap-1"></p>
+                        <div class="flex items-center gap-2 mt-2 flex-wrap">
+                            <span id="adStanding" class="inline-block bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full"></span>
+                            <span id="adDispo" class="text-xs font-bold px-3 py-1 rounded-full"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Body scrollable -->
+            <div class="px-6 py-5 space-y-5 overflow-y-auto">
+                <!-- Propriétaire -->
+                <div class="flex items-center gap-3 bg-blue-50 rounded-2xl p-4">
+                    <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-user-tie text-blue-600"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-blue-600 font-bold uppercase tracking-wide">Propriétaire</p>
+                        <p id="adOwner" class="text-sm font-extrabold text-blue-900"></p>
+                    </div>
+                </div>
+                <!-- Stats -->
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="text-center bg-gray-50 rounded-2xl py-4">
+                        <i class="fas fa-bed text-blue-600 text-lg mb-1 block"></i>
+                        <span id="adChambres" class="text-sm font-extrabold text-gray-800 block"></span>
+                        <p class="text-xs text-gray-400 mt-0.5">Chambres</p>
+                    </div>
+                    <div class="text-center bg-gray-50 rounded-2xl py-4">
+                        <i class="fas fa-bath text-blue-600 text-lg mb-1 block"></i>
+                        <span id="adSdb" class="text-sm font-extrabold text-gray-800 block"></span>
+                        <p class="text-xs text-gray-400 mt-0.5">Salles de bain</p>
+                    </div>
+                    <div class="text-center bg-gray-50 rounded-2xl py-4">
+                        <i class="fas fa-ruler-combined text-blue-600 text-lg mb-1 block"></i>
+                        <span id="adSurface" class="text-sm font-extrabold text-gray-800 block"></span>
+                        <p class="text-xs text-gray-400 mt-0.5">Surface</p>
+                    </div>
+                </div>
+                <!-- Description -->
+                <div id="adDescSection" class="hidden">
+                    <h4 class="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-2">Description</h4>
+                    <p id="adDesc" class="text-sm text-gray-600 leading-relaxed bg-gray-50 rounded-2xl p-4"></p>
+                </div>
+                <!-- Équipements -->
+                <div id="adEquipSection" class="hidden">
+                    <h4 class="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-2">Équipements</h4>
+                    <div id="adEquip" class="flex flex-wrap gap-2"></div>
+                </div>
+                <!-- Galerie -->
+                <div id="adGalerieSection" class="hidden">
+                    <h4 class="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-2">Galerie</h4>
+                    <div id="adGalerie" class="grid grid-cols-3 gap-2"></div>
+                </div>
+                <!-- Prix -->
+                <div class="flex items-center justify-between bg-blue-50 rounded-2xl p-4">
+                    <span class="text-sm font-bold text-blue-800">Prix</span>
+                    <span id="adPrix" class="text-xl font-extrabold text-blue-600"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LIGHTBOX ADMIN -->
+    <div id="adminLightbox"
+         class="fixed inset-0 bg-black/85 z-[300] hidden items-center justify-center cursor-zoom-out"
+         onclick="this.classList.add('hidden'); this.classList.remove('flex')">
+        <img id="adminLbImg" class="max-w-[92vw] max-h-[88vh] rounded-2xl object-contain shadow-2xl" src="" alt="">
+        <button onclick="event.stopPropagation(); document.getElementById('adminLightbox').classList.add('hidden'); document.getElementById('adminLightbox').classList.remove('flex')"
+                class="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/20 text-white text-xl flex items-center justify-center hover:bg-white/30 transition border-none cursor-pointer font-bold">×</button>
+    </div>
+
     <!-- TOAST CONTAINER -->
     <div id="toast-container"></div>
 
@@ -215,6 +328,7 @@
 
         let demandes = [];
         let currentFilter = 'En attente';
+        let regionBiens = [];
 
         async function apiFetch(url, options = {}) {
             const token = localStorage.getItem('jwtToken');
@@ -297,6 +411,322 @@
                     </div>
                 </div>`;
             }).join('');
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // MES PROPRIETAIRES
+        // ═══════════════════════════════════════════════════════════════════
+        async function renderProprietaires() {
+            const grid = document.getElementById('proprietairesGrid');
+            grid.innerHTML = `<div class="flex items-center justify-center py-16"><i class="fas fa-spinner fa-spin text-blue-600 text-2xl"></i></div>`;
+
+            const res = await apiFetch(`${API}/demandesproprietaire/proprietaires`);
+            if (!res.success) {
+                grid.innerHTML = `<p class="text-center text-red-500 py-10">Impossible de charger les propriétaires.</p>`;
+                return;
+            }
+
+            const proprietaires = res.data;
+
+            if (!proprietaires.length) {
+                grid.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
+                        <i class="fas fa-user-tie text-5xl text-gray-300 mb-3"></i>
+                        <p class="text-gray-400 font-semibold">Aucun propriétaire pour l'instant.</p>
+                    </div>`;
+                return;
+            }
+
+            grid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5';
+            grid.innerHTML = proprietaires.map(p => {
+                const date = p.dateValidation
+                    ? new Date(p.dateValidation).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+                    : null;
+                const initiales = ((p.prenom || '?')[0] + (p.nom || '?')[0]).toUpperCase();
+                const lienBiens = `/src/pages/admin_biens_proprietaire.html?id=${p.id}&nom=${encodeURIComponent((p.prenom || '') + ' ' + (p.nom || ''))}`;
+                return `
+                <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden flex flex-col hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
+                    <div class="bg-gradient-to-br from-blue-600 to-blue-800 px-5 pt-6 pb-5 text-center">
+                        <div class="w-16 h-16 rounded-full bg-white/20 border-2 border-white/40 flex items-center justify-center mx-auto mb-3 text-xl font-extrabold text-white">${initiales}</div>
+                        <h4 class="font-extrabold text-white text-base leading-tight">${escapeHtml(p.prenom || '')} ${escapeHtml(p.nom || '')}</h4>
+                        <span class="mt-1.5 inline-block bg-white/20 text-white text-xs font-semibold px-3 py-0.5 rounded-full">Propriétaire</span>
+                    </div>
+                    <div class="p-4 flex-1 flex flex-col gap-3">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-envelope text-blue-600 text-xs"></i>
+                            </div>
+                            <span class="text-sm text-gray-700 break-all leading-tight">${escapeHtml(p.email || '')}</span>
+                        </div>
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-map-marker-alt text-blue-600 text-xs"></i>
+                            </div>
+                            <span class="text-sm text-gray-700">Région <strong class="font-bold">${escapeHtml(p.region || '')}</strong></span>
+                        </div>
+                        ${date ? `
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-calendar-check text-blue-600 text-xs"></i>
+                            </div>
+                            <span class="text-xs text-gray-500">Depuis le ${date}</span>
+                        </div>` : ''}
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-house text-emerald-600 text-xs"></i>
+                            </div>
+                            <span class="text-sm text-gray-700 font-bold">${p.nbBiensPublies} bien${p.nbBiensPublies !== 1 ? 's' : ''} publié${p.nbBiensPublies !== 1 ? 's' : ''}</span>
+                        </div>
+                    </div>
+                    <div class="px-4 pb-4">
+                        <a href="${lienBiens}"
+                           class="block w-full text-center bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-bold py-2.5 rounded-xl hover:from-blue-700 hover:to-blue-800 transition no-underline">
+                            <i class="fas fa-eye mr-1.5"></i>Voir les biens publiés
+                        </a>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // BIENS A MODERER
+        // ═══════════════════════════════════════════════════════════════════
+        async function renderBiens() {
+            const grid = document.getElementById('biensGrid');
+            grid.className = '';
+            grid.innerHTML = `<div class="flex items-center justify-center py-16"><i class="fas fa-spinner fa-spin text-blue-600 text-2xl"></i></div>`;
+
+            const res = await apiFetch(`${API}/biens/region`);
+            if (!res.success) {
+                grid.innerHTML = `<p class="text-center text-red-500 py-10">Impossible de charger les biens.</p>`;
+                return;
+            }
+
+            regionBiens = res.data;
+
+            if (!regionBiens.length) {
+                grid.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
+                        <i class="fas fa-house text-5xl text-gray-300 mb-3"></i>
+                        <p class="text-gray-400 font-semibold">Aucun bien dans votre région.</p>
+                    </div>`;
+                return;
+            }
+
+            grid.style.display = 'grid';
+            grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
+            grid.style.gap = '24px';
+
+            grid.innerHTML = regionBiens.map((b, idx) => {
+                const isOff = !b.estDisponible;
+
+                const badgeStatut = b.statut?.toLowerCase() === 'vente'
+                    ? `<span style="position:absolute;top:12px;left:12px;background:#f59e0b;color:#fff;font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,0.15);">Vente</span>`
+                    : `<span style="position:absolute;top:12px;left:12px;background:#2563eb;color:#fff;font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,0.15);">Location</span>`;
+
+                const badgeDispo = isOff
+                    ? `<span style="position:absolute;top:12px;right:12px;background:rgba(17,24,39,0.8);color:#fff;font-size:10px;font-weight:800;padding:4px 10px;border-radius:999px;text-transform:uppercase;letter-spacing:0.05em;">Désactivé</span>`
+                    : '';
+
+                const imageBlock = b.imageUrl
+                    ? `<img src="${escapeHtml(b.imageUrl)}" alt="${escapeHtml(b.titre)}"
+                           style="width:100%;height:100%;object-fit:cover;transition:transform 0.7s ease;${isOff ? 'filter:grayscale(60%);opacity:0.7;' : ''}"
+                           class="group-img">`
+                    : `<div style="width:100%;height:100%;background:linear-gradient(135deg,#eff6ff,#dbeafe);display:flex;align-items:center;justify-content:center;">
+                           <i class="fas fa-house" style="font-size:48px;color:#93c5fd;"></i>
+                       </div>`;
+
+                const galerieHtml = (b.galerie && b.galerie.length)
+                    ? `<div style="display:flex;gap:6px;flex-wrap:wrap;padding:12px 16px 4px;">
+                        ${b.galerie.map((url, i) => `
+                            <img src="${escapeHtml(url)}" alt="photo ${i+1}"
+                                 onclick="ouvrirPhoto('${escapeHtml(url)}')"
+                                 style="width:56px;height:56px;object-fit:cover;border-radius:8px;cursor:pointer;transition:transform 0.2s;"
+                                 onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">`
+                        ).join('')}
+                       </div>`
+                    : '';
+
+                const modBtn = isOff
+                    ? `<button onclick="confirmerModeration(${b.id}, true)"
+                           style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 8px;background:#059669;color:#fff;border:none;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;transition:background 0.2s;"
+                           onmouseover="this.style.background='#047857'" onmouseout="this.style.background='#059669'">
+                           <i class="fas fa-check"></i> Réactiver
+                       </button>`
+                    : `<button onclick="confirmerModeration(${b.id}, false)"
+                           style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 8px;background:#dc2626;color:#fff;border:none;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;transition:background 0.2s;"
+                           onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">
+                           <i class="fas fa-ban"></i> Désactiver
+                       </button>`;
+
+                return `
+                <div class="bien-mod-card" data-idx="${idx}"
+                     style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);border:1px solid #f3f4f6;opacity:0;transform:translateY(20px);transition:transform 0.3s ease,box-shadow 0.3s ease,opacity 0.5s ease,transform 0.5s ease;"
+                     onmouseover="this.style.transform='translateY(-6px)';this.style.boxShadow='0 16px 40px rgba(0,0,0,0.12)'"
+                     onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 20px rgba(0,0,0,0.08)'">
+                    <!-- Image -->
+                    <div style="position:relative;height:200px;overflow:hidden;cursor:pointer;" onclick="ouvrirPhoto('${escapeHtml(b.imageUrl || '')}')">
+                        ${imageBlock}
+                        ${badgeStatut}
+                        ${badgeDispo}
+                    </div>
+                    <!-- Galerie -->
+                    ${galerieHtml}
+                    <!-- Corps -->
+                    <div style="padding:18px 18px 16px;">
+                        <h3 style="font-size:15px;font-weight:800;color:#111827;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(b.titre)}</h3>
+                        <p style="font-size:12px;color:#6b7280;margin-bottom:3px;display:flex;align-items:center;gap:5px;">
+                            <i class="fas fa-user-tie" style="color:#2563eb;font-size:11px;flex-shrink:0;"></i>
+                            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;">${escapeHtml(b.prenomProprietaire || '')} ${escapeHtml(b.nomProprietaire || '')}</span>
+                        </p>
+                        <p style="font-size:13px;color:#6b7280;margin-bottom:8px;display:flex;align-items:center;gap:5px;">
+                            <i class="fas fa-map-marker-alt" style="color:#2563eb;font-size:11px;flex-shrink:0;"></i>
+                            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(b.localisation)}</span>
+                        </p>
+                        <p style="font-size:17px;font-weight:800;color:#2563eb;margin-bottom:12px;">${escapeHtml(b.prix)}</p>
+                        <div style="display:flex;justify-content:space-between;font-size:11px;color:#9ca3af;font-weight:700;border-top:1px solid #f3f4f6;padding-top:10px;margin-bottom:12px;">
+                            <span><i class="fas fa-eye" style="margin-right:3px;"></i>${b.vues}</span>
+                            <span><i class="fas fa-bed" style="margin-right:3px;"></i>${b.chambres} ch.</span>
+                            <span><i class="fas fa-bath" style="margin-right:3px;"></i>${b.sallesDeBain} sdb</span>
+                            <span><i class="fas fa-ruler-combined" style="margin-right:3px;"></i>${b.surface} m²</span>
+                        </div>
+                        <!-- Boutons -->
+                        <div style="display:flex;gap:8px;">
+                            <button onclick="openDetailsAdmin(${b.id})"
+                                style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 8px;background:#fff;color:#2563eb;border:2px solid #2563eb;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;transition:background 0.2s;"
+                                onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='#fff'">
+                                <i class="fas fa-info-circle"></i> Détails
+                            </button>
+                            ${modBtn}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            // Animation d'entrée décalée
+            setTimeout(() => {
+                document.querySelectorAll('.bien-mod-card').forEach((card, i) => {
+                    setTimeout(() => {
+                        card.style.opacity = '1';
+                        card.style.transform = 'translateY(0)';
+                    }, i * 80);
+                });
+            }, 50);
+        }
+
+        function ouvrirPhoto(url) {
+            if (!url) return;
+            const lb = document.getElementById('adminLightbox');
+            document.getElementById('adminLbImg').src = url;
+            lb.classList.remove('hidden');
+            lb.classList.add('flex');
+        }
+
+        function openDetailsAdmin(bienId) {
+            const b = regionBiens.find(x => x.id === bienId);
+            if (!b) return;
+
+            document.getElementById('adTitre').textContent = b.titre;
+            document.getElementById('adLocalisation').innerHTML =
+                `<i class="fas fa-map-marker-alt mr-1 flex-shrink-0"></i>${escapeHtml(b.localisation)}`;
+            document.getElementById('adStanding').textContent = b.standing || b.type || '';
+            document.getElementById('adPrix').textContent = b.prix;
+            document.getElementById('adChambres').textContent = b.chambres;
+            document.getElementById('adSdb').textContent = b.sallesDeBain;
+            document.getElementById('adSurface').textContent = b.surface + ' m²';
+            document.getElementById('adOwner').textContent =
+                `${b.prenomProprietaire || ''} ${b.nomProprietaire || ''}`.trim();
+
+            const dispo = document.getElementById('adDispo');
+            if (b.estDisponible) {
+                dispo.textContent = 'Actif';
+                dispo.className = 'text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700';
+            } else {
+                dispo.textContent = 'Désactivé';
+                dispo.className = 'text-xs font-bold px-3 py-1 rounded-full bg-red-100 text-red-700';
+            }
+
+            const adImg = document.getElementById('adImg');
+            if (b.imageUrl) {
+                document.getElementById('adMainImg').src = b.imageUrl;
+                adImg.classList.remove('hidden');
+            } else {
+                adImg.classList.add('hidden');
+            }
+
+            const descSection = document.getElementById('adDescSection');
+            if (b.description) {
+                document.getElementById('adDesc').textContent = b.description;
+                descSection.classList.remove('hidden');
+            } else {
+                descSection.classList.add('hidden');
+            }
+
+            const equipSection = document.getElementById('adEquipSection');
+            if (b.equipements && b.equipements.length) {
+                document.getElementById('adEquip').innerHTML = b.equipements.map(eq =>
+                    `<span class="text-xs bg-blue-50 text-blue-700 font-semibold px-3 py-1 rounded-full">${escapeHtml(eq)}</span>`
+                ).join('');
+                equipSection.classList.remove('hidden');
+            } else {
+                equipSection.classList.add('hidden');
+            }
+
+            const galerieSection = document.getElementById('adGalerieSection');
+            if (b.galerie && b.galerie.length) {
+                document.getElementById('adGalerie').innerHTML = b.galerie.map((url, i) =>
+                    `<img src="${escapeHtml(url)}" alt="photo ${i+1}"
+                          onclick="ouvrirPhoto('${escapeHtml(url)}')"
+                          class="w-full aspect-square object-cover rounded-2xl cursor-pointer hover:scale-105 transition duration-200 shadow-sm">`
+                ).join('');
+                galerieSection.classList.remove('hidden');
+            } else {
+                galerieSection.classList.add('hidden');
+            }
+
+            const modal = document.getElementById('adminDetailsModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeDetailsAdmin() {
+            const modal = document.getElementById('adminDetailsModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        async function confirmerModeration(id, activer) {
+            openConfirmModal({
+                title:   activer ? 'Réactiver ce bien ?' : 'Désactiver ce bien ?',
+                message: activer
+                    ? 'Le bien sera à nouveau visible sur la plateforme.'
+                    : 'Le bien ne sera plus visible. Le propriétaire pourra le remettre en ligne.',
+                labelOk: activer ? 'Réactiver' : 'Désactiver',
+                colorOk: activer ? '#059669' : '#dc2626',
+                onConfirm: async () => {
+                    let res;
+                    if (!activer) {
+                        res = await apiFetch(`${API}/biens/${id}`, { method: 'DELETE' });
+                    } else {
+                        // Récupérer les données actuelles pour le PUT
+                        const detail = await apiFetch(`${API}/biens/${id}`);
+                        if (!detail.success) return;
+                        const b = detail.data;
+                        res = await apiFetch(`${API}/biens/${id}`, {
+                            method: 'PUT',
+                            body: JSON.stringify({
+                                titre: b.titre, type: b.type, statut: b.statut, prix: b.prix,
+                                chambres: b.chambres, sallesDeBain: b.sallesDeBain, surface: b.surface,
+                                localisation: b.localisation, description: b.description,
+                                imageUrl: b.imageUrl, galerieUrls: b.galerie?.join('|') || '',
+                                equipements: b.equipements?.join('|') || '', standing: b.standing,
+                                estDisponible: true
+                            })
+                        });
+                    }
+                    if (res.success) renderBiens();
+                }
+            });
         }
 
         function filterDemandes(statut, btn) {
@@ -413,6 +843,8 @@
             document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
             if (btn) btn.classList.add('active');
             if (id === 'notifications') renderNotifications();
+            if (id === 'proprietaires') renderProprietaires();
+            if (id === 'biens')         renderBiens();
             window.scrollTo(0, 0);
         }
 
@@ -426,7 +858,9 @@
             NouvelleDemandeProprietaire: { icon: 'fa-user-check', bg: '#e0e7ff', color: '#4f46e5' },
             DemandeValidee: { icon: 'fa-circle-check', bg: '#d1fae5', color: '#059669' },
             DemandeRefusee: { icon: 'fa-circle-xmark', bg: '#fee2e2', color: '#dc2626' },
-            NouvelleRecommandation: { icon: 'fa-share-nodes', bg: '#e0e7ff', color: '#4f46e5' },
+            NouvelleRecommandation: { icon: 'fa-share-nodes',    bg: '#e0e7ff', color: '#4f46e5' },
+            'nouvelle-annonce':     { icon: 'fa-house-circle-check', bg: '#d1fae5', color: '#059669' },
+            moderation:             { icon: 'fa-shield-halved',  bg: '#fef3c7', color: '#92400e' },
         };
 
         async function refreshNotifBadge() {
@@ -497,7 +931,12 @@
         }
 
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') { closeConfirmModal(); }
+            if (e.key === 'Escape') {
+                closeConfirmModal();
+                closeDetailsAdmin();
+                const lb = document.getElementById('adminLightbox');
+                if (lb) { lb.classList.add('hidden'); lb.classList.remove('flex'); }
+            }
         });
 
         // ═══════════════════════════════════════════════════════════════════

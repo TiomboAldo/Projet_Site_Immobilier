@@ -28,7 +28,8 @@ export default defineConfig({
         accueil_user:  resolve(__dirname, 'src/pages/accueil_user.html'),
         details:       resolve(__dirname, 'src/pages/details.html'),
         espace_proprietaire: resolve(__dirname, 'src/pages/espace_proprietaire.html'),
-        espace_admin_region: resolve(__dirname, 'src/pages/espace_admin_region.html'),
+        espace_admin_region:    resolve(__dirname, 'src/pages/espace_admin_region.html'),
+        admin_biens_proprietaire: resolve(__dirname, 'src/pages/admin_biens_proprietaire.html'),
         // ↑ Ajoute ici toutes tes nouvelles pages
       },
     },
