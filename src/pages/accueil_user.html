@@ -72,6 +72,19 @@
             box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
         }
 
+        /* ─── Étoiles avis ──────────────────────────────────── */
+        .star-input { display:flex; gap:4px; flex-direction:row-reverse; justify-content:flex-end; }
+        .star-input input { display:none; }
+        .star-input label {
+            font-size:28px; color:#d1d5db; cursor:pointer; transition:color 0.15s;
+            line-height:1;
+        }
+        .star-input label:hover,
+        .star-input label:hover ~ label,
+        .star-input input:checked ~ label { color:#f59e0b; }
+        .star-display { display:inline-flex; gap:2px; }
+        .star-display i { font-size:13px; }
+
         .modal-hidden {
             display: none !important;
             pointer-events: none;
@@ -1095,6 +1108,38 @@
                     <div class="flex items-center gap-2 text-xs font-bold text-gray-600"><i
                             class="fas fa-swimming-pool text-blue-500"></i> Piscine / Spa</div>
                 </div>
+                <!-- ─── Section Avis ──────────────────────────────────── -->
+                <div style="border-top:1px solid #f3f4f6;padding-top:24px;margin-top:8px;margin-bottom:24px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+                        <h4 style="font-size:16px;font-weight:800;color:#111827;">Avis vérifiés</h4>
+                        <div id="modalAvisSummary" style="display:flex;align-items:center;gap:8px;font-size:13px;color:#6b7280;font-weight:700;"></div>
+                    </div>
+                    <div id="modalAvisList" style="display:flex;flex-direction:column;gap:12px;"></div>
+                    <!-- Formulaire avis (affiché si canReview) -->
+                    <div id="avisFormContainer" style="display:none;margin-top:16px;background:#f8fafc;border-radius:16px;padding:20px;border:1px solid #e2e8f0;">
+                        <p style="font-size:13px;font-weight:800;color:#374151;margin-bottom:12px;">
+                            <i class="fas fa-star" style="color:#f59e0b;margin-right:6px;"></i>Laisser un avis
+                        </p>
+                        <div class="star-input" id="avisStarInput">
+                            <input type="radio" id="s5" name="avisNote" value="5"><label for="s5">★</label>
+                            <input type="radio" id="s4" name="avisNote" value="4"><label for="s4">★</label>
+                            <input type="radio" id="s3" name="avisNote" value="3"><label for="s3">★</label>
+                            <input type="radio" id="s2" name="avisNote" value="2"><label for="s2">★</label>
+                            <input type="radio" id="s1" name="avisNote" value="1"><label for="s1">★</label>
+                        </div>
+                        <textarea id="avisTexte" placeholder="Décrivez votre expérience..." rows="3"
+                            style="width:100%;margin-top:12px;padding:12px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:13px;font-family:inherit;resize:none;outline:none;"></textarea>
+                        <button onclick="submitAvis()" style="margin-top:10px;width:100%;padding:12px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-weight:700;font-size:13px;cursor:pointer;">
+                            Publier mon avis
+                        </button>
+                    </div>
+                    <!-- Message si visite non confirmée -->
+                    <div id="avisLockedMsg" style="display:none;text-align:center;padding:16px;background:#f9fafb;border-radius:12px;margin-top:12px;">
+                        <i class="fas fa-lock" style="color:#9ca3af;font-size:18px;margin-bottom:6px;display:block;"></i>
+                        <p style="font-size:12px;color:#9ca3af;font-weight:600;">Réservez et effectuez une visite pour laisser un avis.</p>
+                    </div>
+                </div>
+
                 <button onclick="openVisitForm(currentPropertyId)"
                     class="w-full bg-gray-900 hover:bg-blue-600 text-white py-5 rounded-2xl font-bold transition"
                     style="border:none; cursor:pointer;">
@@ -1842,12 +1887,121 @@
             const modal = document.getElementById('propertyModal');
             modal.classList.remove('modal-hidden');
             modal.classList.add('modal-visible');
+
+            loadAvis(id);
         }
 
         function closeModal() {
             const modal = document.getElementById('propertyModal');
             modal.classList.add('modal-hidden');
             modal.classList.remove('modal-visible');
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // AVIS VÉRIFIÉS
+        // ═══════════════════════════════════════════════════════════════════════
+        async function loadAvis(bienId) {
+            const list   = document.getElementById('modalAvisList');
+            const summary = document.getElementById('modalAvisSummary');
+            const form   = document.getElementById('avisFormContainer');
+            const locked = document.getElementById('avisLockedMsg');
+            if (!list) return;
+
+            list.innerHTML = `<div style="text-align:center;padding:12px 0;"><i class="fas fa-spinner fa-spin" style="color:#2563eb;"></i></div>`;
+            summary.innerHTML = '';
+            form.style.display = 'none';
+            locked.style.display = 'none';
+
+            // Charger les avis
+            const res = await apiFetch(`${API}/avis/bien/${bienId}`);
+            if (!res.success) { list.innerHTML = ''; return; }
+
+            // Résumé
+            if (res.total > 0) {
+                const stars = renderStars(res.moyenne);
+                summary.innerHTML = `${stars} <span>${res.moyenne}/5</span> <span style="color:#d1d5db;">·</span> ${res.total} avis`;
+            } else {
+                summary.innerHTML = `<span style="color:#d1d5db;">Aucun avis pour l'instant</span>`;
+            }
+
+            // Liste
+            if (!res.data.length) {
+                list.innerHTML = `<p style="font-size:13px;color:#9ca3af;text-align:center;padding:8px 0;">Soyez le premier à laisser un avis après votre visite.</p>`;
+            } else {
+                list.innerHTML = res.data.map(a => {
+                    const initiales = ((a.prenomAuteur || '?')[0] + (a.nomAuteur || '?')[0]).toUpperCase();
+                    const date = new Date(a.createdAt).toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
+                    const myId = getUserId();
+                    const canDel = myId && Number(myId) === a.userId;
+                    return `
+                    <div style="background:#fff;border:1px solid #f3f4f6;border-radius:16px;padding:16px;display:flex;gap:12px;align-items:flex-start;" id="avis-${a.id}">
+                        <div style="width:36px;height:36px;border-radius:50%;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;font-weight:800;color:#2563eb;">${initiales}</div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                                <span style="font-size:13px;font-weight:800;color:#111827;">${escapeHtml(a.prenomAuteur)} ${escapeHtml(a.nomAuteur)}</span>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    ${renderStars(a.note)}
+                                    ${canDel ? `<button onclick="deleteAvis(${a.id})" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:12px;" title="Supprimer"><i class="fas fa-trash-alt"></i></button>` : ''}
+                                </div>
+                            </div>
+                            ${a.texte ? `<p style="font-size:13px;color:#6b7280;margin-top:4px;line-height:1.5;">"${escapeHtml(a.texte)}"</p>` : ''}
+                            <p style="font-size:11px;color:#d1d5db;margin-top:4px;">${date} · Visite vérifiée <i class="fas fa-circle-check" style="color:#10b981;font-size:10px;"></i></p>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+
+            // Vérifier si l'utilisateur peut laisser un avis
+            const userId = getUserId();
+            if (userId) {
+                const canRes = await apiFetch(`${API}/avis/can-review/${bienId}`);
+                if (canRes.success) {
+                    if (canRes.canReview) {
+                        form.style.display = 'block';
+                        document.querySelectorAll('#avisStarInput input').forEach(i => i.checked = false);
+                        document.getElementById('avisTexte').value = '';
+                    } else if (!canRes.hasVisited) {
+                        locked.style.display = 'block';
+                    }
+                }
+            }
+        }
+
+        function renderStars(note) {
+            const n = Math.round(note);
+            let html = '<span class="star-display">';
+            for (let i = 1; i <= 5; i++)
+                html += `<i class="${i <= n ? 'fa-solid' : 'fa-regular'} fa-star" style="color:${i <= n ? '#f59e0b' : '#d1d5db'};font-size:13px;"></i>`;
+            return html + '</span>';
+        }
+
+        async function submitAvis() {
+            const noteEl = document.querySelector('#avisStarInput input:checked');
+            if (!noteEl) { showToast('error', 'Note requise', 'Sélectionnez une note entre 1 et 5 étoiles.'); return; }
+            const note  = parseInt(noteEl.value);
+            const texte = document.getElementById('avisTexte').value.trim();
+
+            const res = await apiFetch(`${API}/avis`, {
+                method: 'POST',
+                body: JSON.stringify({ bienId: currentPropertyId, note, texte })
+            });
+
+            if (res.success) {
+                showToast('success', 'Avis publié !', 'Merci pour votre retour.');
+                await loadAvis(currentPropertyId);
+            } else {
+                showToast('error', 'Erreur', res.message || 'Impossible de publier l\'avis.');
+            }
+        }
+
+        async function deleteAvis(id) {
+            const res = await apiFetch(`${API}/avis/${id}`, { method: 'DELETE' });
+            if (res.success) {
+                const el = document.getElementById(`avis-${id}`);
+                if (el) el.remove();
+                showToast('info', 'Avis supprimé', '');
+                await loadAvis(currentPropertyId);
+            }
         }
 
         function changeMainImage(index) {
