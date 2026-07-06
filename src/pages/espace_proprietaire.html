@@ -46,6 +46,11 @@
             text-transform: uppercase; letter-spacing: 0.05em; padding: 6px 12px; border-radius: 999px;
         }
 
+        @keyframes popIn {
+            from { transform: scale(0.88); opacity: 0; }
+            to   { transform: scale(1);    opacity: 1; }
+        }
+
         .form-group { margin-bottom: 20px; }
         .form-group label {
             display: block; margin-bottom: 8px; font-size: 12px; font-weight: 700;
@@ -197,7 +202,7 @@
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
                     <h1 style="font-size:28px; font-weight:800; color:#111827;">Mes annonces</h1>
                 </div>
-                <div id="myBiensGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:24px;"></div>
+                <div id="myBiensGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
             </section>
 
             <!-- RESERVATIONS -->
@@ -267,8 +272,48 @@
                         <div class="form-group"><label>Surface (m²)</label><input type="number" id="pfSurface" min="0" value="0"></div>
                     </div>
                     <div class="form-group"><label>Description</label><textarea id="pfDescription"></textarea></div>
-                    <div class="form-group"><label>Image principale (URL)</label><input type="text" id="pfImageUrl" placeholder="https://..."></div>
-                    <div class="form-group"><label>Galerie (URLs séparées par |)</label><textarea id="pfGalerieUrls" placeholder="https://...|https://..."></textarea></div>
+                    <!-- IMAGE PRINCIPALE -->
+                    <div class="form-group">
+                        <label>Image principale</label>
+                        <input type="hidden" id="pfImageUrl">
+                        <div id="mainImgZone" onclick="document.getElementById('mainImgFile').click()"
+                            style="border:2px dashed #d1d5db; border-radius:14px; padding:28px; text-align:center; cursor:pointer; transition:border-color 0.2s; background:#fafafa;"
+                            onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#d1d5db'">
+                            <div id="mainImgPreview" style="display:none; margin-bottom:10px;">
+                                <img id="mainImgThumb" style="max-height:160px; border-radius:10px; object-fit:cover;">
+                            </div>
+                            <div id="mainImgPlaceholder">
+                                <i class="fas fa-cloud-upload-alt" style="font-size:28px; color:#9ca3af; display:block; margin-bottom:8px;"></i>
+                                <p style="font-size:13px; color:#6b7280; font-weight:600;">Cliquer pour choisir une image</p>
+                                <p style="font-size:11px; color:#9ca3af; margin-top:4px;">JPG, PNG, WEBP — max 10 Mo</p>
+                            </div>
+                            <div id="mainImgLoader" style="display:none;">
+                                <i class="fas fa-spinner fa-spin" style="font-size:24px; color:#2563eb;"></i>
+                                <p style="font-size:13px; color:#2563eb; margin-top:8px; font-weight:600;">Upload en cours…</p>
+                            </div>
+                        </div>
+                        <input type="file" id="mainImgFile" accept="image/*" style="display:none;" onchange="uploadMainImage(this.files[0])">
+                    </div>
+
+                    <!-- GALERIE -->
+                    <div class="form-group">
+                        <label>Galerie (jusqu'à 6 photos)</label>
+                        <input type="hidden" id="pfGalerieUrls">
+                        <div id="galerieZone" onclick="document.getElementById('galerieFiles').click()"
+                            style="border:2px dashed #d1d5db; border-radius:14px; padding:20px; text-align:center; cursor:pointer; transition:border-color 0.2s; background:#fafafa;"
+                            onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#d1d5db'">
+                            <div id="galeriePreviews" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:10px;"></div>
+                            <div id="galeriePlaceholder">
+                                <i class="fas fa-images" style="font-size:24px; color:#9ca3af; display:block; margin-bottom:6px;"></i>
+                                <p style="font-size:13px; color:#6b7280; font-weight:600;">Ajouter des photos à la galerie</p>
+                            </div>
+                            <div id="galerieLoader" style="display:none;">
+                                <i class="fas fa-spinner fa-spin" style="font-size:20px; color:#2563eb;"></i>
+                                <p style="font-size:13px; color:#2563eb; margin-top:6px; font-weight:600;">Upload en cours…</p>
+                            </div>
+                        </div>
+                        <input type="file" id="galerieFiles" accept="image/*" multiple style="display:none;" onchange="uploadGalerieImages(this.files)">
+                    </div>
                     <div class="form-group"><label>Équipements (séparés par |)</label><textarea id="pfEquipements" placeholder="Piscine|Jardin|Climatisation"></textarea></div>
 
                     <button type="submit" class="hover-lift"
@@ -297,6 +342,72 @@
         </div>
     </div>
 
+    <!-- MODAL DÉTAILS BIEN -->
+    <div id="detailsModal" class="fixed inset-0 z-[200] hidden items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+         onclick="if(event.target===this) closeDetails()">
+        <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+             style="animation: popIn 0.25s cubic-bezier(0.175,0.885,0.32,1.275);">
+            <!-- Header gradient -->
+            <div class="bg-gradient-to-br from-blue-600 to-blue-800 px-6 pt-6 pb-8 relative flex-shrink-0">
+                <button onclick="closeDetails()"
+                    class="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/20 text-white flex items-center justify-center hover:bg-white/30 transition border-none cursor-pointer text-base">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="flex items-start gap-4">
+                    <div id="dmImg" class="w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 border-2 border-white/30">
+                        <img id="dmMainImg" class="w-full h-full object-cover" src="" alt="">
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h3 id="dmTitre" class="text-lg font-extrabold text-white leading-tight"></h3>
+                        <p id="dmLocalisation" class="text-sm text-blue-200 mt-1 flex items-center gap-1"></p>
+                        <span id="dmStanding" class="mt-2 inline-block bg-white/20 text-white text-xs font-bold px-3 py-1 rounded-full"></span>
+                    </div>
+                </div>
+            </div>
+            <!-- Body scrollable -->
+            <div class="px-6 py-5 space-y-5 overflow-y-auto">
+                <!-- Stats -->
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="text-center bg-gray-50 rounded-2xl py-4">
+                        <i class="fas fa-bed text-blue-600 text-lg mb-1 block"></i>
+                        <span id="dmChambres" class="text-sm font-extrabold text-gray-800 block"></span>
+                        <p class="text-xs text-gray-400 mt-0.5">Chambres</p>
+                    </div>
+                    <div class="text-center bg-gray-50 rounded-2xl py-4">
+                        <i class="fas fa-bath text-blue-600 text-lg mb-1 block"></i>
+                        <span id="dmSdb" class="text-sm font-extrabold text-gray-800 block"></span>
+                        <p class="text-xs text-gray-400 mt-0.5">Salles de bain</p>
+                    </div>
+                    <div class="text-center bg-gray-50 rounded-2xl py-4">
+                        <i class="fas fa-ruler-combined text-blue-600 text-lg mb-1 block"></i>
+                        <span id="dmSurface" class="text-sm font-extrabold text-gray-800 block"></span>
+                        <p class="text-xs text-gray-400 mt-0.5">Surface</p>
+                    </div>
+                </div>
+                <!-- Description -->
+                <div id="dmDescSection" class="hidden">
+                    <h4 class="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-2">Description</h4>
+                    <p id="dmDesc" class="text-sm text-gray-600 leading-relaxed bg-gray-50 rounded-2xl p-4"></p>
+                </div>
+                <!-- Équipements -->
+                <div id="dmEquipSection" class="hidden">
+                    <h4 class="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-2">Équipements</h4>
+                    <div id="dmEquip" class="flex flex-wrap gap-2"></div>
+                </div>
+                <!-- Galerie -->
+                <div id="dmGalerieSection" class="hidden">
+                    <h4 class="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-2">Galerie</h4>
+                    <div id="dmGalerie" class="grid grid-cols-3 gap-2"></div>
+                </div>
+                <!-- Prix -->
+                <div class="flex items-center justify-between bg-blue-50 rounded-2xl p-4">
+                    <span class="text-sm font-bold text-blue-800">Prix</span>
+                    <span id="dmPrix" class="text-xl font-extrabold text-blue-600"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- TOAST CONTAINER -->
     <div id="toast-container"></div>
 
@@ -306,6 +417,106 @@
         // ═══════════════════════════════════════════════════════════════════
         const API = 'http://localhost:5257/api';
         const getUserId = () => parseInt(localStorage.getItem('userId') || '0');
+
+        // ─── CLOUDINARY ───────────────────────────────────────────────────────
+        const CLOUDINARY_CLOUD  = 'cwepzu0w';
+        const CLOUDINARY_PRESET = 'said_africa_biens';
+        const CLOUDINARY_URL    = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`;
+
+        async function uploadToCloudinary(file) {
+            const fd = new FormData();
+            fd.append('file', file);
+            fd.append('upload_preset', CLOUDINARY_PRESET);
+            const res = await fetch(CLOUDINARY_URL, { method: 'POST', body: fd });
+            if (!res.ok) throw new Error('Upload échoué');
+            const data = await res.json();
+            return data.secure_url;
+        }
+
+        async function uploadMainImage(file) {
+            if (!file) return;
+            const loader = document.getElementById('mainImgLoader');
+            const placeholder = document.getElementById('mainImgPlaceholder');
+            const preview = document.getElementById('mainImgPreview');
+            loader.style.display = 'block';
+            placeholder.style.display = 'none';
+            preview.style.display = 'none';
+            try {
+                const url = await uploadToCloudinary(file);
+                document.getElementById('pfImageUrl').value = url;
+                document.getElementById('mainImgThumb').src = url;
+                preview.style.display = 'block';
+            } catch (e) {
+                placeholder.style.display = 'block';
+                alert("Erreur lors de l'upload. Vérifiez votre connexion.");
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+
+        let galerieUrls = [];
+
+        async function uploadGalerieImages(files) {
+            if (!files.length) return;
+            const loader = document.getElementById('galerieLoader');
+            const placeholder = document.getElementById('galeriePlaceholder');
+            loader.style.display = 'block';
+            placeholder.style.display = 'none';
+            const toUpload = Array.from(files).slice(0, 6 - galerieUrls.length);
+            for (const file of toUpload) {
+                try {
+                    const url = await uploadToCloudinary(file);
+                    galerieUrls.push(url);
+                } catch (e) { /* skip failed */ }
+            }
+            document.getElementById('pfGalerieUrls').value = galerieUrls.join('|');
+            renderGaleriePreviews();
+            loader.style.display = 'none';
+            if (galerieUrls.length < 6) placeholder.style.display = 'block';
+        }
+
+        function renderGaleriePreviews() {
+            const container = document.getElementById('galeriePreviews');
+            container.innerHTML = galerieUrls.map((url, i) => `
+                <div style="position:relative; width:80px; height:80px;">
+                    <img src="${url}" style="width:80px; height:80px; object-fit:cover; border-radius:8px;">
+                    <button type="button" onclick="removeGalerieImage(${i})"
+                        style="position:absolute; top:-6px; right:-6px; width:20px; height:20px; border-radius:50%;
+                               background:#ef4444; color:#fff; border:none; cursor:pointer; font-size:11px; font-weight:800;
+                               display:flex; align-items:center; justify-content:center; line-height:1;">×</button>
+                </div>`).join('');
+        }
+
+        function removeGalerieImage(index) {
+            galerieUrls.splice(index, 1);
+            document.getElementById('pfGalerieUrls').value = galerieUrls.join('|');
+            renderGaleriePreviews();
+            if (galerieUrls.length < 6) document.getElementById('galeriePlaceholder').style.display = 'block';
+        }
+
+        function resetImageFields() {
+            document.getElementById('pfImageUrl').value = '';
+            document.getElementById('mainImgThumb').src = '';
+            document.getElementById('mainImgPreview').style.display = 'none';
+            document.getElementById('mainImgPlaceholder').style.display = 'block';
+            galerieUrls = [];
+            document.getElementById('pfGalerieUrls').value = '';
+            document.getElementById('galeriePreviews').innerHTML = '';
+            document.getElementById('galeriePlaceholder').style.display = 'block';
+        }
+
+        function prefillImageFields(bien) {
+            document.getElementById('pfImageUrl').value = bien.imageUrl || '';
+            if (bien.imageUrl) {
+                document.getElementById('mainImgThumb').src = bien.imageUrl;
+                document.getElementById('mainImgPreview').style.display = 'block';
+                document.getElementById('mainImgPlaceholder').style.display = 'none';
+            }
+            galerieUrls = bien.galerie || [];
+            document.getElementById('pfGalerieUrls').value = galerieUrls.join('|');
+            renderGaleriePreviews();
+            if (galerieUrls.length < 6) document.getElementById('galeriePlaceholder').style.display = 'block';
+        }
 
         let mesBiens = [];
         let reservations = [];
@@ -355,43 +566,179 @@
         function renderAnnonces() {
             const grid = document.getElementById('myBiensGrid');
             if (!mesBiens.length) {
-                grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:60px 0; background:#fff; border-radius:24px; border:2px dashed #e5e7eb;">
-                    <i class="fas fa-house-circle-xmark" style="font-size:36px; color:#d1d5db; display:block; margin-bottom:12px;"></i>
-                    <p style="color:#9ca3af; font-weight:600;">Aucune annonce publiée pour l'instant.</p>
-                </div>`;
+                grid.innerHTML = `
+                    <div class="col-span-full flex flex-col items-center justify-center py-16 bg-white rounded-3xl border-2 border-dashed border-gray-200">
+                        <i class="fas fa-house-circle-xmark text-4xl text-gray-300 mb-3"></i>
+                        <p class="text-gray-400 font-semibold">Aucune annonce publiée pour l'instant.</p>
+                    </div>`;
                 return;
             }
 
-            grid.innerHTML = mesBiens.map(b => `
-                <div style="background:#fff; border-radius:24px; overflow:hidden; border:1px solid #f3f4f6; box-shadow:0 1px 3px rgba(0,0,0,0.04); position:relative;">
-                    ${!b.estDisponible ? '<span class="badge-off">Désactivée</span>' : ''}
-                    <div style="height:160px; overflow:hidden;">
-                        <img src="${b.imageUrl}" style="width:100%; height:100%; object-fit:cover; ${!b.estDisponible ? 'filter:grayscale(60%); opacity:0.7;' : ''}">
+            grid.innerHTML = mesBiens.map(b => {
+                const isOff = !b.estDisponible;
+
+                const badgeStatut = b.statut?.toLowerCase() === 'vente'
+                    ? `<span class="absolute top-3 left-3 bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow">Vente</span>`
+                    : `<span class="absolute top-3 left-3 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow">Location</span>`;
+
+                const badgeOff = isOff
+                    ? `<span class="absolute top-3 right-3 bg-gray-900/80 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">Désactivée</span>`
+                    : '';
+
+                const imageBlock = b.imageUrl
+                    ? `<img src="${escapeHtml(b.imageUrl)}" alt="${escapeHtml(b.titre)}"
+                           class="w-full h-full object-cover transition duration-700 group-hover:scale-110${isOff ? ' grayscale opacity-70' : ''}">`
+                    : `<div class="w-full h-full bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
+                           <i class="fas fa-house text-5xl text-blue-300"></i>
+                       </div>`;
+
+                const galerieHtml = (b.galerie && b.galerie.length)
+                    ? `<div class="flex gap-1.5 px-4 pt-3 pb-1 flex-wrap">
+                        ${b.galerie.map((url, i) => `
+                            <img src="${escapeHtml(url)}" alt="photo ${i+1}"
+                                 onclick="ouvrirPhoto('${escapeHtml(url)}')"
+                                 class="w-14 h-14 object-cover rounded-lg cursor-pointer hover:scale-105 transition duration-200 shadow-sm">`
+                        ).join('')}
+                       </div>`
+                    : '';
+
+                const retireBtn = isOff
+                    ? `<button onclick="republierBien(${b.id})"
+                           class="w-full py-2.5 text-xs font-bold rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition flex items-center justify-center gap-1.5 border-none cursor-pointer">
+                           <i class="fas fa-arrow-rotate-left"></i> Republier
+                       </button>`
+                    : `<button onclick="confirmRetirer(${b.id})"
+                           class="w-full py-2.5 text-xs font-bold rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition flex items-center justify-center gap-1.5 border-none cursor-pointer">
+                           <i class="fas fa-eye-slash"></i> Retirer
+                       </button>`;
+
+                return `
+                <div class="group opacity-0 translate-y-10 transition-all duration-700 ease-out bg-white rounded-2xl shadow-xl overflow-hidden hover:-translate-y-2 hover:shadow-2xl">
+                    <div class="relative h-52 overflow-hidden cursor-pointer" onclick="ouvrirPhoto('${escapeHtml(b.imageUrl || '')}')">
+                        ${imageBlock}
+                        ${badgeStatut}
+                        ${badgeOff}
                     </div>
-                    <div style="padding:20px;">
-                        <h3 style="font-weight:800; color:#111827; margin-bottom:4px;">${escapeHtml(b.titre)}</h3>
-                        <p style="font-size:13px; color:#6b7280; margin-bottom:10px;"><i class="fas fa-map-marker-alt mr-1"></i> ${escapeHtml(b.localisation)}</p>
-                        <p style="font-weight:800; color:#2563eb; margin-bottom:12px;">${escapeHtml(b.prix)}</p>
-                        <div style="display:flex; justify-content:space-between; font-size:11px; color:#9ca3af; font-weight:700; border-top:1px solid #f3f4f6; padding-top:12px; margin-bottom:14px;">
-                            <span><i class="fas fa-eye mr-1"></i>${b.vues} vues</span>
-                            <span><i class="fas fa-ruler-combined mr-1"></i>${b.surface} m²</span>
+                    ${galerieHtml}
+                    <div class="p-5">
+                        <h3 class="text-base font-extrabold text-gray-900 truncate mb-1">${escapeHtml(b.titre)}</h3>
+                        <p class="text-sm text-gray-500 mb-2 flex items-center gap-1">
+                            <i class="fas fa-map-marker-alt text-blue-600 flex-shrink-0 text-xs"></i>
+                            <span class="truncate">${escapeHtml(b.localisation)}</span>
+                        </p>
+                        <p class="text-lg font-extrabold text-blue-600 mb-3">${escapeHtml(b.prix)}</p>
+                        <div class="flex items-center justify-between text-xs text-gray-400 font-semibold border-t border-gray-100 pt-3 mb-4">
+                            <span><i class="fas fa-eye mr-0.5"></i> ${b.vues}</span>
+                            <span><i class="fas fa-bed mr-0.5"></i> ${b.chambres} ch.</span>
+                            <span><i class="fas fa-bath mr-0.5"></i> ${b.sallesDeBain} sdb</span>
+                            <span><i class="fas fa-ruler-combined mr-0.5"></i> ${b.surface} m²</span>
                         </div>
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                            <button onclick="openPropertyForm(${b.id})" style="background:#f3f4f6; color:#374151; padding:10px; border-radius:10px; font-weight:700; font-size:13px; border:none; cursor:pointer;">
-                                <i class="fas fa-pen mr-1"></i> Modifier
+                        <div class="grid grid-cols-2 gap-2 mb-2">
+                            <button onclick="openDetails(${b.id})"
+                                class="flex items-center justify-center gap-1.5 py-2.5 border border-blue-600 text-blue-600 text-xs font-bold rounded-xl hover:bg-blue-50 transition cursor-pointer bg-transparent">
+                                <i class="fas fa-info-circle"></i> Détails
                             </button>
-                            ${b.estDisponible
-                                ? `<button onclick="confirmRetirer(${b.id})" style="background:#fee2e2; color:#dc2626; padding:10px; border-radius:10px; font-weight:700; font-size:13px; border:none; cursor:pointer;"><i class="fas fa-eye-slash mr-1"></i> Retirer</button>`
-                                : `<button onclick="republierBien(${b.id})" style="background:#d1fae5; color:#059669; padding:10px; border-radius:10px; font-weight:700; font-size:13px; border:none; cursor:pointer;"><i class="fas fa-arrow-rotate-left mr-1"></i> Republier</button>`
-                            }
+                            <button onclick="openPropertyForm(${b.id})"
+                                class="flex items-center justify-center gap-1.5 py-2.5 bg-gray-800 text-white text-xs font-bold rounded-xl hover:bg-blue-600 transition border-none cursor-pointer">
+                                <i class="fas fa-pen"></i> Modifier
+                            </button>
                         </div>
+                        ${retireBtn}
                     </div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
+
+            observeCards();
+        }
+
+        function observeCards() {
+            document.querySelectorAll('#myBiensGrid > div').forEach((card, i) => {
+                setTimeout(() => {
+                    card.classList.remove('opacity-0', 'translate-y-10');
+                }, i * 80);
+            });
+        }
+
+        function openDetails(bienId) {
+            const b = mesBiens.find(x => x.id === bienId);
+            if (!b) return;
+
+            document.getElementById('dmTitre').textContent = b.titre;
+            document.getElementById('dmLocalisation').innerHTML =
+                `<i class="fas fa-map-marker-alt mr-1 flex-shrink-0"></i>${escapeHtml(b.localisation)}`;
+            document.getElementById('dmStanding').textContent = b.standing || b.type || '';
+            document.getElementById('dmPrix').textContent = b.prix;
+            document.getElementById('dmChambres').textContent = b.chambres;
+            document.getElementById('dmSdb').textContent = b.sallesDeBain;
+            document.getElementById('dmSurface').textContent = b.surface + ' m²';
+
+            const dmImg = document.getElementById('dmImg');
+            if (b.imageUrl) {
+                document.getElementById('dmMainImg').src = b.imageUrl;
+                dmImg.classList.remove('hidden');
+            } else {
+                dmImg.classList.add('hidden');
+            }
+
+            const descSection = document.getElementById('dmDescSection');
+            if (b.description) {
+                document.getElementById('dmDesc').textContent = b.description;
+                descSection.classList.remove('hidden');
+            } else {
+                descSection.classList.add('hidden');
+            }
+
+            const equipSection = document.getElementById('dmEquipSection');
+            if (b.equipements && b.equipements.length) {
+                document.getElementById('dmEquip').innerHTML = b.equipements.map(eq =>
+                    `<span class="text-xs bg-blue-50 text-blue-700 font-semibold px-3 py-1 rounded-full">${escapeHtml(eq)}</span>`
+                ).join('');
+                equipSection.classList.remove('hidden');
+            } else {
+                equipSection.classList.add('hidden');
+            }
+
+            const galerieSection = document.getElementById('dmGalerieSection');
+            if (b.galerie && b.galerie.length) {
+                document.getElementById('dmGalerie').innerHTML = b.galerie.map((url, i) =>
+                    `<img src="${escapeHtml(url)}" alt="photo ${i+1}"
+                          onclick="ouvrirPhoto('${escapeHtml(url)}')"
+                          class="w-full aspect-square object-cover rounded-2xl cursor-pointer hover:scale-105 transition duration-200 shadow-sm">`
+                ).join('');
+                galerieSection.classList.remove('hidden');
+            } else {
+                galerieSection.classList.add('hidden');
+            }
+
+            const modal = document.getElementById('detailsModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeDetails() {
+            const modal = document.getElementById('detailsModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
         }
 
         function escapeHtml(str = '') {
             return String(str).replace(/[&<>"']/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
+        }
+
+        function ouvrirPhoto(url) {
+            if (!url) return;
+            let lb = document.getElementById('photoLightbox');
+            if (!lb) {
+                lb = document.createElement('div');
+                lb.id = 'photoLightbox';
+                lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;';
+                lb.innerHTML = `<img id="lbImg" style="max-width:92vw;max-height:88vh;border-radius:12px;object-fit:contain;box-shadow:0 24px 64px rgba(0,0,0,0.5);">
+                                <button onclick="event.stopPropagation();document.getElementById('photoLightbox').remove()" style="position:absolute;top:18px;right:18px;background:rgba(255,255,255,0.15);color:#fff;border:none;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer;font-weight:800;">×</button>`;
+                lb.onclick = () => lb.remove();
+                document.body.appendChild(lb);
+            }
+            document.getElementById('lbImg').src = url;
+            lb.style.display = 'flex';
         }
 
         // ═══════════════════════════════════════════════════════════════════
@@ -416,11 +763,11 @@
                 document.getElementById('pfSallesDeBain').value = b.sallesDeBain;
                 document.getElementById('pfSurface').value = b.surface;
                 document.getElementById('pfDescription').value = b.description;
-                document.getElementById('pfImageUrl').value = b.imageUrl;
-                document.getElementById('pfGalerieUrls').value = (b.galerie || []).join('|');
                 document.getElementById('pfEquipements').value = (b.equipements || []).join('|');
+                prefillImageFields(b);
             } else {
                 document.getElementById('propertyFormTitle').textContent = 'Publier une annonce';
+                resetImageFields();
             }
 
             const modal = document.getElementById('propertyFormModal');
@@ -433,6 +780,7 @@
             modal.classList.add('modal-hidden');
             modal.classList.remove('modal-visible');
             editingBienId = null;
+            resetImageFields();
         }
 
         document.getElementById('propertyForm').addEventListener('submit', async function (e) {
@@ -790,7 +1138,7 @@
         }
 
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') { closePropertyForm(); closeConfirmModal(); }
+            if (e.key === 'Escape') { closePropertyForm(); closeConfirmModal(); closeDetails(); }
         });
 
         // ═══════════════════════════════════════════════════════════════════
