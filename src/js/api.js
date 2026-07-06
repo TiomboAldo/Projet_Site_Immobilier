@@ -109,7 +109,15 @@ export function normalizeBien(b) {
         description: b.description,
         features: b.equipements || [],
         standing: b.standing,
+        proprietaireId: b.proprietaireId ?? null,
     };
+}
+
+export function sendMessage(destinataireId, bienId, contenu) {
+    return apiFetch(`${API_BASE}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({ DestinataireId: destinataireId, BienId: bienId, Contenu: contenu }),
+    });
 }
 
 export { API_BASE };
