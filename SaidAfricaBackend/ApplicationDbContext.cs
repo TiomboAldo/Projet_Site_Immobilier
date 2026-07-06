@@ -14,6 +14,8 @@ namespace SaidAfricaBackend
         public DbSet<Commentaire>        Commentaires        { get; set; }
         public DbSet<Recommandation>      Recommandations     { get; set; }
         public DbSet<Notification>        Notifications       { get; set; }
+        public DbSet<Message>             Messages            { get; set; }
+        public DbSet<Disponibilite>       Disponibilites      { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -77,6 +79,30 @@ namespace SaidAfricaBackend
                 .HasOne(n => n.User)
                 .WithMany()
                 .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Message>()
+                .HasOne(m => m.Expediteur)
+                .WithMany()
+                .HasForeignKey(m => m.ExpediteurId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Message>()
+                .HasOne(m => m.Destinataire)
+                .WithMany()
+                .HasForeignKey(m => m.DestinataireId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<Message>()
+                .HasOne(m => m.Bien)
+                .WithMany()
+                .HasForeignKey(m => m.BienId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Disponibilite>()
+                .HasOne(d => d.Bien)
+                .WithMany()
+                .HasForeignKey(d => d.BienId)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }
@@ -263,5 +289,41 @@ namespace SaidAfricaBackend
 
         // Navigation
         public User? User { get; set; }
+    }
+
+    // ─── MESSAGE (MESSAGERIE INTERNE) ──────────────────────────────────────────
+    public class Message
+    {
+        public int    Id              { get; set; }
+        public int    ExpediteurId    { get; set; }
+        public int    DestinataireId  { get; set; }
+
+        /// <summary>Bien concerné par la conversation (optionnel)</summary>
+        public int?   BienId          { get; set; }
+
+        public string Contenu         { get; set; } = string.Empty;
+        public bool   EstLu           { get; set; } = false;
+        public DateTime CreatedAt     { get; set; } = DateTime.UtcNow;
+
+        // Navigation
+        public User? Expediteur   { get; set; }
+        public User? Destinataire { get; set; }
+        public Bien? Bien         { get; set; }
+    }
+
+    // ─── DISPONIBILITE (CALENDRIER PAR BIEN) ──────────────────────────────────
+    public class Disponibilite
+    {
+        public int      Id      { get; set; }
+        public int      BienId  { get; set; }
+
+        /// <summary>Date bloquée (partie date uniquement, heure ignorée)</summary>
+        public DateTime Date    { get; set; }
+
+        /// <summary>Motif facultatif : "Maintenance", "Déjà loué", etc.</summary>
+        public string?  Motif   { get; set; }
+
+        // Navigation
+        public Bien? Bien { get; set; }
     }
 }
