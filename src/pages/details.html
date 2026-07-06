@@ -418,8 +418,73 @@
     </div>
 
 
+    <!-- MODAL : CONTACTER LE PROPRIÉTAIRE -->
+    <div id="contactModal"
+        class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] hidden items-center justify-center p-4"
+        onclick="window.closeContactForm(event)">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all duration-300 scale-95 opacity-0 overflow-hidden"
+            id="contactModalContent" onclick="event.stopPropagation()">
+            <!-- Header gradient -->
+            <div class="bg-gradient-to-br from-blue-600 to-blue-800 px-6 py-5 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                        <i class="fas fa-comments text-white text-base"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-white font-extrabold text-base leading-tight">Contacter le propriétaire</h3>
+                        <p id="contactBienTitle" class="text-blue-200 text-xs mt-0.5 truncate max-w-[200px]"></p>
+                    </div>
+                </div>
+                <button onclick="window.closeContactForm()" class="text-white/70 hover:text-white transition">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            <!-- Corps -->
+            <div class="p-6">
+                <!-- Pas connecté -->
+                <div id="contactLoginGate" class="hidden text-center py-6">
+                    <div class="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-lock text-blue-600 text-xl"></i>
+                    </div>
+                    <p class="text-gray-700 font-bold text-base mb-1">Connexion requise</p>
+                    <p class="text-gray-500 text-sm mb-5">Connectez-vous pour envoyer un message au propriétaire.</p>
+                    <a href="/src/pages/login.html"
+                        class="inline-block bg-blue-600 text-white font-bold px-6 py-3 rounded-xl hover:bg-blue-700 transition text-sm">
+                        Se connecter
+                    </a>
+                </div>
+                <!-- Formulaire -->
+                <div id="contactForm">
+                    <p class="text-sm text-gray-500 mb-4">Présentez-vous et posez votre question. Le propriétaire recevra une notification et pourra vous répondre dans la messagerie.</p>
+                    <textarea id="contactMessage" rows="5" placeholder="Bonjour, je suis intéressé par ce bien et j'aimerais…"
+                        class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                        onkeydown="if(event.ctrlKey && event.key==='Enter') window.sendContactMessage()"></textarea>
+                    <p class="text-xs text-gray-400 mt-1 mb-4">Ctrl+Entrée pour envoyer</p>
+                    <div id="contactFeedback" class="hidden mb-3"></div>
+                    <button onclick="window.sendContactMessage()"
+                        id="contactSendBtn"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm">
+                        <i class="fas fa-paper-plane"></i> Envoyer le message
+                    </button>
+                </div>
+                <!-- Succès -->
+                <div id="contactSuccess" class="hidden text-center py-4">
+                    <div class="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-check-circle text-green-500 text-2xl"></i>
+                    </div>
+                    <p class="text-gray-800 font-extrabold text-base mb-1">Message envoyé !</p>
+                    <p class="text-gray-500 text-sm mb-5">Le propriétaire a été notifié. Consultez votre messagerie pour suivre la conversation.</p>
+                    <button onclick="window.closeContactForm()"
+                        class="bg-gray-100 text-gray-700 font-bold px-6 py-2 rounded-xl hover:bg-gray-200 transition text-sm">
+                        Fermer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
-        import { getBienById, getBiens, createReservation, normalizeBien, getCommentaires, createCommentaire, updateCommentaire, deleteCommentaire, recommanderBien } from '../js/api.js';
+        import { getBienById, getBiens, createReservation, normalizeBien, getCommentaires, createCommentaire, updateCommentaire, deleteCommentaire, recommanderBien, sendMessage } from '../js/api.js';
 
         // ---------- HELPERS ----------
         function escapeHtml(str = '') {
@@ -715,6 +780,11 @@
                         <button onclick="window.openVisitForm(${property.id})" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-all shadow-blue-200 shadow-lg flex items-center justify-center group">
                             <i class="fas fa-calendar-alt mr-2 group-hover:scale-110 transition"></i> Réserver une Visite
                         </button>
+                        ${property.proprietaireId ? `
+                        <button onclick="window.openContactForm(${property.id}, ${property.proprietaireId}, '${property.title.replace(/'/g, "\\'")}')"
+                            class="w-full border-2 border-blue-500 text-blue-600 hover:bg-blue-50 font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2">
+                            <i class="fas fa-comments text-lg"></i> Contacter le propriétaire
+                        </button>` : ''}
                         <a href="https://wa.me/237683862828" class="w-full border-2 border-green-500 text-green-600 hover:bg-green-50 font-bold py-4 rounded-xl transition-all flex items-center justify-center">
                             <i class="fab fa-whatsapp mr-2 text-xl"></i> Contacter par WhatsApp
                         </a>
@@ -916,6 +986,84 @@
             }, 300);
         };
 
+        // ─── MESSAGERIE : CONTACTER LE PROPRIÉTAIRE ─────────────────────────
+        let _contactBienId = null;
+        let _contactProprietaireId = null;
+
+        window.openContactForm = function (bienId, proprietaireId, bienTitre) {
+            _contactBienId        = bienId;
+            _contactProprietaireId = proprietaireId;
+
+            const modal        = document.getElementById('contactModal');
+            const modalContent = document.getElementById('contactModalContent');
+            const userId       = parseInt(localStorage.getItem('userId') || '0', 10);
+
+            // Réinitialiser l'état
+            document.getElementById('contactForm').classList.remove('hidden');
+            document.getElementById('contactSuccess').classList.add('hidden');
+            document.getElementById('contactFeedback').classList.add('hidden');
+            document.getElementById('contactMessage').value = '';
+            document.getElementById('contactBienTitle').textContent = bienTitre || '';
+
+            if (!userId) {
+                document.getElementById('contactLoginGate').classList.remove('hidden');
+                document.getElementById('contactForm').classList.add('hidden');
+            } else {
+                document.getElementById('contactLoginGate').classList.add('hidden');
+                document.getElementById('contactForm').classList.remove('hidden');
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modalContent.classList.remove('scale-95', 'opacity-0');
+                modalContent.classList.add('scale-100', 'opacity-100');
+                if (userId) document.getElementById('contactMessage').focus();
+            }, 10);
+        };
+
+        window.closeContactForm = function (event) {
+            if (event && event.target !== document.getElementById('contactModal')) return;
+            const modal        = document.getElementById('contactModal');
+            const modalContent = document.getElementById('contactModalContent');
+            modalContent.classList.remove('scale-100', 'opacity-100');
+            modalContent.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }, 300);
+        };
+
+        window.sendContactMessage = async function () {
+            const contenu = document.getElementById('contactMessage').value.trim();
+            if (!contenu) {
+                const fb = document.getElementById('contactFeedback');
+                fb.className = 'mb-3 text-red-500 text-sm font-semibold';
+                fb.textContent = 'Veuillez saisir un message.';
+                fb.classList.remove('hidden');
+                return;
+            }
+
+            const btn = document.getElementById('contactSendBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Envoi en cours…';
+
+            const res = await sendMessage(_contactProprietaireId, _contactBienId, contenu);
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Envoyer le message';
+
+            if (res.success) {
+                document.getElementById('contactForm').classList.add('hidden');
+                document.getElementById('contactSuccess').classList.remove('hidden');
+            } else {
+                const fb = document.getElementById('contactFeedback');
+                fb.className = 'mb-3 text-red-500 text-sm font-semibold';
+                fb.textContent = res.message || 'Impossible d\'envoyer le message. Réessayez.';
+                fb.classList.remove('hidden');
+            }
+        };
+
         // ---------- LOGIQUE PRINCIPALE ----------
         let currentProperty = null;
 
@@ -1019,6 +1167,14 @@
                     }
                 });
             }
+
+            // Fermer le modal de contact avec Escape
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    const m = document.getElementById('contactModal');
+                    if (m && !m.classList.contains('hidden')) window.closeContactForm();
+                }
+            });
         });
     </script>
 
