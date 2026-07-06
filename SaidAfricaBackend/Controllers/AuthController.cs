@@ -5,6 +5,7 @@ using BCrypt.Net;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using SaidAfricaBackend.Services;
 
 namespace SaidAfricaBackend.Controllers
 {
@@ -14,11 +15,13 @@ namespace SaidAfricaBackend.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _config;
+        private readonly IEmailService _email;
 
-        public AuthController(ApplicationDbContext context, IConfiguration config)
+        public AuthController(ApplicationDbContext context, IConfiguration config, IEmailService email)
         {
             _context = context;
             _config = config;
+            _email = email;
         }
 
         private string GenerateJwt(User user)
@@ -68,6 +71,8 @@ namespace SaidAfricaBackend.Controllers
 
                 _context.Users.Add(newUser);
                 await _context.SaveChangesAsync();
+
+                _ = _email.SendBienvenueAsync(newUser.Email, newUser.Prenom);
 
                 return Ok(new
                 {
