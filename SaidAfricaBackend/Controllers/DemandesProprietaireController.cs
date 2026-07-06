@@ -105,6 +105,38 @@ namespace SaidAfricaBackend.Controllers
             return Ok(new { success = true, data = demandes });
         }
 
+        // ─── GET /api/demandesproprietaire/proprietaires ──────────────────────
+        // Liste des comptes Propriétaire (de la région de l'AdminRegion, ou toutes pour AdminPays/DirecteurProjet)
+        [HttpGet("proprietaires")]
+        [Authorize(Roles = "AdminRegion,AdminPays,DirecteurProjet")]
+        public async Task<IActionResult> GetProprietaires()
+        {
+            var query = _context.Users.Where(u => u.Role == "Proprietaire").AsQueryable();
+
+            if (CurrentRole() == "AdminRegion")
+            {
+                var moi = await _context.Users.FindAsync(CurrentUserId());
+                query = query.Where(u => u.Region == moi!.Region);
+            }
+
+            var proprietaires = await query.OrderBy(u => u.Nom).ToListAsync();
+
+            var data = new List<ProprietaireDto>();
+            foreach (var p in proprietaires)
+            {
+                var nbBiens = await _context.Biens.CountAsync(b => b.ProprietaireId == p.Id);
+                var derniereValidation = await _context.DemandesProprietaire
+                    .Where(d => d.UserId == p.Id && d.Statut == "Validée")
+                    .OrderByDescending(d => d.TraiteLe)
+                    .Select(d => d.TraiteLe)
+                    .FirstOrDefaultAsync();
+
+                data.Add(new ProprietaireDto(p, nbBiens, derniereValidation));
+            }
+
+            return Ok(new { success = true, data });
+        }
+
         // ─── PUT /api/demandesproprietaire/{id}/valider ───────────────────────
         [HttpPut("{id:int}/valider")]
         [Authorize(Roles = "AdminRegion,AdminPays,DirecteurProjet")]
@@ -131,6 +163,7 @@ namespace SaidAfricaBackend.Controllers
             demande.TraiteParAdminId = CurrentUserId();
             demande.TraiteLe         = DateTime.UtcNow;
             demande.User!.Role      = "Proprietaire";
+            demande.User.Region     = demande.Region;
 
             NotificationHelper.Creer(_context, demande.UserId,
                 "DemandeValidee", "Demande Propriétaire validée",
@@ -201,6 +234,28 @@ namespace SaidAfricaBackend.Controllers
             Message   = d.Message;
             Statut    = d.Statut;
             CreatedAt = d.CreatedAt;
+        }
+    }
+
+    public class ProprietaireDto
+    {
+        public int       Id             { get; set; }
+        public string    Prenom         { get; set; }
+        public string    Nom            { get; set; }
+        public string    Email          { get; set; }
+        public string?   Region         { get; set; }
+        public int       NbBiensPublies { get; set; }
+        public DateTime? DateValidation { get; set; }
+
+        public ProprietaireDto(User u, int nbBiens, DateTime? dateValidation)
+        {
+            Id             = u.Id;
+            Prenom         = u.Prenom;
+            Nom            = u.Nom;
+            Email          = u.Email;
+            Region         = u.Region;
+            NbBiensPublies = nbBiens;
+            DateValidation = dateValidation;
         }
     }
 

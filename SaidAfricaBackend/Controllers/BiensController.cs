@@ -18,10 +18,19 @@ namespace SaidAfricaBackend.Controllers
 
         private int CurrentUserId() => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-        private bool IsAdmin()
+        private string? CurrentRole() => User.FindFirst(ClaimTypes.Role)?.Value;
+
+        private bool IsAdmin() => CurrentRole() is "AdminRegion" or "AdminPays" or "DirecteurProjet";
+
+        private async Task<bool> IsAdminForBienAsync(Bien bien)
         {
-            var role = User.FindFirst(ClaimTypes.Role)?.Value;
-            return role is "AdminRegion" or "AdminPays" or "DirecteurProjet";
+            var role = CurrentRole();
+            if (role is "AdminPays" or "DirecteurProjet") return true;
+            if (role != "AdminRegion") return false;
+
+            var admin  = await _context.Users.FindAsync(CurrentUserId());
+            var proprio = await _context.Users.FindAsync(bien.ProprietaireId);
+            return admin?.Region != null && admin.Region == proprio?.Region;
         }
 
         // ─── GET /api/biens ───────────────────────────────────────────────────
@@ -72,6 +81,27 @@ namespace SaidAfricaBackend.Controllers
             return Ok(new { success = true, data = new BienDto(bien) });
         }
 
+        // ─── GET /api/biens/region  (modération : tous les biens de la région) ──
+        [HttpGet("region")]
+        [Authorize(Roles = "AdminRegion,AdminPays,DirecteurProjet")]
+        public async Task<IActionResult> GetRegion()
+        {
+            var query = _context.Biens.Include(b => b.Proprietaire).AsQueryable();
+
+            if (CurrentRole() == "AdminRegion")
+            {
+                var admin = await _context.Users.FindAsync(CurrentUserId());
+                query = query.Where(b => b.Proprietaire != null && b.Proprietaire.Region == admin!.Region);
+            }
+
+            var biens = await query
+                .OrderByDescending(b => b.DateAjout)
+                .Select(b => new BienRegionDto(b))
+                .ToListAsync();
+
+            return Ok(new { success = true, data = biens });
+        }
+
         // ─── GET /api/biens/mine  (annonces du propriétaire connecté) ─────────
         [HttpGet("mine")]
         [Authorize(Roles = "Proprietaire,UserIndep,AdminRegion,AdminPays,DirecteurProjet")]
@@ -97,7 +127,7 @@ namespace SaidAfricaBackend.Controllers
             if (bien == null)
                 return NotFound(new { success = false, message = "Bien introuvable." });
 
-            if (bien.ProprietaireId != CurrentUserId() && !IsAdmin())
+            if (bien.ProprietaireId != CurrentUserId() && !await IsAdminForBienAsync(bien))
                 return Forbid();
 
             bien.Titre         = req.Titre;
@@ -113,7 +143,19 @@ namespace SaidAfricaBackend.Controllers
             bien.GalerieUrls    = req.GalerieUrls;
             bien.Equipements    = req.Equipements;
             bien.Standing       = req.Standing;
+            bool etaitDesactive = !bien.EstDisponible;
             bien.EstDisponible  = req.EstDisponible;
+
+            // Notification au propriétaire si un admin réactive un bien précédemment désactivé
+            if (IsAdmin() && bien.ProprietaireId != null && etaitDesactive && req.EstDisponible)
+            {
+                NotificationHelper.Creer(_context,
+                    bien.ProprietaireId.Value,
+                    "moderation",
+                    "Votre annonce a été réactivée",
+                    $"Votre bien « {bien.Titre} » a été réactivé par l'administration régionale.",
+                    "mes-biens");
+            }
 
             await _context.SaveChangesAsync();
 
@@ -131,10 +173,22 @@ namespace SaidAfricaBackend.Controllers
             if (bien == null)
                 return NotFound(new { success = false, message = "Bien introuvable." });
 
-            if (bien.ProprietaireId != CurrentUserId() && !IsAdmin())
+            if (bien.ProprietaireId != CurrentUserId() && !await IsAdminForBienAsync(bien))
                 return Forbid();
 
             bien.EstDisponible = false;
+
+            // Notification au propriétaire si la désactivation vient d'un admin
+            if (IsAdmin() && bien.ProprietaireId != null)
+            {
+                NotificationHelper.Creer(_context,
+                    bien.ProprietaireId.Value,
+                    "moderation",
+                    "Votre annonce a été désactivée",
+                    $"Votre bien « {bien.Titre} » a été désactivé par l'administration régionale pour non-respect des normes de la plateforme. Contactez-nous pour plus d'informations.",
+                    "mes-biens");
+            }
+
             await _context.SaveChangesAsync();
 
             return Ok(new { success = true, message = "Annonce retirée." });
@@ -166,6 +220,26 @@ namespace SaidAfricaBackend.Controllers
             };
 
             _context.Biens.Add(bien);
+
+            // Notifier le ou les AdminRegion de la région du propriétaire
+            var proprio = await _context.Users.FindAsync(proprietaireId);
+            if (proprio?.Region != null)
+            {
+                var admins = await _context.Users
+                    .Where(u => u.Role == "AdminRegion" && u.Region == proprio.Region)
+                    .ToListAsync();
+
+                foreach (var admin in admins)
+                {
+                    NotificationHelper.Creer(_context,
+                        admin.Id,
+                        "nouvelle-annonce",
+                        "Nouvelle annonce publiée",
+                        $"{proprio.Prenom} {proprio.Nom} vient de publier une nouvelle annonce : « {req.Titre} » à {req.Localisation}.",
+                        "biens");
+                }
+            }
+
             await _context.SaveChangesAsync();
 
             return Ok(new { success = true, message = "Bien créé avec succès.", data = new BienDto(bien) });
@@ -221,6 +295,18 @@ namespace SaidAfricaBackend.Controllers
             Equipements  = string.IsNullOrEmpty(b.Equipements)
                                ? new List<string>()
                                : b.Equipements.Split('|').ToList();
+        }
+    }
+
+    public class BienRegionDto : BienDto
+    {
+        public string? PrenomProprietaire { get; set; }
+        public string? NomProprietaire    { get; set; }
+
+        public BienRegionDto(Bien b) : base(b)
+        {
+            PrenomProprietaire = b.Proprietaire?.Prenom;
+            NomProprietaire    = b.Proprietaire?.Nom;
         }
     }
 

@@ -12,12 +12,13 @@ var connectionString = "server=localhost;port=3306;database=said_africa;user=roo
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
-// 2. Définition de la politique CORS (ports Vite 5173 ET 3000)
+// 2. Définition de la politique CORS (ports Vite 5173, 3000, 3001, 4173)
 builder.Services.AddCors(options => {
     options.AddPolicy("AllowFrontend", policy => {
         policy.WithOrigins(
                 "http://localhost:5173",
                 "http://localhost:3000",
+                "http://localhost:3001",
                 "http://localhost:4173"
               )
               .AllowAnyHeader()
