@@ -82,6 +82,19 @@
             display: none; position: fixed; inset: 0;
             background: rgba(0,0,0,0.5); z-index: 49; backdrop-filter: blur(2px);
         }
+        .kyc-filter-btn {
+            padding:9px 18px; border-radius:999px; border:1.5px solid #e5e7eb;
+            background:#fff; color:#6b7280; font-size:13px; font-weight:700;
+            cursor:pointer; transition:all 0.2s;
+        }
+        .kyc-filter-btn:hover { border-color:#2563eb; color:#2563eb; }
+        .kyc-filter-active { background:#2563eb !important; color:#fff !important; border-color:#2563eb !important; }
+        .kyc-card {
+            background:#fff; border-radius:20px; border:1px solid #f3f4f6;
+            box-shadow:0 4px 16px rgba(0,0,0,0.06); overflow:hidden;
+            transition:transform 0.2s, box-shadow 0.2s;
+        }
+        .kyc-card:hover { transform:translateY(-4px); box-shadow:0 12px 32px rgba(0,0,0,0.1); }
         .mobile-menu-btn { display: none; }
         @media (max-width: 767px) {
             .sidebar { transform: translateX(-100%); width: 256px !important; transition: transform 0.3s ease, width 0s; z-index: 51; }
@@ -158,6 +171,10 @@
                 <i class="fas fa-house-circle-xmark"></i>
                 <span>Biens à modérer</span>
             </button>
+            <button onclick="switchSection('kyc', this)" class="sidebar-item">
+                <i class="fas fa-id-card"></i>
+                <span>Vérification KYC</span>
+            </button>
             <button onclick="switchSection('notifications', this)" class="sidebar-item">
                 <i class="fas fa-bell"></i>
                 <span>Notifications</span>
@@ -229,6 +246,45 @@
             </section>
 
             <!-- NOTIFICATIONS -->
+            <!-- KYC REVIEW -->
+            <section id="section-kyc" class="section-fade">
+                <h1 style="font-size:28px;font-weight:800;color:#111827;margin-bottom:6px;">Vérification KYC</h1>
+                <p style="color:#6b7280;font-size:14px;margin-bottom:24px;">Documents d'identité soumis par les propriétaires.</p>
+
+                <!-- Filtres -->
+                <div style="display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;">
+                    <button onclick="filterKyc('EnAttente', this)"  class="kyc-filter-btn kyc-filter-active" data-statut="EnAttente">
+                        <i class="fas fa-clock" style="margin-right:6px;"></i>En attente
+                    </button>
+                    <button onclick="filterKyc('Approuve', this)"   class="kyc-filter-btn" data-statut="Approuve">
+                        <i class="fas fa-circle-check" style="margin-right:6px;"></i>Approuvés
+                    </button>
+                    <button onclick="filterKyc('Rejete', this)"     class="kyc-filter-btn" data-statut="Rejete">
+                        <i class="fas fa-circle-xmark" style="margin-right:6px;"></i>Refusés
+                    </button>
+                    <button onclick="filterKyc('Tous', this)"       class="kyc-filter-btn" data-statut="Tous">
+                        <i class="fas fa-list" style="margin-right:6px;"></i>Tous
+                    </button>
+                </div>
+
+                <div id="kycAdminGrid"></div>
+
+                <!-- Modal refus -->
+                <div id="kycRejetModal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px;">
+                    <div style="background:#fff;border-radius:24px;padding:32px;max-width:440px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,0.2);">
+                        <h3 style="font-size:18px;font-weight:800;color:#111827;margin-bottom:8px;">Motif du refus</h3>
+                        <p style="font-size:13px;color:#6b7280;margin-bottom:16px;">Ce motif sera transmis au propriétaire pour qu'il puisse re-soumettre.</p>
+                        <textarea id="kycRemarqueInput" rows="3" placeholder="Ex : Photo floue, document expiré, mauvais document..."
+                            style="width:100%;border:1.5px solid #e5e7eb;border-radius:12px;padding:12px 14px;font-size:14px;font-family:inherit;resize:none;outline:none;box-sizing:border-box;"
+                            onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e5e7eb'"></textarea>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;">
+                            <button onclick="closeKycModal()" style="background:#f3f4f6;color:#374151;border:none;padding:12px;border-radius:12px;font-weight:700;cursor:pointer;">Annuler</button>
+                            <button onclick="confirmKycRejet()" style="background:#dc2626;color:#fff;border:none;padding:12px;border-radius:12px;font-weight:700;cursor:pointer;">Refuser</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <section id="section-notifications" class="section-fade">
                 <h1 style="font-size:28px; font-weight:800; color:#111827; margin-bottom:24px;">Notifications</h1>
                 <div id="notificationsGrid" style="display:flex; flex-direction:column; gap:12px;"></div>
@@ -885,6 +941,7 @@
             if (id === 'notifications') renderNotifications();
             if (id === 'proprietaires') renderProprietaires();
             if (id === 'biens')         renderBiens();
+            if (id === 'kyc')           loadKycDemandes();
             window.scrollTo(0, 0);
         }
 
@@ -901,6 +958,7 @@
             NouvelleRecommandation: { icon: 'fa-share-nodes',    bg: '#e0e7ff', color: '#4f46e5' },
             'nouvelle-annonce':     { icon: 'fa-house-circle-check', bg: '#d1fae5', color: '#059669' },
             moderation:             { icon: 'fa-shield-halved',  bg: '#fef3c7', color: '#92400e' },
+            kyc:                    { icon: 'fa-id-card',         bg: '#e0e7ff', color: '#4f46e5' },
         };
 
         async function refreshNotifBadge() {
@@ -978,6 +1036,154 @@
                 if (lb) { lb.classList.add('hidden'); lb.classList.remove('flex'); }
             }
         });
+
+        // ═══════════════════════════════════════════════════════════════════
+        // KYC ADMIN
+        // ═══════════════════════════════════════════════════════════════════
+        let kycCurrentStatut = 'EnAttente';
+        let kycPendingUserId = null;
+
+        async function loadKycDemandes(statut) {
+            if (statut) kycCurrentStatut = statut;
+            const grid = document.getElementById('kycAdminGrid');
+            grid.innerHTML = `<div class="flex items-center justify-center py-16"><i class="fas fa-spinner fa-spin text-blue-600 text-2xl"></i></div>`;
+
+            const res = await apiFetch(`${API}/kyc/demandes?statut=${kycCurrentStatut}`);
+            if (!res.success) {
+                grid.innerHTML = `<p class="text-center text-red-500 py-10">Erreur lors du chargement.</p>`;
+                return;
+            }
+
+            const list = res.data;
+            if (!list.length) {
+                grid.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
+                        <i class="fas fa-id-card text-5xl text-gray-300 mb-3"></i>
+                        <p class="text-gray-400 font-semibold">Aucune demande KYC pour ce filtre.</p>
+                    </div>`;
+                return;
+            }
+
+            grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;';
+            grid.innerHTML = list.map(u => {
+                const date = u.kycSoumisAt
+                    ? new Date(u.kycSoumisAt).toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' })
+                    : '—';
+                const initiales = ((u.prenom||'?')[0]+(u.nom||'?')[0]).toUpperCase();
+                const docIcon = u.kycDocumentType === 'Passeport' ? 'fa-passport' : 'fa-id-card';
+
+                const statBadge = {
+                    EnAttente: `<span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px;">En attente</span>`,
+                    Approuve:  `<span style="background:#d1fae5;color:#065f46;font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px;">Approuvé</span>`,
+                    Rejete:    `<span style="background:#fee2e2;color:#991b1b;font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px;">Refusé</span>`,
+                }[u.kycStatut] || '';
+
+                const docUrl = u.kycDocumentPath
+                    ? `${API}/kyc/document/${encodeURIComponent(u.kycDocumentPath)}`
+                    : null;
+
+                const actions = u.kycStatut === 'EnAttente' ? `
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;">
+                        <button onclick="approuverKyc(${u.userId})"
+                            style="padding:10px;background:#059669;color:#fff;border:none;border-radius:12px;font-size:12px;font-weight:800;cursor:pointer;transition:background 0.2s;"
+                            onmouseover="this.style.background='#047857'" onmouseout="this.style.background='#059669'">
+                            <i class="fas fa-check" style="margin-right:5px;"></i>Approuver
+                        </button>
+                        <button onclick="ouvrirKycModal(${u.userId})"
+                            style="padding:10px;background:#dc2626;color:#fff;border:none;border-radius:12px;font-size:12px;font-weight:800;cursor:pointer;transition:background 0.2s;"
+                            onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">
+                            <i class="fas fa-times" style="margin-right:5px;"></i>Refuser
+                        </button>
+                    </div>` : (u.kycRemarque ? `<p style="margin-top:12px;font-size:12px;color:#6b7280;background:#f8fafc;border-radius:10px;padding:10px 12px;"><i class="fas fa-comment-alt" style="margin-right:5px;"></i>${escapeHtml(u.kycRemarque)}</p>` : '');
+
+                return `
+                <div class="kyc-card">
+                    <div style="background:linear-gradient(135deg,#1e3a8a,#2563eb);padding:20px;display:flex;align-items:center;gap:14px;">
+                        <div style="width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.2);border:2px solid rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;color:#fff;flex-shrink:0;">${initiales}</div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-weight:800;color:#fff;font-size:15px;">${escapeHtml(u.prenom)} ${escapeHtml(u.nom)}</div>
+                            <div style="font-size:12px;color:rgba(255,255,255,0.7);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(u.email)}</div>
+                        </div>
+                        ${statBadge}
+                    </div>
+                    <div style="padding:18px;">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                            <div style="width:34px;height:34px;border-radius:10px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <i class="fas ${docIcon}" style="color:#2563eb;font-size:14px;"></i>
+                            </div>
+                            <div>
+                                <p style="font-size:13px;font-weight:700;color:#111827;">${u.kycDocumentType || '—'}</p>
+                                <p style="font-size:11px;color:#9ca3af;">Soumis le ${date}</p>
+                            </div>
+                            ${docUrl ? `
+                            <a href="${docUrl}" target="_blank" title="Voir le document"
+                                style="margin-left:auto;width:34px;height:34px;border-radius:10px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;color:#6b7280;text-decoration:none;transition:background 0.2s;"
+                                onmouseover="this.style.background='#dbeafe';this.style.color='#2563eb'"
+                                onmouseout="this.style.background='#f3f4f6';this.style.color='#6b7280'">
+                                <i class="fas fa-eye" style="font-size:13px;"></i>
+                            </a>` : ''}
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6b7280;">
+                            <i class="fas fa-map-marker-alt" style="color:#2563eb;font-size:11px;"></i>
+                            Région ${escapeHtml(u.region || '—')}
+                        </div>
+                        ${actions}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function filterKyc(statut, btn) {
+            document.querySelectorAll('.kyc-filter-btn').forEach(b => b.classList.remove('kyc-filter-active'));
+            btn.classList.add('kyc-filter-active');
+            loadKycDemandes(statut);
+        }
+
+        async function approuverKyc(userId) {
+            openConfirmModal({
+                title: 'Approuver ce document ?',
+                message: 'Le propriétaire sera notifié et pourra publier ses annonces.',
+                icon: 'fa-circle-check',
+                confirmLabel: 'Approuver',
+                onConfirm: async () => {
+                    const res = await apiFetch(`${API}/kyc/${userId}/valider`, { method: 'PUT' });
+                    if (res.success) {
+                        showToast('success', 'KYC approuvé', 'Le propriétaire a été notifié.');
+                        loadKycDemandes();
+                    } else {
+                        showToast('error', 'Erreur', res.message || 'Une erreur est survenue.');
+                    }
+                }
+            });
+        }
+
+        function ouvrirKycModal(userId) {
+            kycPendingUserId = userId;
+            document.getElementById('kycRemarqueInput').value = '';
+            const modal = document.getElementById('kycRejetModal');
+            modal.style.display = 'flex';
+        }
+
+        function closeKycModal() {
+            document.getElementById('kycRejetModal').style.display = 'none';
+            kycPendingUserId = null;
+        }
+
+        async function confirmKycRejet() {
+            const remarque = document.getElementById('kycRemarqueInput').value.trim();
+            if (!remarque) { showToast('error', 'Erreur', 'Veuillez indiquer le motif du refus.'); return; }
+            const res = await apiFetch(`${API}/kyc/${kycPendingUserId}/rejeter`, {
+                method: 'PUT',
+                body: JSON.stringify({ remarque })
+            });
+            if (res.success) {
+                closeKycModal();
+                showToast('info', 'KYC refusé', 'Le propriétaire a été notifié du motif.');
+                loadKycDemandes();
+            } else {
+                showToast('error', 'Erreur', res.message || 'Une erreur est survenue.');
+            }
+        }
 
         // ═══════════════════════════════════════════════════════════════════
         // INIT
