@@ -125,6 +125,17 @@ namespace SaidAfricaBackend
         /// <summary>Région administrative de rattachement (utile pour AdminRegion et le scoping futur des Biens).</summary>
         public string? Region { get; set; }
 
+        // ── KYC (vérification d'identité) ───────────────────────────────────
+        /// <summary>NonSoumis | EnAttente | Approuve | Rejete</summary>
+        public string   KycStatut       { get; set; } = "NonSoumis";
+        /// <summary>CNI | Passeport</summary>
+        public string?  KycDocumentType { get; set; }
+        /// <summary>Nom de fichier stocké dans Uploads/Kyc/</summary>
+        public string?  KycDocumentPath { get; set; }
+        public DateTime? KycSoumisAt   { get; set; }
+        /// <summary>Motif de refus renseigné par l'admin</summary>
+        public string?  KycRemarque    { get; set; }
+
         // Navigation
         public ICollection<Reservation> Reservations { get; set; } = new List<Reservation>();
         public ICollection<Favori>      Favoris      { get; set; } = new List<Favori>();
@@ -167,6 +178,10 @@ namespace SaidAfricaBackend
 
         /// <summary>Nombre de consultations de la fiche détaillée (incrémenté à chaque GET /api/biens/{id}).</summary>
         public int Vues { get; set; } = 0;
+
+        /// <summary>Coordonnées GPS — définies par le propriétaire via le sélecteur de carte.</summary>
+        public double? Latitude  { get; set; }
+        public double? Longitude { get; set; }
 
         /// <summary>Propriétaire (User avec rôle Proprietaire/UserIndep/Admin). Nullable : biens historiques sans propriétaire assigné.</summary>
         public int? ProprietaireId { get; set; }

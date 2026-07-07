@@ -143,6 +143,8 @@ namespace SaidAfricaBackend.Controllers
             bien.GalerieUrls    = req.GalerieUrls;
             bien.Equipements    = req.Equipements;
             bien.Standing       = req.Standing;
+            bien.Latitude       = req.Latitude;
+            bien.Longitude      = req.Longitude;
             bool etaitDesactive = !bien.EstDisponible;
             bien.EstDisponible  = req.EstDisponible;
 
@@ -201,6 +203,18 @@ namespace SaidAfricaBackend.Controllers
         {
             var proprietaireId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
+            // Charger le propriétaire une seule fois (utile pour KYC + notifications)
+            var proprio = await _context.Users.FindAsync(proprietaireId);
+
+            // KYC requis pour les propriétaires (les admins sont exemptés)
+            if (CurrentRole() is "Proprietaire" or "UserIndep" && proprio?.KycStatut != "Approuve")
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Votre identité doit être vérifiée avant de publier une annonce. Rendez-vous dans la section « Vérification KYC ».",
+                    kycRequired = true
+                });
+
             var bien = new Bien
             {
                 Titre        = req.Titre,
@@ -216,13 +230,14 @@ namespace SaidAfricaBackend.Controllers
                 GalerieUrls  = req.GalerieUrls,
                 Equipements  = req.Equipements,
                 Standing     = req.Standing,
+                Latitude     = req.Latitude,
+                Longitude    = req.Longitude,
                 ProprietaireId = proprietaireId,
             };
 
             _context.Biens.Add(bien);
 
             // Notifier le ou les AdminRegion de la région du propriétaire
-            var proprio = await _context.Users.FindAsync(proprietaireId);
             if (proprio?.Region != null)
             {
                 var admins = await _context.Users
@@ -266,6 +281,8 @@ namespace SaidAfricaBackend.Controllers
         public DateTime DateAjout    { get; set; }
         public int      Vues         { get; set; }
         public int?     ProprietaireId { get; set; }
+        public double?  Latitude       { get; set; }
+        public double?  Longitude      { get; set; }
 
         // Listes parsées depuis les champs séparés par "|"
         public List<string> Galerie     { get; set; }
@@ -289,6 +306,8 @@ namespace SaidAfricaBackend.Controllers
             DateAjout    = b.DateAjout;
             Vues         = b.Vues;
             ProprietaireId = b.ProprietaireId;
+            Latitude     = b.Latitude;
+            Longitude    = b.Longitude;
             Galerie      = string.IsNullOrEmpty(b.GalerieUrls)
                                ? new List<string>()
                                : b.GalerieUrls.Split('|').ToList();
@@ -313,36 +332,40 @@ namespace SaidAfricaBackend.Controllers
     // ─── REQUEST MODELS ───────────────────────────────────────────────────────
     public class CreateBienRequest
     {
-        public string Titre        { get; set; } = string.Empty;
-        public string Type         { get; set; } = string.Empty;
-        public string Statut       { get; set; } = string.Empty;
-        public string Prix         { get; set; } = string.Empty;
-        public int    Chambres     { get; set; }
-        public int    SallesDeBain { get; set; }
-        public int    Surface      { get; set; }
-        public string Localisation { get; set; } = string.Empty;
-        public string Description  { get; set; } = string.Empty;
-        public string ImageUrl     { get; set; } = string.Empty;
-        public string GalerieUrls  { get; set; } = string.Empty;
-        public string Equipements  { get; set; } = string.Empty;
-        public string Standing     { get; set; } = string.Empty;
+        public string  Titre        { get; set; } = string.Empty;
+        public string  Type         { get; set; } = string.Empty;
+        public string  Statut       { get; set; } = string.Empty;
+        public string  Prix         { get; set; } = string.Empty;
+        public int     Chambres     { get; set; }
+        public int     SallesDeBain { get; set; }
+        public int     Surface      { get; set; }
+        public string  Localisation { get; set; } = string.Empty;
+        public string  Description  { get; set; } = string.Empty;
+        public string  ImageUrl     { get; set; } = string.Empty;
+        public string  GalerieUrls  { get; set; } = string.Empty;
+        public string  Equipements  { get; set; } = string.Empty;
+        public string  Standing     { get; set; } = string.Empty;
+        public double? Latitude     { get; set; }
+        public double? Longitude    { get; set; }
     }
 
     public class UpdateBienRequest
     {
-        public string Titre        { get; set; } = string.Empty;
-        public string Type         { get; set; } = string.Empty;
-        public string Statut       { get; set; } = string.Empty;
-        public string Prix         { get; set; } = string.Empty;
-        public int    Chambres     { get; set; }
-        public int    SallesDeBain { get; set; }
-        public int    Surface      { get; set; }
-        public string Localisation { get; set; } = string.Empty;
-        public string Description  { get; set; } = string.Empty;
-        public string ImageUrl     { get; set; } = string.Empty;
-        public string GalerieUrls  { get; set; } = string.Empty;
-        public string Equipements  { get; set; } = string.Empty;
-        public string Standing     { get; set; } = string.Empty;
-        public bool   EstDisponible { get; set; } = true;
+        public string  Titre        { get; set; } = string.Empty;
+        public string  Type         { get; set; } = string.Empty;
+        public string  Statut       { get; set; } = string.Empty;
+        public string  Prix         { get; set; } = string.Empty;
+        public int     Chambres     { get; set; }
+        public int     SallesDeBain { get; set; }
+        public int     Surface      { get; set; }
+        public string  Localisation { get; set; } = string.Empty;
+        public string  Description  { get; set; } = string.Empty;
+        public string  ImageUrl     { get; set; } = string.Empty;
+        public string  GalerieUrls  { get; set; } = string.Empty;
+        public string  Equipements  { get; set; } = string.Empty;
+        public string  Standing     { get; set; } = string.Empty;
+        public bool    EstDisponible { get; set; } = true;
+        public double? Latitude     { get; set; }
+        public double? Longitude    { get; set; }
     }
 }
