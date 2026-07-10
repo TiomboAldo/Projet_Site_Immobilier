@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SaidAfricaBackend.Services;
 using System.Security.Claims;
 
 namespace SaidAfricaBackend.Controllers
@@ -11,7 +12,12 @@ namespace SaidAfricaBackend.Controllers
     public class MessagesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-        public MessagesController(ApplicationDbContext context) => _context = context;
+        private readonly IEmailService _email;
+        public MessagesController(ApplicationDbContext context, IEmailService email)
+        {
+            _context = context;
+            _email   = email;
+        }
 
         private int CurrentUserId() => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
@@ -119,6 +125,14 @@ namespace SaidAfricaBackend.Controllers
                 "messagerie");
 
             await _context.SaveChangesAsync();
+
+            // Email au destinataire (fire-and-forget — ne bloque pas la réponse)
+            _ = _email.SendNouveauMessageAsync(
+                destinataire.Email,
+                destinataire.Prenom,
+                moi?.Prenom ?? "Quelqu'un",
+                bienTitre ?? "Said Africa",
+                req.Contenu.Trim().Length > 120 ? req.Contenu.Trim()[..120] : req.Contenu.Trim());
 
             // Recharger avec navigation
             await _context.Entry(msg).Reference(m => m.Expediteur).LoadAsync();

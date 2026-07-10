@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SaidAfricaBackend.Services;
 using System.Security.Claims;
 
 namespace SaidAfricaBackend.Controllers
@@ -10,10 +11,12 @@ namespace SaidAfricaBackend.Controllers
     public class ReservationsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IEmailService _email;
 
-        public ReservationsController(ApplicationDbContext context)
+        public ReservationsController(ApplicationDbContext context, IEmailService email)
         {
             _context = context;
+            _email   = email;
         }
 
         private int CurrentUserId() => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
@@ -64,6 +67,14 @@ namespace SaidAfricaBackend.Controllers
                     "NouvelleReservation", "Nouvelle réservation reçue",
                     $"{req.Prenom} {req.Nom} a demandé une visite pour « {bien.Titre} ».",
                     "reservations");
+
+                var proprio = await _context.Users.FindAsync(bien.ProprietaireId.Value);
+                if (proprio != null)
+                    _ = _email.SendNouvelleReservationAsync(
+                        proprio.Email, proprio.Prenom,
+                        bien.Titre,
+                        req.Prenom, req.Nom,
+                        req.DateVisite.ToString("dd/MM/yyyy"));
             }
 
             await _context.SaveChangesAsync();
@@ -139,6 +150,21 @@ namespace SaidAfricaBackend.Controllers
                 $"Réservation {req.Statut.ToLower()}",
                 $"Votre demande de visite pour « {reservation.Bien!.Titre} » a été {req.Statut.ToLower()}.",
                 "reservations");
+
+            var client = await _context.Users.FindAsync(reservation.UserId);
+            if (client != null)
+            {
+                if (req.Statut == "Confirmée")
+                    _ = _email.SendReservationConfirmeeAsync(
+                        client.Email, client.Prenom,
+                        reservation.Bien.Titre,
+                        reservation.DateVisite.ToString("dd/MM/yyyy"),
+                        reservation.Bien.Prix);
+                else
+                    _ = _email.SendReservationRefuseeAsync(
+                        client.Email, client.Prenom,
+                        reservation.Bien.Titre, null);
+            }
 
             await _context.SaveChangesAsync();
 

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SaidAfricaBackend;
 
@@ -10,9 +11,11 @@ using SaidAfricaBackend;
 namespace SaidAfricaBackend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260706151334_AddLatLngToBien")]
+    partial class AddLatLngToBien
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -141,20 +144,11 @@ namespace SaidAfricaBackend.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<string>("DocumentPath")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("DocumentType")
-                        .HasColumnType("longtext");
-
                     b.Property<string>("Message")
                         .HasColumnType("longtext");
 
                     b.Property<string>("Region")
                         .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("SelfieDocumentPath")
                         .HasColumnType("longtext");
 
                     b.Property<string>("Statut")
@@ -402,22 +396,6 @@ namespace SaidAfricaBackend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("tinyint(1)")
                         .HasDefaultValue(true);
-
-                    b.Property<string>("KycDocumentPath")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("KycDocumentType")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("KycRemarque")
-                        .HasColumnType("longtext");
-
-                    b.Property<DateTime?>("KycSoumisAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("KycStatut")
-                        .IsRequired()
-                        .HasColumnType("longtext");
 
                     b.Property<string>("Nom")
                         .IsRequired()

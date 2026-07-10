@@ -9,6 +9,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Détection de visage (Viola-Jones Haar cascades) — chargé en différé pour ne pas bloquer la page -->
+    <!-- Détection de visage BlazeFace (TensorFlow.js) — s'active à l'étape 2 -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.21.0/dist/tf.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7/dist/blazeface.min.js" defer></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
@@ -1076,10 +1080,10 @@
 
             <!-- DEVENIR PROPRIÉTAIRE -->
             <section id="section-devenir-proprietaire" class="section-fade">
-                <h2 class="text-3xl font-extrabold text-gray-900 mb-2">Devenir Propriétaire</h2>
-                <p class="text-gray-400 text-sm mb-8">Proposez vos propres biens à la location ou à la vente sur Said Africa.</p>
+                <h2 class="text-3xl font-extrabold text-gray-900 mb-2 text-center">Devenir Propriétaire</h2>
+                <p class="text-gray-400 text-sm mb-8 text-center">Proposez vos propres biens à la location ou à la vente sur Said Africa.</p>
 
-                <div id="demandeStatusBox" class="max-w-2xl"></div>
+                <div id="demandeStatusBox" class="max-w-2xl mx-auto"></div>
             </section>
 
             <!-- DASHBOARD -->
@@ -2346,25 +2350,589 @@
         }
 
         // ═══════════════════════════════════════════════════════════════════════
-        // DEVENIR PROPRIÉTAIRE — demande de passage de statut
+        // DEVENIR PROPRIÉTAIRE — wizard 3 étapes
+        //   1) Upload pièce d'identité (CNI ou Passeport)
+        //   2) Selfie live (caméra frontale)
+        //   3) Formulaire + soumission
         // ═══════════════════════════════════════════════════════════════════════
+        let _demandeDocType  = '';
+        let _demandeDocFile  = null;
+        let _demandeSelfie   = null;
+        let _scanStream      = null;
+        let _scanProgress    = 0;
+        let _scanInterval    = null;
+        let _scanActive      = false;
+        let _manualTimer     = null;
+        let _blazeFaceModel  = null;
+        let _blazeFaceLoading = false;
+        let _cornerFrames    = [0, 0, 0, 0];
+        const _CORNER_TARGET = 10;
+
+        function selectDemandeDocType(type) {
+            _demandeDocType = type;
+            ['CNI','Passeport'].forEach(t => {
+                const el = document.getElementById('demDocLabel' + t);
+                if (el) {
+                    el.style.borderColor = t === type ? '#2563eb' : '#e5e7eb';
+                    el.style.background  = t === type ? '#eff6ff' : '#fff';
+                }
+            });
+            const btn = document.getElementById('demStep1Btn');
+            if (btn && _demandeDocFile) { btn.disabled = false; btn.style.opacity = '1'; }
+        }
+
+        function previewDemandeFile(input) {
+            if (!input.files.length) return;
+            _demandeDocFile = input.files[0];
+            const nm = document.getElementById('demDocFileName');
+            const z  = document.getElementById('demDocZone');
+            if (nm) nm.textContent = _demandeDocFile.name;
+            if (z)  { z.style.borderColor = '#2563eb'; z.style.background = '#eff6ff'; }
+            const btn = document.getElementById('demStep1Btn');
+            if (btn && _demandeDocType) { btn.disabled = false; btn.style.opacity = '1'; }
+        }
+
         function demandeFormHtml() {
             return `
-                <div class="bg-white rounded-[2rem] p-8 border border-gray-100 shadow-sm">
-                    <form id="demandeProprietaireForm">
-                        <div class="form-group">
-                            <label>Région où vous proposez vos biens</label>
-                            <input type="text" id="demandeRegion" placeholder="Ex: Littoral, Centre, Ouest..." required>
+            <div style="background:#fff;border-radius:2rem;border:1px solid #f3f4f6;box-shadow:0 2px 12px rgba(0,0,0,0.05);overflow:hidden;">
+
+                <!-- Barre de progression -->
+                <div style="background:linear-gradient(135deg,#2563eb,#1d4ed8);padding:18px 24px;">
+                    <div style="display:flex;align-items:center;">
+                        <div id="demStepInd1" style="display:flex;align-items:center;gap:8px;opacity:1;transition:opacity 0.3s;">
+                            <div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,0.2);border:2px solid rgba(255,255,255,0.8);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;">1</div>
+                            <span style="font-size:12px;font-weight:700;color:#fff;">Document</span>
                         </div>
-                        <div class="form-group">
-                            <label>Message (optionnel)</label>
-                            <textarea id="demandeMessage" placeholder="Parlez-nous de votre projet..."></textarea>
+                        <div style="width:28px;height:2px;background:rgba(255,255,255,0.3);margin:0 8px;"></div>
+                        <div id="demStepInd2" style="display:flex;align-items:center;gap:8px;opacity:0.45;transition:opacity 0.3s;">
+                            <div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,0.2);border:2px solid rgba(255,255,255,0.8);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;">2</div>
+                            <span style="font-size:12px;font-weight:700;color:#fff;">Selfie</span>
                         </div>
-                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-bold transition" style="border:none; cursor:pointer;">
-                            Envoyer ma demande
+                        <div style="width:28px;height:2px;background:rgba(255,255,255,0.3);margin:0 8px;"></div>
+                        <div id="demStepInd3" style="display:flex;align-items:center;gap:8px;opacity:0.45;transition:opacity 0.3s;">
+                            <div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,0.2);border:2px solid rgba(255,255,255,0.8);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;">3</div>
+                            <span style="font-size:12px;font-weight:700;color:#fff;">Demande</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── ÉTAPE 1 : Pièce d'identité ── -->
+                <div id="demandeStep1" style="padding:28px;">
+                    <h3 style="font-size:18px;font-weight:800;color:#111827;margin:0 0 4px;">Étape 1 — Pièce d'identité</h3>
+                    <p style="font-size:13px;color:#6b7280;margin:0 0 22px;">Choisissez le type et importez la photo ou le scan de votre document.</p>
+
+                    <!-- Choix type -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+                        <div id="demDocLabelCNI" onclick="selectDemandeDocType('CNI')"
+                            style="border:2px solid #e5e7eb;border-radius:16px;padding:20px 12px;cursor:pointer;transition:all 0.2s;text-align:center;background:#fff;">
+                            <i class="fas fa-id-card" style="font-size:26px;color:#2563eb;margin-bottom:8px;display:block;"></i>
+                            <p style="font-weight:800;font-size:14px;color:#111827;margin:0;">CNI</p>
+                            <p style="font-size:11px;color:#9ca3af;margin:3px 0 0;">Carte Nationale d'Identité</p>
+                        </div>
+                        <div id="demDocLabelPasseport" onclick="selectDemandeDocType('Passeport')"
+                            style="border:2px solid #e5e7eb;border-radius:16px;padding:20px 12px;cursor:pointer;transition:all 0.2s;text-align:center;background:#fff;">
+                            <i class="fas fa-passport" style="font-size:26px;color:#2563eb;margin-bottom:8px;display:block;"></i>
+                            <p style="font-weight:800;font-size:14px;color:#111827;margin:0;">Passeport</p>
+                            <p style="font-size:11px;color:#9ca3af;margin:3px 0 0;">Passeport biométrique</p>
+                        </div>
+                    </div>
+
+                    <!-- Zone import fichier -->
+                    <div id="demDocZone" onclick="document.getElementById('demDocInput').click()"
+                        style="border:2px dashed #d1d5db;border-radius:14px;padding:28px 20px;text-align:center;cursor:pointer;transition:all 0.2s;margin-bottom:20px;"
+                        ondragover="event.preventDefault();this.style.borderColor='#2563eb';this.style.background='#eff6ff';"
+                        ondragleave="this.style.borderColor='#d1d5db';this.style.background='';"
+                        ondrop="(function(e){e.preventDefault();const f=e.dataTransfer.files[0];if(f){const inp=document.getElementById('demDocInput');const dt=new DataTransfer();dt.items.add(f);inp.files=dt.files;previewDemandeFile(inp);}})(event)">
+                        <i class="fas fa-cloud-arrow-up" style="font-size:28px;color:#9ca3af;margin-bottom:10px;display:block;"></i>
+                        <p style="font-weight:700;color:#374151;font-size:13px;margin:0 0 4px;" id="demDocFileName">Cliquez ou glissez votre document ici</p>
+                        <p style="font-size:11px;color:#9ca3af;margin:0;">JPG, PNG ou PDF — 5 Mo max</p>
+                        <input id="demDocInput" type="file" accept=".jpg,.jpeg,.png,.pdf" style="display:none;" onchange="previewDemandeFile(this)">
+                    </div>
+
+                    <button id="demStep1Btn" onclick="goToDemandeStep2()" disabled
+                        style="width:100%;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;padding:14px;border-radius:14px;font-size:15px;font-weight:800;cursor:pointer;opacity:0.4;transition:opacity 0.2s;">
+                        <i class="fas fa-arrow-right" style="margin-right:8px;"></i>Continuer
+                    </button>
+                </div>
+
+                <!-- ── ÉTAPE 2 : Selfie live (caméra frontale) — scan automatique ── -->
+                <div id="demandeStep2" style="display:none;padding:28px;">
+                    <button onclick="goBackToDemandeStep1()" style="background:none;border:none;color:#6b7280;font-size:13px;font-weight:700;cursor:pointer;padding:0;margin-bottom:18px;">
+                        <i class="fas fa-arrow-left" style="margin-right:6px;"></i>Retour
+                    </button>
+                    <h3 style="font-size:18px;font-weight:800;color:#111827;margin:0 0 4px;text-align:center;">Étape 2 — Vérification du visage</h3>
+                    <p style="font-size:13px;color:#6b7280;margin:0 0 18px;text-align:center;">Placez votre visage dans l'ovale. La capture s'effectue automatiquement.</p>
+
+                    <!-- Zone caméra frontale avec coins de scan -->
+                    <div style="position:relative;background:#0f172a;border-radius:20px;overflow:hidden;margin-bottom:10px;aspect-ratio:3/4;max-width:320px;margin-left:auto;margin-right:auto;">
+                        <video id="selfieVideo" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;display:block;transform:scaleX(-1);"></video>
+
+                        <!-- Ovale guide visage -->
+                        <div style="position:absolute;inset:0;pointer-events:none;">
+                            <div id="selfieOval" style="width:70%;padding-top:90%;border-radius:50%;border:2.5px solid rgba(255,255,255,0.6);box-shadow:0 0 0 9999px rgba(0,0,0,0.45);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transition:border-color 0.4s;"></div>
+                        </div>
+
+                        <!-- Coins de scan (4 brackets) -->
+                        <div id="scanCornerTL" style="position:absolute;top:8%;left:9%;width:32px;height:32px;border-top:3px solid rgba(255,255,255,0.35);border-left:3px solid rgba(255,255,255,0.35);border-radius:5px 0 0 0;transition:border-color 0.3s,box-shadow 0.3s;"></div>
+                        <div id="scanCornerTR" style="position:absolute;top:8%;right:9%;width:32px;height:32px;border-top:3px solid rgba(255,255,255,0.35);border-right:3px solid rgba(255,255,255,0.35);border-radius:0 5px 0 0;transition:border-color 0.3s,box-shadow 0.3s;"></div>
+                        <div id="scanCornerBR" style="position:absolute;bottom:8%;right:9%;width:32px;height:32px;border-bottom:3px solid rgba(255,255,255,0.35);border-right:3px solid rgba(255,255,255,0.35);border-radius:0 0 5px 0;transition:border-color 0.3s,box-shadow 0.3s;"></div>
+                        <div id="scanCornerBL" style="position:absolute;bottom:8%;left:9%;width:32px;height:32px;border-bottom:3px solid rgba(255,255,255,0.35);border-left:3px solid rgba(255,255,255,0.35);border-radius:0 0 0 5px;transition:border-color 0.3s,box-shadow 0.3s;"></div>
+
+                        <!-- Texte de statut -->
+                        <p id="scanStatusText" style="position:absolute;bottom:12px;left:0;right:0;text-align:center;color:rgba(255,255,255,0.9);font-size:11px;font-weight:700;pointer-events:none;transition:all 0.3s;">Centrez votre visage dans l'ovale</p>
+
+                        <!-- Erreur caméra -->
+                        <div id="selfieCameraError" style="display:none;position:absolute;inset:0;background:#1e293b;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:24px;">
+                            <i class="fas fa-camera-slash" style="font-size:36px;color:#64748b;margin-bottom:12px;"></i>
+                            <p style="color:#fff;font-weight:700;margin-bottom:6px;">Caméra inaccessible</p>
+                            <p style="color:#94a3b8;font-size:12px;">Autorisez l'accès à la caméra dans votre navigateur.</p>
+                        </div>
+                    </div>
+
+                    <!-- Barre de progression scan -->
+                    <div style="max-width:320px;margin:0 auto 14px;">
+                        <div style="background:#e5e7eb;border-radius:999px;height:5px;overflow:hidden;">
+                            <div id="scanProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#2563eb,#34d399);border-radius:999px;transition:width 0.08s linear;"></div>
+                        </div>
+                    </div>
+
+                    <canvas id="selfieCanvas" style="display:none;"></canvas>
+
+                    <!-- Bouton de capture manuelle (apparait si detection auto bloquee) -->
+                    <div id="selfieManualBtn" style="display:none;max-width:320px;margin:0 auto 10px;">
+                        <button onclick="_doCaptureSelfie()" style="width:100%;background:#f8fafc;color:#374151;border:2px dashed #d1d5db;padding:11px;border-radius:14px;font-size:13px;font-weight:700;cursor:pointer;">
+                            <i class="fas fa-camera" style="margin-right:6px;color:#6b7280;"></i>Capturer maintenant
                         </button>
-                    </form>
-                </div>`;
+                        <p style="text-align:center;font-size:10px;color:#9ca3af;margin:4px 0 0;">Si la detection automatique ne fonctionne pas</p>
+                    </div>
+
+                    <!-- Aperçu selfie capturé (affiché après capture automatique) -->
+                    <div id="selfiePreview" style="display:none;margin-bottom:14px;max-width:320px;margin-left:auto;margin-right:auto;">
+                        <div style="position:relative;border-radius:16px;overflow:hidden;aspect-ratio:3/4;background:#000;">
+                            <img id="selfiePreviewImg" style="width:100%;height:100%;object-fit:cover;display:block;transform:scaleX(-1);">
+                            <div style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.55);border-radius:999px;padding:4px 12px;font-size:11px;color:#fff;font-weight:700;">
+                                <i class="fas fa-check" style="margin-right:4px;color:#34d399;"></i>Selfie capturé
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="selfieAfterBtns" style="display:none;grid-template-columns:1fr 1fr;gap:12px;max-width:320px;margin:0 auto;">
+                        <button onclick="retakeSelfie()"
+                            style="background:#f3f4f6;color:#374151;border:none;padding:14px;border-radius:14px;font-size:14px;font-weight:800;cursor:pointer;">
+                            <i class="fas fa-redo" style="margin-right:6px;"></i>Reprendre
+                        </button>
+                        <button onclick="goToDemandeStep3()"
+                            style="background:linear-gradient(135deg,#059669,#047857);color:#fff;border:none;padding:14px;border-radius:14px;font-size:14px;font-weight:800;cursor:pointer;">
+                            <i class="fas fa-check" style="margin-right:6px;"></i>Utiliser
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ── ÉTAPE 3 : Formulaire de demande ── -->
+                <div id="demandeStep3" style="display:none;padding:28px;">
+                    <button onclick="goBackToDemandeStep2()" style="background:none;border:none;color:#6b7280;font-size:13px;font-weight:700;cursor:pointer;padding:0;margin-bottom:18px;">
+                        <i class="fas fa-arrow-left" style="margin-right:6px;"></i>Retour
+                    </button>
+                    <h3 style="font-size:18px;font-weight:800;color:#111827;margin:0 0 4px;">Étape 3 — Votre demande</h3>
+                    <p style="font-size:13px;color:#6b7280;margin:0 0 18px;">Complétez les informations pour finaliser votre dossier.</p>
+
+                    <!-- Résumé : document + selfie -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+                        <div style="display:flex;align-items:center;gap:10px;background:#f0fdf4;border:1px solid #86efac;border-radius:12px;padding:10px 14px;">
+                            <i id="demSummaryIcon" class="fas fa-id-card" style="color:#059669;font-size:16px;flex-shrink:0;"></i>
+                            <div>
+                                <p id="demSummaryType" style="font-weight:800;color:#065f46;font-size:12px;margin:0;">CNI</p>
+                                <p style="font-size:10px;color:#047857;margin:1px 0 0;">Document joint</p>
+                            </div>
+                            <i class="fas fa-circle-check" style="color:#059669;font-size:14px;margin-left:auto;flex-shrink:0;"></i>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:10px;background:#f0fdf4;border:1px solid #86efac;border-radius:12px;padding:10px 14px;">
+                            <i class="fas fa-user-circle" style="color:#059669;font-size:16px;flex-shrink:0;"></i>
+                            <div>
+                                <p style="font-weight:800;color:#065f46;font-size:12px;margin:0;">Selfie</p>
+                                <p style="font-size:10px;color:#047857;margin:1px 0 0;">Visage vérifié</p>
+                            </div>
+                            <i class="fas fa-circle-check" style="color:#059669;font-size:14px;margin-left:auto;flex-shrink:0;"></i>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Région où vous proposez vos biens <span style="color:#ef4444;">*</span></label>
+                        <input type="text" id="demandeRegion" placeholder="Ex: Littoral, Centre, Ouest..." required>
+                    </div>
+                    <div class="form-group">
+                        <label>Message (optionnel)</label>
+                        <textarea id="demandeMessage" placeholder="Parlez-nous de votre projet immobilier..."></textarea>
+                    </div>
+                    <button id="demSubmitBtn" onclick="submitDemandeProprietaire()"
+                        style="width:100%;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;padding:14px;border-radius:14px;font-size:15px;font-weight:800;cursor:pointer;transition:opacity 0.2s;">
+                        <i class="fas fa-paper-plane" style="margin-right:8px;"></i>Envoyer ma demande
+                    </button>
+                </div>
+            </div>`;
+        }
+
+        // ── Navigation entre étapes ──────────────────────────────────────────────
+        function _setStepIndicator(active) {
+            ['1','2','3'].forEach(n => {
+                const el = document.getElementById('demStepInd' + n);
+                if (el) el.style.opacity = n === String(active) ? '1' : '0.45';
+            });
+        }
+
+        function goToDemandeStep2() {
+            if (!_demandeDocType || !_demandeDocFile) return;
+            document.getElementById('demandeStep1').style.display = 'none';
+            document.getElementById('demandeStep2').style.display = 'block';
+            _setStepIndicator(2);
+            _startSelfieCamera();
+        }
+
+        function goBackToDemandeStep1() {
+            _stopCamera();
+            document.getElementById('demandeStep2').style.display = 'none';
+            document.getElementById('demandeStep1').style.display = 'block';
+            _setStepIndicator(1);
+            _resetSelfieUI();
+            _demandeSelfie = null;
+        }
+
+        function goToDemandeStep3() {
+            _stopCamera();
+            document.getElementById('demandeStep2').style.display = 'none';
+            document.getElementById('demandeStep3').style.display = 'block';
+            _setStepIndicator(3);
+            const icon = document.getElementById('demSummaryIcon');
+            const type = document.getElementById('demSummaryType');
+            if (icon) icon.className = `fas ${_demandeDocType === 'Passeport' ? 'fa-passport' : 'fa-id-card'}`;
+            if (type) type.textContent = _demandeDocType;
+        }
+
+        function goBackToDemandeStep2() {
+            document.getElementById('demandeStep3').style.display = 'none';
+            document.getElementById('demandeStep2').style.display = 'block';
+            _setStepIndicator(2);
+            if (_demandeSelfie) {
+                document.getElementById('selfiePreview').style.display   = 'block';
+                document.getElementById('selfieAfterBtns').style.display = 'grid';
+            } else {
+                _startSelfieCamera();
+            }
+        }
+
+        // ── Caméra frontale (selfie) + scan automatique ──────────────────────────
+        async function _startSelfieCamera() {
+            const video  = document.getElementById('selfieVideo');
+            const errDiv = document.getElementById('selfieCameraError');
+            if (!video) return;
+            video.style.display = 'block';
+            if (errDiv) errDiv.style.display = 'none';
+            try {
+                _scanStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 960 } }
+                });
+                video.srcObject = _scanStream;
+                _startAutoScan();
+            } catch(e) {
+                video.style.display = 'none';
+                if (errDiv) errDiv.style.display = 'flex';
+            }
+        }
+
+        function _stopCamera() {
+            _stopAutoScan();
+            if (_scanStream) { _scanStream.getTracks().forEach(t => t.stop()); _scanStream = null; }
+            const v = document.getElementById('selfieVideo');
+            if (v) { v.srcObject = null; }
+        }
+
+        // ── Scan automatique — BlazeFace (TensorFlow.js) ────────────────────────
+        const _CX = 75, _CY = 100; // centre du canvas d'analyse 150x200
+
+        function _startAutoScan() {
+            _cornerFrames = [0, 0, 0, 0];
+            _scanProgress = 0;
+            _scanActive   = true;
+            _updateScanUI(false);
+
+            // Bouton de secours visible apres 25 s si la detection bloque
+            _manualTimer = setTimeout(() => {
+                const btn = document.getElementById('selfieManualBtn');
+                if (btn && _scanActive) btn.style.display = 'block';
+            }, 25000);
+
+            _loadModelThenScan();
+        }
+
+        async function _loadModelThenScan() {
+            const st = document.getElementById('scanStatusText');
+
+            // Attendre que le script TF.js/BlazeFace soit charge (defer)
+            if (!window.blazeface) {
+                if (st) st.textContent = 'Chargement du detecteur de visage...';
+                await new Promise(resolve => {
+                    const tick = setInterval(() => {
+                        if (window.blazeface || !_scanActive) {
+                            clearInterval(tick);
+                            resolve();
+                        }
+                    }, 400);
+                });
+            }
+
+            if (!_scanActive) return;
+
+            if (!window.blazeface) {
+                if (st) st.textContent = 'Detecteur indisponible — verifiez votre connexion.';
+                return;
+            }
+
+            // Charger le modele BlazeFace (telecharge ~450 Ko depuis TF Hub, mis en cache)
+            if (!_blazeFaceModel) {
+                if (!_blazeFaceLoading) {
+                    _blazeFaceLoading = true;
+                    if (st) st.textContent = 'Chargement du modele de detection...';
+                    try {
+                        _blazeFaceModel = await blazeface.load();
+                    } catch (e) {
+                        _blazeFaceLoading = false;
+                        if (st) st.textContent = 'Erreur chargement modele. Verifiez votre connexion.';
+                        return;
+                    }
+                    _blazeFaceLoading = false;
+                } else {
+                    // Deja en cours de chargement depuis un autre appel
+                    await new Promise(resolve => {
+                        const wait = setInterval(() => {
+                            if (_blazeFaceModel || !_scanActive) {
+                                clearInterval(wait);
+                                resolve();
+                            }
+                        }, 300);
+                    });
+                }
+            }
+
+            if (!_scanActive || !_blazeFaceModel) return;
+            if (st) st.textContent = 'Centrez votre visage dans l\'ovale';
+
+            // Boucle de detection asynchrone
+            const video = document.getElementById('selfieVideo');
+            const scanLoop = async () => {
+                if (!_scanActive) return;
+                if (video && video.videoWidth) {
+                    try {
+                        const preds = await _blazeFaceModel.estimateFaces(video, false);
+                        if (!_scanActive) return;
+                        if (preds && preds.length) {
+                            const vw = video.videoWidth, vh = video.videoHeight;
+                            _processFaceResults(preds.map(p => ({
+                                x:      p.topLeft[0]                     / vw * 150,
+                                y:      p.topLeft[1]                     / vh * 200,
+                                width:  (p.bottomRight[0] - p.topLeft[0]) / vw * 150,
+                                height: (p.bottomRight[1] - p.topLeft[1]) / vh * 200,
+                            })));
+                        } else {
+                            _processFaceResults([]);
+                        }
+                    } catch (e) {
+                        if (_scanActive) _processFaceResults([]);
+                    }
+                }
+                if (_scanActive) _scanInterval = setTimeout(scanLoop, 150);
+            };
+            scanLoop();
+        }
+
+        // ── Traitement commun des resultats de detection ─────────────────────────
+        function _processFaceResults(faces) {
+            if (!faces.length) {
+                _cornerFrames = _cornerFrames.map(f => Math.max(0, f - 2));
+            } else {
+                // Prendre le visage le plus grand (le plus proche)
+                const face = faces.reduce((a, b) =>
+                    a.width * a.height >= b.width * b.height ? a : b);
+                const { x: fx, y: fy, width: fw, height: fh } = face;
+                const faceCX = fx + fw / 2, faceCY = fy + fh / 2;
+
+                // Le visage doit etre centre dans l'ovale ET suffisamment proche
+                const centered = Math.abs(faceCX - _CX) < 58
+                               && Math.abs(faceCY - _CY) < 72
+                               && fw >= 25; // >25px sur 150px = pas trop loin
+
+                if (centered) {
+                    [
+                        fx < _CX      && fy < _CY,
+                        fx + fw > _CX && fy < _CY,
+                        fx + fw > _CX && fy + fh > _CY,
+                        fx < _CX      && fy + fh > _CY,
+                    ].forEach((valid, i) => {
+                        _cornerFrames[i] = valid
+                            ? Math.min(_CORNER_TARGET, _cornerFrames[i] + 1)
+                            : Math.max(0, _cornerFrames[i] - 1);
+                    });
+                } else {
+                    _cornerFrames = _cornerFrames.map(f => Math.max(0, f - 1));
+                    const t = document.getElementById('scanStatusText');
+                    if (t) t.textContent = fw < 25
+                        ? 'Rapprochez-vous de la camera'
+                        : 'Centrez votre visage dans l\'ovale';
+                }
+            }
+
+            _scanProgress = _cornerFrames.reduce((s, f) => s + f, 0) / (4 * _CORNER_TARGET) * 100;
+            _updateScanUI(false);
+
+            if (_cornerFrames.every(f => f >= _CORNER_TARGET)) {
+                _stopAutoScan();
+                _updateScanUI(true);
+                setTimeout(_doCaptureSelfie, 700);
+            }
+        }
+
+        function _stopAutoScan() {
+            _scanActive = false;
+            if (_scanInterval)  { clearTimeout(_scanInterval);  _scanInterval  = null; }
+            if (_manualTimer)   { clearTimeout(_manualTimer);   _manualTimer   = null; }
+            const btn = document.getElementById('selfieManualBtn');
+            if (btn) btn.style.display = 'none';
+        }
+
+        function _updateScanUI(complete) {
+            const progress = _scanProgress || 0;
+
+            // Barre de progression globale
+            const bar = document.getElementById('scanProgressBar');
+            if (bar) bar.style.width = progress + '%';
+
+            // Texte de statut dynamique
+            const text = document.getElementById('scanStatusText');
+            if (text) {
+                if (complete)            text.textContent = '✓ Visage vérifié !';
+                else if (progress < 3)   text.textContent = 'Centrez votre visage dans l\'ovale';
+                else if (progress < 50)  text.textContent = 'Scan en cours… ne bougez pas';
+                else if (progress < 90)  text.textContent = 'Presque… gardez la position';
+                else                     text.textContent = 'Finalisation…';
+            }
+
+            // Ovale : passage au vert quand scan terminé
+            const oval = document.getElementById('selfieOval');
+            if (oval) {
+                oval.style.borderColor = complete
+                    ? '#34d399'
+                    : (progress > 65 ? 'rgba(80,200,140,0.85)' : 'rgba(255,255,255,0.6)');
+            }
+
+            // Chaque coin reflète son propre niveau de détection (indépendant)
+            const cornerMap = [
+                { id: 'scanCornerTL', idx: 0 },
+                { id: 'scanCornerTR', idx: 1 },
+                { id: 'scanCornerBR', idx: 2 },
+                { id: 'scanCornerBL', idx: 3 },
+            ];
+            cornerMap.forEach(({ id, idx }) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const r = _cornerFrames[idx] / _CORNER_TARGET; // 0 → 1
+                if (r >= 1) {
+                    el.style.borderColor = '#34d399';
+                    el.style.boxShadow   = '0 0 10px rgba(52,211,153,0.85)';
+                } else if (r > 0) {
+                    const rv = Math.round(255 * (1 - r));
+                    const gv = Math.round(55  + 200 * r);
+                    el.style.borderColor = `rgb(${rv},${gv},50)`;
+                    el.style.boxShadow   = '';
+                } else {
+                    el.style.borderColor = 'rgba(255,255,255,0.35)';
+                    el.style.boxShadow   = '';
+                }
+            });
+        }
+
+        function _doCaptureSelfie() {
+            const video  = document.getElementById('selfieVideo');
+            const canvas = document.getElementById('selfieCanvas');
+            if (!video || !video.videoWidth) return;
+            canvas.width  = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0);
+            canvas.toBlob(blob => {
+                _demandeSelfie = new File([blob], `selfie-${Date.now()}.jpg`, { type: 'image/jpeg' });
+                const img = document.getElementById('selfiePreviewImg');
+                if (img) img.src = URL.createObjectURL(blob);
+                document.getElementById('selfieVideo').style.display    = 'none';
+                document.getElementById('selfiePreview').style.display  = 'block';
+                document.getElementById('selfieAfterBtns').style.display = 'grid';
+                _stopCamera();
+            }, 'image/jpeg', 0.92);
+        }
+
+        function _resetSelfieUI() {
+            const v = document.getElementById('selfieVideo');
+            if (v) v.style.display = 'block';
+            const p = document.getElementById('selfiePreview');
+            if (p) p.style.display = 'none';
+            const ab = document.getElementById('selfieAfterBtns');
+            if (ab) ab.style.display = 'none';
+            const mb = document.getElementById('selfieManualBtn');
+            if (mb) mb.style.display = 'none';
+            _cornerFrames = [0, 0, 0, 0];
+            _scanProgress = 0;
+            _scanActive   = false;
+            _updateScanUI(false);
+        }
+
+        function retakeSelfie() {
+            _demandeSelfie = null;
+            _resetSelfieUI();
+            _startSelfieCamera();
+        }
+
+        // ── Soumission ───────────────────────────────────────────────────────────
+        async function submitDemandeProprietaire() {
+            if (!_demandeDocType)  { showToast('error','Erreur','Type de document manquant.'); return; }
+            if (!_demandeDocFile)  { showToast('error','Erreur','Importez votre pièce d\'identité.'); return; }
+            if (!_demandeSelfie)   { showToast('error','Erreur','Prenez votre selfie de vérification.'); return; }
+            const region = document.getElementById('demandeRegion')?.value.trim();
+            if (!region) { showToast('error','Erreur','Veuillez indiquer votre région.'); return; }
+
+            const btn = document.getElementById('demSubmitBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Envoi en cours…';
+            btn.disabled = true;
+
+            const form = new FormData();
+            form.append('Region',       region);
+            form.append('Message',      document.getElementById('demandeMessage')?.value.trim() || '');
+            form.append('DocumentType', _demandeDocType);
+            form.append('Document',     _demandeDocFile);
+            form.append('Selfie',       _demandeSelfie);
+
+            try {
+                const token = localStorage.getItem('jwtToken');
+                const res = await fetch(`${API}/demandesproprietaire`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: form
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('success','Demande envoyée !', data.message);
+                    _stopCamera();
+                    _demandeDocType = ''; _demandeDocFile = null; _demandeSelfie = null;
+                    renderDemandeProprietaire();
+                } else {
+                    showToast('error','Erreur', data.message || 'Une erreur est survenue.');
+                    btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:8px;"></i>Envoyer ma demande';
+                    btn.disabled = false;
+                }
+            } catch(err) {
+                showToast('error','Erreur réseau','Impossible d\'envoyer la demande.');
+                btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:8px;"></i>Envoyer ma demande';
+                btn.disabled = false;
+            }
         }
 
         function demandeStatusBadgeHtml(demande) {
@@ -2399,33 +2967,7 @@
             }
 
             box.innerHTML = (derniere ? demandeStatusBadgeHtml(derniere) : '') + demandeFormHtml();
-
-            const form = document.getElementById('demandeProprietaireForm');
-            form.addEventListener('submit', async function (e) {
-                e.preventDefault();
-                const btn = this.querySelector('button[type="submit"]');
-                const originalText = btn.innerHTML;
-                btn.innerHTML = 'Envoi en cours...';
-                btn.disabled = true;
-
-                const result = await apiFetch(`${API}/demandesproprietaire`, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        Region: document.getElementById('demandeRegion').value,
-                        Message: document.getElementById('demandeMessage').value,
-                    })
-                });
-
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-
-                if (result.success) {
-                    showToast('success', 'Demande envoyée !', result.message);
-                    renderDemandeProprietaire();
-                } else {
-                    showToast('error', 'Erreur', result.message || 'Une erreur est survenue.');
-                }
-            });
+            _demandeDocType = ''; _demandeDocFile = null; _demandeSelfie = null;
         }
 
         // ═══════════════════════════════════════════════════════════════════════
@@ -2466,6 +3008,7 @@
             if (id === 'reservations') renderReservations();
             if (id === 'dashboard') renderDashboard();
             if (id === 'devenir-proprietaire') renderDemandeProprietaire();
+            else _stopCamera();
             if (id === 'recommandations') renderRecommandations();
             if (id === 'notifications') renderNotifications();
             if (id === 'messagerie') initClientMessagerie();

@@ -11,6 +11,11 @@ SaidAfricaBackend/obj/
 .vscode/
 *.user
 
+# Secrets — ne jamais commiter
+.env
+SaidAfricaBackend/appsettings.*.json
+!SaidAfricaBackend/appsettings.json
+
 # Logs
 *.log
 

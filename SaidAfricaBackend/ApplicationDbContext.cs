@@ -241,6 +241,13 @@ namespace SaidAfricaBackend
         /// <summary>Statut : "En attente", "Validée", "Refusée"</summary>
         public string Statut { get; set; } = "En attente";
 
+        /// <summary>Type de pièce d'identité : "CNI" ou "Passeport"</summary>
+        public string?  DocumentType       { get; set; }
+        /// <summary>Photo de la pièce d'identité, stockée dans Uploads/Demandes/</summary>
+        public string?  DocumentPath       { get; set; }
+        /// <summary>Selfie de vérification (photo live du visage), stocké dans Uploads/Demandes/</summary>
+        public string?  SelfieDocumentPath { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public int?     TraiteParAdminId { get; set; }

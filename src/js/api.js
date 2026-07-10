@@ -110,6 +110,8 @@ export function normalizeBien(b) {
         features: b.equipements || [],
         standing: b.standing,
         proprietaireId: b.proprietaireId ?? null,
+        lat: b.latitude  ?? null,
+        lng: b.longitude ?? null,
     };
 }
 

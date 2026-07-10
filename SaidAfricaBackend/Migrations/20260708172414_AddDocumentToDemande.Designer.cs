@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SaidAfricaBackend;
 
@@ -10,9 +11,11 @@ using SaidAfricaBackend;
 namespace SaidAfricaBackend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260708172414_AddDocumentToDemande")]
+    partial class AddDocumentToDemande
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -152,9 +155,6 @@ namespace SaidAfricaBackend.Migrations
 
                     b.Property<string>("Region")
                         .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("SelfieDocumentPath")
                         .HasColumnType("longtext");
 
                     b.Property<string>("Statut")

@@ -2,7 +2,23 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SaidAfricaBackend;
+using SaidAfricaBackend.Services;
 using System.Text;
+
+// ─── Chargement du fichier .env (s'il existe) ────────────────────────────────
+var envFile = Path.Combine(Directory.GetCurrentDirectory(), ".env");
+if (File.Exists(envFile))
+{
+    foreach (var line in File.ReadAllLines(envFile))
+    {
+        var trimmed = line.Trim();
+        if (trimmed.StartsWith('#') || !trimmed.Contains('=')) continue;
+        var idx = trimmed.IndexOf('=');
+        var key = trimmed[..idx].Trim();
+        var val = trimmed[(idx + 1)..].Trim();
+        Environment.SetEnvironmentVariable(key, val);
+    }
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -52,6 +68,9 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
+
+// 5. Service email (MailKit — identifiants dans User Secrets)
+builder.Services.AddSingleton<IEmailService, EmailService>();
 
 builder.Services.AddControllers();
 
