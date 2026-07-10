@@ -10,17 +10,17 @@ namespace SaidAfricaBackend.Controllers
     public class BiensController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IWebHostEnvironment  _env;
 
-        public BiensController(ApplicationDbContext context)
+        public BiensController(ApplicationDbContext context, IWebHostEnvironment env)
         {
             _context = context;
+            _env     = env;
         }
 
-        private int CurrentUserId() => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-
-        private string? CurrentRole() => User.FindFirst(ClaimTypes.Role)?.Value;
-
-        private bool IsAdmin() => CurrentRole() is "AdminRegion" or "AdminPays" or "DirecteurProjet";
+        private int     CurrentUserId() => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        private string? CurrentRole()   => User.FindFirst(ClaimTypes.Role)?.Value;
+        private bool    IsAdmin()       => CurrentRole() is "AdminRegion" or "AdminPays" or "DirecteurProjet";
 
         private async Task<bool> IsAdminForBienAsync(Bien bien)
         {
@@ -28,13 +28,12 @@ namespace SaidAfricaBackend.Controllers
             if (role is "AdminPays" or "DirecteurProjet") return true;
             if (role != "AdminRegion") return false;
 
-            var admin  = await _context.Users.FindAsync(CurrentUserId());
+            var admin   = await _context.Users.FindAsync(CurrentUserId());
             var proprio = await _context.Users.FindAsync(bien.ProprietaireId);
             return admin?.Region != null && admin.Region == proprio?.Region;
         }
 
         // ─── GET /api/biens ───────────────────────────────────────────────────
-        // Paramètres optionnels : ?type=villa&statut=vente&standing=Elite&q=Douala
         [HttpGet]
         public async Task<IActionResult> GetAll(
             [FromQuery] string? type,
@@ -42,7 +41,9 @@ namespace SaidAfricaBackend.Controllers
             [FromQuery] string? standing,
             [FromQuery] string? q)
         {
-            var query = _context.Biens.Where(b => b.EstDisponible).AsQueryable();
+            var query = _context.Biens
+                .Where(b => b.EstDisponible && b.StatutPublication == "Validée")
+                .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(type))
                 query = query.Where(b => b.Type.ToLower() == type.ToLower());
@@ -68,7 +69,7 @@ namespace SaidAfricaBackend.Controllers
         }
 
         // ─── GET /api/biens/{id} ──────────────────────────────────────────────
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
             var bien = await _context.Biens.FindAsync(id);
@@ -81,7 +82,7 @@ namespace SaidAfricaBackend.Controllers
             return Ok(new { success = true, data = new BienDto(bien) });
         }
 
-        // ─── GET /api/biens/region  (modération : tous les biens de la région) ──
+        // ─── GET /api/biens/region  (admin : tous les biens de la région) ─────
         [HttpGet("region")]
         [Authorize(Roles = "AdminRegion,AdminPays,DirecteurProjet")]
         public async Task<IActionResult> GetRegion()
@@ -102,7 +103,7 @@ namespace SaidAfricaBackend.Controllers
             return Ok(new { success = true, data = biens });
         }
 
-        // ─── GET /api/biens/mine  (annonces du propriétaire connecté) ─────────
+        // ─── GET /api/biens/mine ──────────────────────────────────────────────
         [HttpGet("mine")]
         [Authorize(Roles = "Proprietaire,UserIndep,AdminRegion,AdminPays,DirecteurProjet")]
         public async Task<IActionResult> GetMine()
@@ -118,8 +119,28 @@ namespace SaidAfricaBackend.Controllers
             return Ok(new { success = true, data = biens });
         }
 
-        // ─── PUT /api/biens/{id}  (modifier sa propre annonce) ────────────────
-        [HttpPut("{id}")]
+        // ─── GET /api/biens/document/{filename}  (titre foncier — admin) ──────
+        [HttpGet("document/{filename}")]
+        [Authorize(Roles = "AdminRegion,AdminPays,DirecteurProjet")]
+        public IActionResult GetDocument(string filename)
+        {
+            if (filename.Contains("..") || filename.Contains('/') || filename.Contains('\\'))
+                return BadRequest();
+
+            var filePath = Path.Combine(_env.ContentRootPath, "Uploads", "Biens", filename);
+            if (!System.IO.File.Exists(filePath)) return NotFound();
+
+            var contentType = Path.GetExtension(filename).ToLowerInvariant() switch
+            {
+                ".pdf" => "application/pdf",
+                ".png" => "image/png",
+                _      => "image/jpeg",
+            };
+            return PhysicalFile(filePath, contentType);
+        }
+
+        // ─── PUT /api/biens/{id}  (modifier son annonce) ─────────────────────
+        [HttpPut("{id:int}")]
         [Authorize]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateBienRequest req)
         {
@@ -130,25 +151,25 @@ namespace SaidAfricaBackend.Controllers
             if (bien.ProprietaireId != CurrentUserId() && !await IsAdminForBienAsync(bien))
                 return Forbid();
 
-            bien.Titre         = req.Titre;
-            bien.Type          = req.Type;
-            bien.Statut        = req.Statut;
-            bien.Prix          = req.Prix;
-            bien.Chambres      = req.Chambres;
-            bien.SallesDeBain  = req.SallesDeBain;
-            bien.Surface       = req.Surface;
-            bien.Localisation  = req.Localisation;
-            bien.Description   = req.Description;
-            bien.ImageUrl       = req.ImageUrl;
-            bien.GalerieUrls    = req.GalerieUrls;
-            bien.Equipements    = req.Equipements;
-            bien.Standing       = req.Standing;
-            bien.Latitude       = req.Latitude;
-            bien.Longitude      = req.Longitude;
+            bien.Titre        = req.Titre;
+            bien.Type         = req.Type;
+            bien.Statut       = req.Statut;
+            bien.Prix         = req.Prix;
+            bien.Chambres     = req.Chambres;
+            bien.SallesDeBain = req.SallesDeBain;
+            bien.Surface      = req.Surface;
+            bien.Localisation = req.Localisation;
+            bien.Description  = req.Description;
+            bien.ImageUrl     = req.ImageUrl;
+            bien.GalerieUrls  = req.GalerieUrls;
+            bien.Equipements  = req.Equipements;
+            bien.Standing     = req.Standing;
+            bien.Latitude     = req.Latitude;
+            bien.Longitude    = req.Longitude;
+
             bool etaitDesactive = !bien.EstDisponible;
             bien.EstDisponible  = req.EstDisponible;
 
-            // Notification au propriétaire si un admin réactive un bien précédemment désactivé
             if (IsAdmin() && bien.ProprietaireId != null && etaitDesactive && req.EstDisponible)
             {
                 NotificationHelper.Creer(_context,
@@ -164,10 +185,127 @@ namespace SaidAfricaBackend.Controllers
             return Ok(new { success = true, message = "Bien mis à jour avec succès.", data = new BienDto(bien) });
         }
 
-        // ─── DELETE /api/biens/{id}  (retirer sa propre annonce) ──────────────
-        // Pas de suppression physique : Reservations/Favoris sont en CASCADE en base,
-        // un vrai DELETE effacerait silencieusement leur historique. On désactive seulement.
-        [HttpDelete("{id}")]
+        // ─── PUT /api/biens/{id}/valider  (AdminRegion valide) ───────────────
+        [HttpPut("{id:int}/valider")]
+        [Authorize(Roles = "AdminRegion,AdminPays,DirecteurProjet")]
+        public async Task<IActionResult> Valider(int id)
+        {
+            var bien = await _context.Biens
+                .Include(b => b.Proprietaire)
+                .FirstOrDefaultAsync(b => b.Id == id);
+
+            if (bien == null)
+                return NotFound(new { success = false, message = "Bien introuvable." });
+
+            if (!await IsAdminForBienAsync(bien))
+                return Forbid();
+
+            if (bien.StatutPublication == "Validée")
+                return BadRequest(new { success = false, message = "Ce bien est déjà validé." });
+
+            bien.StatutPublication = "Validée";
+            bien.EstDisponible     = true;
+            bien.MotifsRejet       = null;
+            bien.ValideParAdminId  = CurrentUserId();
+            bien.ValideLe          = DateTime.UtcNow;
+
+            if (bien.ProprietaireId != null)
+            {
+                NotificationHelper.Creer(_context,
+                    bien.ProprietaireId.Value,
+                    "moderation",
+                    "Annonce validée !",
+                    $"Votre bien « {bien.Titre} » a été vérifié sur le terrain et validé. Il est maintenant visible sur la plateforme.",
+                    "mes-biens");
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, message = $"Bien « {bien.Titre} » validé et mis en ligne." });
+        }
+
+        // ─── PUT /api/biens/{id}/rejeter  (AdminRegion rejette) ──────────────
+        [HttpPut("{id:int}/rejeter")]
+        [Authorize(Roles = "AdminRegion,AdminPays,DirecteurProjet")]
+        public async Task<IActionResult> Rejeter(int id, [FromBody] RejeterBienRequest req)
+        {
+            var bien = await _context.Biens
+                .Include(b => b.Proprietaire)
+                .FirstOrDefaultAsync(b => b.Id == id);
+
+            if (bien == null)
+                return NotFound(new { success = false, message = "Bien introuvable." });
+
+            if (!await IsAdminForBienAsync(bien))
+                return Forbid();
+
+            bien.StatutPublication = "Rejetée";
+            bien.EstDisponible     = false;
+            bien.MotifsRejet       = req.Motif?.Trim();
+
+            if (bien.ProprietaireId != null)
+            {
+                var motifMsg = string.IsNullOrWhiteSpace(req.Motif)
+                    ? $"Votre bien « {bien.Titre} » n'a pas pu être validé. Corrigez les informations et resoumettez."
+                    : $"Votre bien « {bien.Titre} » a été rejeté : {req.Motif}. Corrigez et resoumettez votre annonce.";
+
+                NotificationHelper.Creer(_context,
+                    bien.ProprietaireId.Value,
+                    "moderation",
+                    "Annonce rejetée",
+                    motifMsg,
+                    "mes-biens");
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, message = "Annonce rejetée." });
+        }
+
+        // ─── PUT /api/biens/{id}/resoumettre  (Propriétaire remet en modération) ─
+        [HttpPut("{id:int}/resoumettre")]
+        [Authorize(Roles = "Proprietaire,UserIndep")]
+        public async Task<IActionResult> Resoumettre(int id)
+        {
+            var bien = await _context.Biens.FindAsync(id);
+            if (bien == null)
+                return NotFound(new { success = false, message = "Bien introuvable." });
+
+            if (bien.ProprietaireId != CurrentUserId())
+                return Forbid();
+
+            if (bien.StatutPublication != "Rejetée")
+                return BadRequest(new { success = false, message = "Seuls les biens rejetés peuvent être resoumis." });
+
+            bien.StatutPublication = "En attente";
+            bien.EstDisponible     = false;
+            bien.MotifsRejet       = null;
+
+            var proprio = await _context.Users.FindAsync(CurrentUserId());
+            if (proprio?.Region != null)
+            {
+                var admins = await _context.Users
+                    .Where(u => u.Role == "AdminRegion" && u.Region == proprio.Region)
+                    .ToListAsync();
+
+                foreach (var admin in admins)
+                {
+                    NotificationHelper.Creer(_context,
+                        admin.Id,
+                        "nouvelle-annonce",
+                        "Bien resoumis pour validation",
+                        $"{proprio.Prenom} {proprio.Nom} a resoumis « {bien.Titre} » pour validation.",
+                        "biens");
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, message = "Bien resoumis à la modération." });
+        }
+
+        // ─── DELETE /api/biens/{id} ───────────────────────────────────────────
+        [HttpDelete("{id:int}")]
         [Authorize]
         public async Task<IActionResult> Deactivate(int id)
         {
@@ -180,14 +318,13 @@ namespace SaidAfricaBackend.Controllers
 
             bien.EstDisponible = false;
 
-            // Notification au propriétaire si la désactivation vient d'un admin
             if (IsAdmin() && bien.ProprietaireId != null)
             {
                 NotificationHelper.Creer(_context,
                     bien.ProprietaireId.Value,
                     "moderation",
                     "Votre annonce a été désactivée",
-                    $"Votre bien « {bien.Titre} » a été désactivé par l'administration régionale pour non-respect des normes de la plateforme. Contactez-nous pour plus d'informations.",
+                    $"Votre bien « {bien.Titre} » a été désactivé par l'administration régionale.",
                     "mes-biens");
             }
 
@@ -196,17 +333,15 @@ namespace SaidAfricaBackend.Controllers
             return Ok(new { success = true, message = "Annonce retirée." });
         }
 
-        // ─── POST /api/biens  (Propriétaire / User indep / Admin uniquement) ──
+        // ─── POST /api/biens ──────────────────────────────────────────────────
         [HttpPost]
         [Authorize(Roles = "Proprietaire,UserIndep,AdminRegion,AdminPays,DirecteurProjet")]
-        public async Task<IActionResult> Create([FromBody] CreateBienRequest req)
+        [RequestSizeLimit(15 * 1024 * 1024)]
+        public async Task<IActionResult> Create([FromForm] CreateBienRequest req)
         {
-            var proprietaireId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-
-            // Charger le propriétaire une seule fois (utile pour KYC + notifications)
+            var proprietaireId = CurrentUserId();
             var proprio = await _context.Users.FindAsync(proprietaireId);
 
-            // KYC requis pour les propriétaires (les admins sont exemptés)
             if (CurrentRole() is "Proprietaire" or "UserIndep" && proprio?.KycStatut != "Approuve")
                 return BadRequest(new
                 {
@@ -215,29 +350,54 @@ namespace SaidAfricaBackend.Controllers
                     kycRequired = true
                 });
 
+            // Titre foncier : requis pour la vente (pour les propriétaires non-admins)
+            string? titreFoncierFileName = null;
+            if (req.TitreFoncier != null && req.TitreFoncier.Length > 0)
+            {
+                if (req.TitreFoncier.Length > 10 * 1024 * 1024)
+                    return BadRequest(new { success = false, message = "Le titre foncier ne doit pas dépasser 10 Mo." });
+
+                var allowed = new[] { "image/jpeg", "image/jpg", "image/png", "application/pdf" };
+                if (!allowed.Contains(req.TitreFoncier.ContentType.ToLowerInvariant()))
+                    return BadRequest(new { success = false, message = "Titre foncier : format accepté JPG, PNG ou PDF." });
+
+                var dir = Path.Combine(_env.ContentRootPath, "Uploads", "Biens");
+                Directory.CreateDirectory(dir);
+                var ext = Path.GetExtension(req.TitreFoncier.FileName);
+                titreFoncierFileName = $"tf_{Guid.NewGuid()}{ext}";
+                using var s = System.IO.File.Create(Path.Combine(dir, titreFoncierFileName));
+                await req.TitreFoncier.CopyToAsync(s);
+            }
+            else if (req.Statut?.ToLower() == "vente" && CurrentRole() is "Proprietaire" or "UserIndep")
+            {
+                return BadRequest(new { success = false, message = "Le titre foncier est obligatoire pour les biens en vente." });
+            }
+
             var bien = new Bien
             {
-                Titre        = req.Titre,
-                Type         = req.Type,
-                Statut       = req.Statut,
-                Prix         = req.Prix,
-                Chambres     = req.Chambres,
-                SallesDeBain = req.SallesDeBain,
-                Surface      = req.Surface,
-                Localisation = req.Localisation,
-                Description  = req.Description,
-                ImageUrl     = req.ImageUrl,
-                GalerieUrls  = req.GalerieUrls,
-                Equipements  = req.Equipements,
-                Standing     = req.Standing,
-                Latitude     = req.Latitude,
-                Longitude    = req.Longitude,
-                ProprietaireId = proprietaireId,
+                Titre             = req.Titre,
+                Type              = req.Type,
+                Statut            = req.Statut,
+                Prix              = req.Prix,
+                Chambres          = req.Chambres,
+                SallesDeBain      = req.SallesDeBain,
+                Surface           = req.Surface,
+                Localisation      = req.Localisation,
+                Description       = req.Description,
+                ImageUrl          = req.ImageUrl,
+                GalerieUrls       = req.GalerieUrls,
+                Equipements       = req.Equipements,
+                Standing          = req.Standing,
+                Latitude          = req.Latitude,
+                Longitude         = req.Longitude,
+                ProprietaireId    = proprietaireId,
+                EstDisponible     = false,
+                StatutPublication = "En attente",
+                TitreFoncierPath  = titreFoncierFileName,
             };
 
             _context.Biens.Add(bien);
 
-            // Notifier le ou les AdminRegion de la région du propriétaire
             if (proprio?.Region != null)
             {
                 var admins = await _context.Users
@@ -249,71 +409,79 @@ namespace SaidAfricaBackend.Controllers
                     NotificationHelper.Creer(_context,
                         admin.Id,
                         "nouvelle-annonce",
-                        "Nouvelle annonce publiée",
-                        $"{proprio.Prenom} {proprio.Nom} vient de publier une nouvelle annonce : « {req.Titre} » à {req.Localisation}.",
+                        "Nouveau bien à valider",
+                        $"{proprio.Prenom} {proprio.Nom} a publié « {req.Titre} » à {req.Localisation} — en attente de validation terrain.",
                         "biens");
                 }
             }
 
             await _context.SaveChangesAsync();
 
-            return Ok(new { success = true, message = "Bien créé avec succès.", data = new BienDto(bien) });
+            return Ok(new
+            {
+                success = true,
+                message = "Votre annonce est soumise. Elle sera visible après validation par l'admin régional.",
+                data = new BienDto(bien)
+            });
         }
     }
 
-    // ─── DTO ─────────────────────────────────────────────────────────────────
-    // On expose un objet propre, avec les listes déjà parsées
+    // ─── DTOs ─────────────────────────────────────────────────────────────────
     public class BienDto
     {
-        public int      Id           { get; set; }
-        public string   Titre        { get; set; }
-        public string   Type         { get; set; }
-        public string   Statut       { get; set; }
-        public string   Prix         { get; set; }
-        public int      Chambres     { get; set; }
-        public int      SallesDeBain { get; set; }
-        public int      Surface      { get; set; }
-        public string   Localisation { get; set; }
-        public string   Description  { get; set; }
-        public string   ImageUrl     { get; set; }
-        public string   Standing     { get; set; }
-        public bool     EstDisponible{ get; set; }
-        public DateTime DateAjout    { get; set; }
-        public int      Vues         { get; set; }
-        public int?     ProprietaireId { get; set; }
-        public double?  Latitude       { get; set; }
-        public double?  Longitude      { get; set; }
-
-        // Listes parsées depuis les champs séparés par "|"
-        public List<string> Galerie     { get; set; }
-        public List<string> Equipements { get; set; }
+        public int      Id                { get; set; }
+        public string   Titre             { get; set; }
+        public string   Type              { get; set; }
+        public string   Statut            { get; set; }
+        public string   Prix              { get; set; }
+        public int      Chambres          { get; set; }
+        public int      SallesDeBain      { get; set; }
+        public int      Surface           { get; set; }
+        public string   Localisation      { get; set; }
+        public string   Description       { get; set; }
+        public string   ImageUrl          { get; set; }
+        public string   Standing          { get; set; }
+        public bool     EstDisponible     { get; set; }
+        public string   StatutPublication { get; set; }
+        public string?  MotifsRejet       { get; set; }
+        public string?  TitreFoncierPath  { get; set; }
+        public DateTime DateAjout         { get; set; }
+        public int      Vues              { get; set; }
+        public int?     ProprietaireId    { get; set; }
+        public double?  Latitude          { get; set; }
+        public double?  Longitude         { get; set; }
+        public List<string> Galerie       { get; set; }
+        public List<string> Equipements   { get; set; }
 
         public BienDto(Bien b)
         {
-            Id           = b.Id;
-            Titre        = b.Titre;
-            Type         = b.Type;
-            Statut       = b.Statut;
-            Prix         = b.Prix;
-            Chambres     = b.Chambres;
-            SallesDeBain = b.SallesDeBain;
-            Surface      = b.Surface;
-            Localisation = b.Localisation;
-            Description  = b.Description;
-            ImageUrl     = b.ImageUrl;
-            Standing     = b.Standing;
-            EstDisponible= b.EstDisponible;
-            DateAjout    = b.DateAjout;
-            Vues         = b.Vues;
-            ProprietaireId = b.ProprietaireId;
-            Latitude     = b.Latitude;
-            Longitude    = b.Longitude;
-            Galerie      = string.IsNullOrEmpty(b.GalerieUrls)
-                               ? new List<string>()
-                               : b.GalerieUrls.Split('|').ToList();
-            Equipements  = string.IsNullOrEmpty(b.Equipements)
-                               ? new List<string>()
-                               : b.Equipements.Split('|').ToList();
+            Id                = b.Id;
+            Titre             = b.Titre;
+            Type              = b.Type;
+            Statut            = b.Statut;
+            Prix              = b.Prix;
+            Chambres          = b.Chambres;
+            SallesDeBain      = b.SallesDeBain;
+            Surface           = b.Surface;
+            Localisation      = b.Localisation;
+            Description       = b.Description;
+            ImageUrl          = b.ImageUrl;
+            Standing          = b.Standing;
+            EstDisponible     = b.EstDisponible;
+            StatutPublication = b.StatutPublication;
+            MotifsRejet       = b.MotifsRejet;
+            TitreFoncierPath  = b.TitreFoncierPath;
+            DateAjout         = b.DateAjout;
+            Vues              = b.Vues;
+            ProprietaireId    = b.ProprietaireId;
+            Latitude          = b.Latitude;
+            Longitude         = b.Longitude;
+            Galerie           = string.IsNullOrEmpty(b.GalerieUrls)
+                                    ? new List<string>()
+                                    : b.GalerieUrls.Split('|').ToList();
+            Equipements       = string.IsNullOrEmpty(b.Equipements)
+                                    ? new List<string>()
+                                    : b.Equipements.Split('|').ToList();
         }
     }
 
@@ -332,40 +500,46 @@ namespace SaidAfricaBackend.Controllers
     // ─── REQUEST MODELS ───────────────────────────────────────────────────────
     public class CreateBienRequest
     {
-        public string  Titre        { get; set; } = string.Empty;
-        public string  Type         { get; set; } = string.Empty;
-        public string  Statut       { get; set; } = string.Empty;
-        public string  Prix         { get; set; } = string.Empty;
-        public int     Chambres     { get; set; }
-        public int     SallesDeBain { get; set; }
-        public int     Surface      { get; set; }
-        public string  Localisation { get; set; } = string.Empty;
-        public string  Description  { get; set; } = string.Empty;
-        public string  ImageUrl     { get; set; } = string.Empty;
-        public string  GalerieUrls  { get; set; } = string.Empty;
-        public string  Equipements  { get; set; } = string.Empty;
-        public string  Standing     { get; set; } = string.Empty;
-        public double? Latitude     { get; set; }
-        public double? Longitude    { get; set; }
+        public string     Titre        { get; set; } = string.Empty;
+        public string     Type         { get; set; } = string.Empty;
+        public string     Statut       { get; set; } = string.Empty;
+        public string     Prix         { get; set; } = string.Empty;
+        public int        Chambres     { get; set; }
+        public int        SallesDeBain { get; set; }
+        public int        Surface      { get; set; }
+        public string     Localisation { get; set; } = string.Empty;
+        public string     Description  { get; set; } = string.Empty;
+        public string     ImageUrl     { get; set; } = string.Empty;
+        public string     GalerieUrls  { get; set; } = string.Empty;
+        public string     Equipements  { get; set; } = string.Empty;
+        public string     Standing     { get; set; } = string.Empty;
+        public double?    Latitude     { get; set; }
+        public double?    Longitude    { get; set; }
+        public IFormFile? TitreFoncier { get; set; }
     }
 
     public class UpdateBienRequest
     {
-        public string  Titre        { get; set; } = string.Empty;
-        public string  Type         { get; set; } = string.Empty;
-        public string  Statut       { get; set; } = string.Empty;
-        public string  Prix         { get; set; } = string.Empty;
-        public int     Chambres     { get; set; }
-        public int     SallesDeBain { get; set; }
-        public int     Surface      { get; set; }
-        public string  Localisation { get; set; } = string.Empty;
-        public string  Description  { get; set; } = string.Empty;
-        public string  ImageUrl     { get; set; } = string.Empty;
-        public string  GalerieUrls  { get; set; } = string.Empty;
-        public string  Equipements  { get; set; } = string.Empty;
-        public string  Standing     { get; set; } = string.Empty;
-        public bool    EstDisponible { get; set; } = true;
-        public double? Latitude     { get; set; }
-        public double? Longitude    { get; set; }
+        public string  Titre         { get; set; } = string.Empty;
+        public string  Type          { get; set; } = string.Empty;
+        public string  Statut        { get; set; } = string.Empty;
+        public string  Prix          { get; set; } = string.Empty;
+        public int     Chambres      { get; set; }
+        public int     SallesDeBain  { get; set; }
+        public int     Surface       { get; set; }
+        public string  Localisation  { get; set; } = string.Empty;
+        public string  Description   { get; set; } = string.Empty;
+        public string  ImageUrl      { get; set; } = string.Empty;
+        public string  GalerieUrls   { get; set; } = string.Empty;
+        public string  Equipements   { get; set; } = string.Empty;
+        public string  Standing      { get; set; } = string.Empty;
+        public bool    EstDisponible  { get; set; } = true;
+        public double? Latitude      { get; set; }
+        public double? Longitude     { get; set; }
+    }
+
+    public class RejeterBienRequest
+    {
+        public string? Motif { get; set; }
     }
 }

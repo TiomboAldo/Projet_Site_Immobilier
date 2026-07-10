@@ -254,6 +254,24 @@
         </div>
     </div>
 
+    <!-- MODAL MOTIF REJET BIEN -->
+    <div id="motifRejetBienModal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px;">
+        <div style="background:#fff;border-radius:24px;padding:32px;max-width:440px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,0.2);">
+            <div style="width:52px;height:52px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+                <i class="fas fa-circle-xmark" style="color:#dc2626;font-size:22px;"></i>
+            </div>
+            <h3 style="font-size:18px;font-weight:800;color:#111827;margin-bottom:6px;text-align:center;">Rejeter ce bien</h3>
+            <p style="font-size:13px;color:#6b7280;margin-bottom:16px;text-align:center;">Expliquez pourquoi ce bien ne peut pas être validé (adresse introuvable, coordonnées incorrectes, etc.).</p>
+            <textarea id="motifRejetBienInput" rows="3" placeholder="Ex : Adresse introuvable sur le terrain, coordonnées GPS incorrectes, titre foncier illisible..."
+                style="width:100%;border:1.5px solid #e5e7eb;border-radius:12px;padding:12px 14px;font-size:14px;font-family:inherit;resize:none;outline:none;box-sizing:border-box;"
+                onfocus="this.style.borderColor='#dc2626'" onblur="this.style.borderColor='#e5e7eb'"></textarea>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;">
+                <button onclick="fermerRejeterBien()" style="background:#f3f4f6;color:#374151;border:none;padding:12px;border-radius:12px;font-weight:700;cursor:pointer;">Annuler</button>
+                <button onclick="confirmerRejeterBien()" style="background:#dc2626;color:#fff;border:none;padding:12px;border-radius:12px;font-weight:700;cursor:pointer;"><i class="fas fa-times" style="margin-right:6px;"></i>Confirmer le rejet</button>
+            </div>
+        </div>
+    </div>
+
     <!-- CONFIRM MODAL -->
     <div id="confirmModal" class="fixed inset-0 z-[110] modal-hidden items-center justify-center p-4"
         style="background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
@@ -341,6 +359,27 @@
                 <div id="adGalerieSection" class="hidden">
                     <h4 class="text-xs font-extrabold text-gray-500 uppercase tracking-wider mb-2">Galerie</h4>
                     <div id="adGalerie" class="grid grid-cols-3 gap-2"></div>
+                </div>
+                <!-- GPS -->
+                <div id="adGpsSection" class="hidden">
+                    <a id="adGpsLink" href="#" target="_blank" rel="noopener"
+                       class="flex items-center gap-2 bg-green-50 rounded-2xl p-4 text-green-700 font-bold text-sm no-underline hover:bg-green-100 transition">
+                        <i class="fas fa-location-dot text-green-600 text-lg"></i>
+                        Vérifier la position GPS sur Google Maps
+                    </a>
+                </div>
+                <!-- Titre foncier -->
+                <div id="adTitreFoncierSection" class="hidden">
+                    <a id="adTitreFoncierLink" href="#" target="_blank" rel="noopener"
+                       class="flex items-center gap-2 bg-purple-50 rounded-2xl p-4 text-purple-700 font-bold text-sm no-underline hover:bg-purple-100 transition">
+                        <i class="fas fa-file-contract text-purple-600 text-lg"></i>
+                        Consulter le titre foncier
+                    </a>
+                </div>
+                <!-- Motif rejet -->
+                <div id="adMotifSection" class="hidden bg-red-50 rounded-2xl p-4">
+                    <h4 class="text-xs font-extrabold text-red-500 uppercase tracking-wider mb-1">Motif du rejet</h4>
+                    <p id="adMotif" class="text-sm text-red-700 leading-relaxed"></p>
                 </div>
                 <!-- Prix -->
                 <div class="flex items-center justify-between bg-blue-50 rounded-2xl p-4">
@@ -587,6 +626,8 @@
         // ═══════════════════════════════════════════════════════════════════
         // BIENS A MODERER
         // ═══════════════════════════════════════════════════════════════════
+        let biensModerationFilter = 'En attente';
+
         async function renderBiens() {
             const grid = document.getElementById('biensGrid');
             grid.className = '';
@@ -600,34 +641,60 @@
 
             regionBiens = res.data;
 
-            if (!regionBiens.length) {
-                grid.innerHTML = `
-                    <div class="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
-                        <i class="fas fa-house text-5xl text-gray-300 mb-3"></i>
-                        <p class="text-gray-400 font-semibold">Aucun bien dans votre région.</p>
+            // Onglets de filtre
+            const counts = {
+                'En attente': regionBiens.filter(b => b.statutPublication === 'En attente').length,
+                'Validée':    regionBiens.filter(b => b.statutPublication === 'Validée').length,
+                'Rejetée':    regionBiens.filter(b => b.statutPublication === 'Rejetée').length,
+            };
+
+            const filterBar = `
+                <div style="display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;">
+                    <button onclick="setBienFilter('En attente', this)"
+                        style="background:${biensModerationFilter==='En attente'?'#f59e0b':'#fff'};color:${biensModerationFilter==='En attente'?'#fff':'#374151'};border:1px solid #e5e7eb;font-weight:700;font-size:13px;padding:10px 18px;border-radius:12px;cursor:pointer;">
+                        <i class="fas fa-clock" style="margin-right:6px;"></i>En attente (${counts['En attente']})
+                    </button>
+                    <button onclick="setBienFilter('Validée', this)"
+                        style="background:${biensModerationFilter==='Validée'?'#059669':'#fff'};color:${biensModerationFilter==='Validée'?'#fff':'#374151'};border:1px solid #e5e7eb;font-weight:700;font-size:13px;padding:10px 18px;border-radius:12px;cursor:pointer;">
+                        <i class="fas fa-circle-check" style="margin-right:6px;"></i>Validés (${counts['Validée']})
+                    </button>
+                    <button onclick="setBienFilter('Rejetée', this)"
+                        style="background:${biensModerationFilter==='Rejetée'?'#dc2626':'#fff'};color:${biensModerationFilter==='Rejetée'?'#fff':'#374151'};border:1px solid #e5e7eb;font-weight:700;font-size:13px;padding:10px 18px;border-radius:12px;cursor:pointer;">
+                        <i class="fas fa-circle-xmark" style="margin-right:6px;"></i>Rejetés (${counts['Rejetée']})
+                    </button>
+                </div>`;
+
+            const filtered = regionBiens.filter(b => b.statutPublication === biensModerationFilter);
+
+            if (!filtered.length) {
+                grid.innerHTML = filterBar + `
+                    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 0;background:#fff;border-radius:24px;border:2px dashed #e5e7eb;">
+                        <i class="fas fa-house" style="font-size:48px;color:#d1d5db;margin-bottom:12px;"></i>
+                        <p style="color:#9ca3af;font-weight:600;">Aucun bien « ${biensModerationFilter} » dans votre région.</p>
                     </div>`;
                 return;
             }
 
-            grid.style.display = 'grid';
-            grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
-            grid.style.gap = '24px';
-
-            grid.innerHTML = regionBiens.map((b, idx) => {
+            const cardsHtml = filtered.map((b, idx) => {
+                const sp    = b.statutPublication || 'En attente';
                 const isOff = !b.estDisponible;
 
-                const badgeStatut = b.statut?.toLowerCase() === 'vente'
-                    ? `<span style="position:absolute;top:12px;left:12px;background:#f59e0b;color:#fff;font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,0.15);">Vente</span>`
-                    : `<span style="position:absolute;top:12px;left:12px;background:#2563eb;color:#fff;font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,0.15);">Location</span>`;
+                const badgeVenteLocation = b.statut?.toLowerCase() === 'vente'
+                    ? `<span style="position:absolute;top:12px;left:12px;background:#f59e0b;color:#fff;font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px;">Vente</span>`
+                    : `<span style="position:absolute;top:12px;left:12px;background:#2563eb;color:#fff;font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px;">Location</span>`;
 
-                const badgeDispo = isOff
-                    ? `<span style="position:absolute;top:12px;right:12px;background:rgba(17,24,39,0.8);color:#fff;font-size:10px;font-weight:800;padding:4px 10px;border-radius:999px;text-transform:uppercase;letter-spacing:0.05em;">Désactivé</span>`
-                    : '';
+                const badgeSp = sp === 'Validée' && !isOff
+                    ? `<span style="position:absolute;top:12px;right:12px;background:#059669;color:#fff;font-size:10px;font-weight:800;padding:3px 10px;border-radius:999px;text-transform:uppercase;">En ligne</span>`
+                    : sp === 'Validée' && isOff
+                        ? `<span style="position:absolute;top:12px;right:12px;background:rgba(17,24,39,0.8);color:#fff;font-size:10px;font-weight:800;padding:3px 10px;border-radius:999px;text-transform:uppercase;">Retiré</span>`
+                    : sp === 'Rejetée'
+                        ? `<span style="position:absolute;top:12px;right:12px;background:#dc2626;color:#fff;font-size:10px;font-weight:800;padding:3px 10px;border-radius:999px;text-transform:uppercase;">Rejeté</span>`
+                        : `<span style="position:absolute;top:12px;right:12px;background:#f59e0b;color:#fff;font-size:10px;font-weight:800;padding:3px 10px;border-radius:999px;text-transform:uppercase;">En attente</span>`;
 
+                const dimmed = sp !== 'Validée' || isOff;
                 const imageBlock = b.imageUrl
                     ? `<img src="${escapeHtml(b.imageUrl)}" alt="${escapeHtml(b.titre)}"
-                           style="width:100%;height:100%;object-fit:cover;transition:transform 0.7s ease;${isOff ? 'filter:grayscale(60%);opacity:0.7;' : ''}"
-                           class="group-img">`
+                           style="width:100%;height:100%;object-fit:cover;transition:transform 0.7s ease;${dimmed ? 'filter:grayscale(50%);opacity:0.75;' : ''}">`
                     : `<div style="width:100%;height:100%;background:linear-gradient(135deg,#eff6ff,#dbeafe);display:flex;align-items:center;justify-content:center;">
                            <i class="fas fa-house" style="font-size:48px;color:#93c5fd;"></i>
                        </div>`;
@@ -637,77 +704,106 @@
                         ${b.galerie.map((url, i) => `
                             <img src="${escapeHtml(url)}" alt="photo ${i+1}"
                                  onclick="ouvrirPhoto('${escapeHtml(url)}')"
-                                 style="width:56px;height:56px;object-fit:cover;border-radius:8px;cursor:pointer;transition:transform 0.2s;"
-                                 onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">`
+                                 style="width:56px;height:56px;object-fit:cover;border-radius:8px;cursor:pointer;">`
                         ).join('')}
                        </div>`
                     : '';
 
-                const modBtn = isOff
-                    ? `<button onclick="confirmerModeration(${b.id}, true)"
-                           style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 8px;background:#059669;color:#fff;border:none;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;transition:background 0.2s;"
-                           onmouseover="this.style.background='#047857'" onmouseout="this.style.background='#059669'">
-                           <i class="fas fa-check"></i> Réactiver
-                       </button>`
-                    : `<button onclick="confirmerModeration(${b.id}, false)"
-                           style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 8px;background:#dc2626;color:#fff;border:none;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;transition:background 0.2s;"
-                           onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">
-                           <i class="fas fa-ban"></i> Désactiver
-                       </button>`;
+                // GPS lien
+                const gpsHtml = b.latitude && b.longitude
+                    ? `<a href="https://www.google.com/maps?q=${b.latitude},${b.longitude}" target="_blank" rel="noopener"
+                           style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#2563eb;font-weight:700;text-decoration:none;margin-bottom:8px;">
+                           <i class="fas fa-location-dot"></i> Voir sur Google Maps
+                       </a>`
+                    : `<p style="font-size:11px;color:#9ca3af;margin-bottom:8px;"><i class="fas fa-location-dot" style="margin-right:4px;"></i>Pas de coordonnées GPS</p>`;
+
+                // Titre foncier
+                const tfHtml = b.titreFoncierPath
+                    ? `<a href="${API}/biens/document/${encodeURIComponent(b.titreFoncierPath)}" target="_blank" rel="noopener"
+                           style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#7c3aed;font-weight:700;text-decoration:none;margin-bottom:10px;">
+                           <i class="fas fa-file-contract"></i> Voir le titre foncier
+                       </a>`
+                    : `<p style="font-size:11px;color:#9ca3af;margin-bottom:10px;"><i class="fas fa-file-contract" style="margin-right:4px;"></i>Pas de titre foncier</p>`;
+
+                // Motif de rejet
+                const motifHtml = sp === 'Rejetée' && b.motifsRejet
+                    ? `<div style="background:#fee2e2;border-radius:10px;padding:8px 10px;margin-bottom:10px;font-size:11px;color:#991b1b;">
+                           <strong>Motif :</strong> ${escapeHtml(b.motifsRejet)}
+                       </div>`
+                    : '';
+
+                // Boutons d'action selon statutPublication
+                let actionBtns = '';
+                if (sp === 'En attente') {
+                    actionBtns = `
+                        <button onclick="validerBien(${b.id})"
+                            style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:9px 6px;background:#059669;color:#fff;border:none;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;">
+                            <i class="fas fa-check"></i> Valider
+                        </button>
+                        <button onclick="ouvrirRejeterBien(${b.id})"
+                            style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:9px 6px;background:#dc2626;color:#fff;border:none;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;">
+                            <i class="fas fa-times"></i> Rejeter
+                        </button>`;
+                } else if (sp === 'Validée') {
+                    actionBtns = isOff
+                        ? `<button onclick="confirmerModeration(${b.id}, true)"
+                               style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:9px 6px;background:#059669;color:#fff;border:none;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;">
+                               <i class="fas fa-eye"></i> Réactiver
+                           </button>`
+                        : `<button onclick="confirmerModeration(${b.id}, false)"
+                               style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:9px 6px;background:#dc2626;color:#fff;border:none;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;">
+                               <i class="fas fa-ban"></i> Désactiver
+                           </button>`;
+                }
 
                 return `
                 <div class="bien-mod-card" data-idx="${idx}"
-                     style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);border:1px solid #f3f4f6;opacity:0;transform:translateY(20px);transition:transform 0.3s ease,box-shadow 0.3s ease,opacity 0.5s ease,transform 0.5s ease;"
+                     style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);border:1px solid #f3f4f6;opacity:0;transform:translateY(20px);transition:opacity 0.5s ease,transform 0.5s ease;"
                      onmouseover="this.style.transform='translateY(-6px)';this.style.boxShadow='0 16px 40px rgba(0,0,0,0.12)'"
                      onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 20px rgba(0,0,0,0.08)'">
-                    <!-- Image -->
                     <div style="position:relative;height:200px;overflow:hidden;cursor:pointer;" onclick="ouvrirPhoto('${escapeHtml(b.imageUrl || '')}')">
                         ${imageBlock}
-                        ${badgeStatut}
-                        ${badgeDispo}
+                        ${badgeVenteLocation}
+                        ${badgeSp}
                     </div>
-                    <!-- Galerie -->
                     ${galerieHtml}
-                    <!-- Corps -->
-                    <div style="padding:18px 18px 16px;">
+                    <div style="padding:16px;">
                         <h3 style="font-size:15px;font-weight:800;color:#111827;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(b.titre)}</h3>
-                        <p style="font-size:12px;color:#6b7280;margin-bottom:3px;display:flex;align-items:center;gap:5px;">
-                            <i class="fas fa-user-tie" style="color:#2563eb;font-size:11px;flex-shrink:0;"></i>
-                            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;">${escapeHtml(b.prenomProprietaire || '')} ${escapeHtml(b.nomProprietaire || '')}</span>
+                        <p style="font-size:12px;color:#6b7280;margin-bottom:3px;display:flex;align-items:center;gap:5px;font-weight:600;">
+                            <i class="fas fa-user-tie" style="color:#2563eb;font-size:11px;"></i>
+                            ${escapeHtml(b.prenomProprietaire || '')} ${escapeHtml(b.nomProprietaire || '')}
                         </p>
-                        <p style="font-size:13px;color:#6b7280;margin-bottom:8px;display:flex;align-items:center;gap:5px;">
-                            <i class="fas fa-map-marker-alt" style="color:#2563eb;font-size:11px;flex-shrink:0;"></i>
+                        <p style="font-size:12px;color:#6b7280;margin-bottom:8px;display:flex;align-items:center;gap:5px;">
+                            <i class="fas fa-map-marker-alt" style="color:#2563eb;font-size:11px;"></i>
                             <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(b.localisation)}</span>
                         </p>
-                        <p style="font-size:17px;font-weight:800;color:#2563eb;margin-bottom:12px;">${escapeHtml(b.prix)}</p>
-                        <div style="display:flex;justify-content:space-between;font-size:11px;color:#9ca3af;font-weight:700;border-top:1px solid #f3f4f6;padding-top:10px;margin-bottom:12px;">
-                            <span><i class="fas fa-eye" style="margin-right:3px;"></i>${b.vues}</span>
-                            <span><i class="fas fa-bed" style="margin-right:3px;"></i>${b.chambres} ch.</span>
-                            <span><i class="fas fa-bath" style="margin-right:3px;"></i>${b.sallesDeBain} sdb</span>
-                            <span><i class="fas fa-ruler-combined" style="margin-right:3px;"></i>${b.surface} m²</span>
-                        </div>
-                        <!-- Boutons -->
+                        ${gpsHtml}
+                        ${tfHtml}
+                        ${motifHtml}
+                        <p style="font-size:16px;font-weight:800;color:#2563eb;margin-bottom:10px;">${escapeHtml(b.prix)}</p>
                         <div style="display:flex;gap:8px;">
                             <button onclick="openDetailsAdmin(${b.id})"
-                                style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 8px;background:#fff;color:#2563eb;border:2px solid #2563eb;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;transition:background 0.2s;"
-                                onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='#fff'">
+                                style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:9px 6px;background:#fff;color:#2563eb;border:2px solid #2563eb;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;">
                                 <i class="fas fa-info-circle"></i> Détails
                             </button>
-                            ${modBtn}
+                            ${actionBtns}
                         </div>
                     </div>
                 </div>`;
             }).join('');
 
-            // Animation d'entrée décalée
+            grid.innerHTML = filterBar + `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:24px;">${cardsHtml}</div>`;
+
             setTimeout(() => {
                 document.querySelectorAll('.bien-mod-card').forEach((card, i) => {
-                    setTimeout(() => {
-                        card.style.opacity = '1';
-                        card.style.transform = 'translateY(0)';
-                    }, i * 80);
+                    setTimeout(() => { card.style.opacity = '1'; card.style.transform = 'translateY(0)'; }, i * 80);
                 });
             }, 50);
+        }
+
+        function setBienFilter(filtre, btn) {
+            biensModerationFilter = filtre;
+            renderBiens();
         }
 
         function ouvrirPhoto(url) {
@@ -734,12 +830,48 @@
                 `${b.prenomProprietaire || ''} ${b.nomProprietaire || ''}`.trim();
 
             const dispo = document.getElementById('adDispo');
-            if (b.estDisponible) {
-                dispo.textContent = 'Actif';
+            const sp = b.statutPublication || 'En attente';
+            if (sp === 'Validée' && b.estDisponible) {
+                dispo.textContent = 'En ligne';
                 dispo.className = 'text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700';
-            } else {
-                dispo.textContent = 'Désactivé';
+            } else if (sp === 'Rejetée') {
+                dispo.textContent = 'Rejeté';
                 dispo.className = 'text-xs font-bold px-3 py-1 rounded-full bg-red-100 text-red-700';
+            } else if (sp === 'En attente') {
+                dispo.textContent = 'En attente';
+                dispo.className = 'text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-700';
+            } else {
+                dispo.textContent = 'Retiré';
+                dispo.className = 'text-xs font-bold px-3 py-1 rounded-full bg-gray-100 text-gray-600';
+            }
+
+            // GPS
+            const gpsSection = document.getElementById('adGpsSection');
+            const gpsLink    = document.getElementById('adGpsLink');
+            if (b.latitude && b.longitude) {
+                gpsLink.href = `https://www.google.com/maps?q=${b.latitude},${b.longitude}`;
+                gpsSection.classList.remove('hidden');
+            } else {
+                gpsSection.classList.add('hidden');
+            }
+
+            // Titre foncier
+            const tfSection = document.getElementById('adTitreFoncierSection');
+            const tfLink    = document.getElementById('adTitreFoncierLink');
+            if (b.titreFoncierPath) {
+                tfLink.href = `${API}/biens/document/${encodeURIComponent(b.titreFoncierPath)}`;
+                tfSection.classList.remove('hidden');
+            } else {
+                tfSection.classList.add('hidden');
+            }
+
+            // Motif rejet
+            const motifSection = document.getElementById('adMotifSection');
+            if (sp === 'Rejetée' && b.motifsRejet) {
+                document.getElementById('adMotif').textContent = b.motifsRejet;
+                motifSection.classList.remove('hidden');
+            } else {
+                motifSection.classList.add('hidden');
             }
 
             const adImg = document.getElementById('adImg');
@@ -791,23 +923,66 @@
             modal.classList.remove('flex');
         }
 
+        function validerBien(id) {
+            openConfirmModal({
+                title: 'Valider ce bien ?',
+                message: 'Le bien a été vérifié sur le terrain. Il sera mis en ligne et le propriétaire notifié.',
+                icon: 'fa-circle-check',
+                confirmLabel: 'Valider',
+                onConfirm: async () => {
+                    const res = await apiFetch(`${API}/biens/${id}/valider`, { method: 'PUT' });
+                    if (res.success) {
+                        showToast('success', 'Bien validé !', res.message || '');
+                        renderBiens();
+                    } else {
+                        showToast('error', 'Erreur', res.message || '');
+                    }
+                }
+            });
+        }
+
+        let _rejeterBienId = null;
+        function ouvrirRejeterBien(id) {
+            _rejeterBienId = id;
+            document.getElementById('motifRejetBienInput').value = '';
+            const modal = document.getElementById('motifRejetBienModal');
+            modal.style.display = 'flex';
+        }
+        function fermerRejeterBien() {
+            document.getElementById('motifRejetBienModal').style.display = 'none';
+            _rejeterBienId = null;
+        }
+        async function confirmerRejeterBien() {
+            if (!_rejeterBienId) return;
+            const motif = document.getElementById('motifRejetBienInput').value.trim();
+            const res = await apiFetch(`${API}/biens/${_rejeterBienId}/rejeter`, {
+                method: 'PUT',
+                body: JSON.stringify({ Motif: motif })
+            });
+            fermerRejeterBien();
+            if (res.success) {
+                showToast('info', 'Bien rejeté', res.message || '');
+                renderBiens();
+            } else {
+                showToast('error', 'Erreur', res.message || '');
+            }
+        }
+
         async function confirmerModeration(id, activer) {
             openConfirmModal({
                 title:   activer ? 'Réactiver ce bien ?' : 'Désactiver ce bien ?',
                 message: activer
                     ? 'Le bien sera à nouveau visible sur la plateforme.'
                     : 'Le bien ne sera plus visible. Le propriétaire pourra le remettre en ligne.',
-                labelOk: activer ? 'Réactiver' : 'Désactiver',
-                colorOk: activer ? '#059669' : '#dc2626',
+                icon: activer ? 'fa-eye' : 'fa-ban',
+                confirmLabel: activer ? 'Réactiver' : 'Désactiver',
                 onConfirm: async () => {
                     let res;
                     if (!activer) {
                         res = await apiFetch(`${API}/biens/${id}`, { method: 'DELETE' });
                     } else {
-                        // Récupérer les données actuelles pour le PUT
-                        const detail = await apiFetch(`${API}/biens/${id}`);
-                        if (!detail.success) return;
-                        const b = detail.data;
+                        const b = regionBiens.find(x => x.id === id);
+                        if (!b) return;
                         res = await apiFetch(`${API}/biens/${id}`, {
                             method: 'PUT',
                             body: JSON.stringify({

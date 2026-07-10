@@ -33,6 +33,12 @@ namespace SaidAfricaBackend
                 .HasForeignKey(b => b.ProprietaireId)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            modelBuilder.Entity<Bien>()
+                .HasOne(b => b.ValideParAdmin)
+                .WithMany()
+                .HasForeignKey(b => b.ValideParAdminId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             modelBuilder.Entity<DemandeProprietaire>()
                 .HasOne(d => d.User)
                 .WithMany()
@@ -186,10 +192,20 @@ namespace SaidAfricaBackend
         /// <summary>Propriétaire (User avec rôle Proprietaire/UserIndep/Admin). Nullable : biens historiques sans propriétaire assigné.</summary>
         public int? ProprietaireId { get; set; }
 
+        // ── Modération par l'AdminRegion ─────────────────────────────────────
+        /// <summary>En attente | Validée | Rejetée</summary>
+        public string  StatutPublication { get; set; } = "En attente";
+        public string? MotifsRejet       { get; set; }
+        /// <summary>Titre foncier (PDF/JPG/PNG) stocké dans Uploads/Biens/</summary>
+        public string? TitreFoncierPath  { get; set; }
+        public int?      ValideParAdminId { get; set; }
+        public DateTime? ValideLe         { get; set; }
+
         // Navigation
-        public User?                    Proprietaire { get; set; }
-        public ICollection<Reservation> Reservations { get; set; } = new List<Reservation>();
-        public ICollection<Favori>      Favoris      { get; set; } = new List<Favori>();
+        public User?                    Proprietaire   { get; set; }
+        public User?                    ValideParAdmin  { get; set; }
+        public ICollection<Reservation> Reservations   { get; set; } = new List<Reservation>();
+        public ICollection<Favori>      Favoris        { get; set; } = new List<Favori>();
     }
 
     // ─── RÉSERVATION / DEMANDE DE VISITE ─────────────────────────────────────

@@ -531,6 +531,37 @@
                     </div>
                     <div class="form-group"><label>Équipements (séparés par |)</label><textarea id="pfEquipements" placeholder="Piscine|Jardin|Climatisation"></textarea></div>
 
+                    <!-- TITRE FONCIER -->
+                    <div class="form-group" id="titreFoncierGroup">
+                        <label id="titreFoncierLabel">Titre foncier <span id="titreFoncierReq" style="color:#ef4444;font-size:12px;">(obligatoire pour la vente)</span></label>
+                        <div id="titreFoncierZone"
+                            style="border:2px dashed #d1d5db; border-radius:14px; padding:20px; text-align:center; cursor:pointer; transition:border-color 0.2s, background 0.2s; background:#fafafa;"
+                            onclick="document.getElementById('pfTitreFoncierFile').click()"
+                            ondragover="event.preventDefault(); this.style.borderColor='#2563eb'; this.style.background='#eff6ff';"
+                            ondragleave="this.style.borderColor='#d1d5db'; this.style.background='#fafafa';"
+                            ondrop="event.preventDefault(); this.style.borderColor='#d1d5db'; this.style.background='#fafafa'; selectTitreFoncier(event.dataTransfer.files[0]);">
+                            <div id="titreFoncierPlaceholder">
+                                <i class="fas fa-file-contract" style="font-size:24px; color:#9ca3af; display:block; margin-bottom:6px;"></i>
+                                <p style="font-size:13px; color:#4b5563; font-weight:600;">Cliquer ou glisser-déposer le titre foncier</p>
+                                <p style="font-size:11px; color:#9ca3af; margin-top:2px;">PDF, JPG ou PNG — max 10 Mo</p>
+                            </div>
+                            <div id="titreFoncierSelected" style="display:none; align-items:center; gap:10px; justify-content:center;">
+                                <i class="fas fa-file-check" style="font-size:20px; color:#059669;"></i>
+                                <span id="titreFoncierName" style="font-size:13px; color:#059669; font-weight:700;"></span>
+                                <button type="button" onclick="event.stopPropagation(); clearTitreFoncier()"
+                                    style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:12px; font-weight:700;">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <input type="file" id="pfTitreFoncierFile" accept=".pdf,image/*" style="display:none;" onchange="selectTitreFoncier(this.files[0])">
+                        <p id="titreFoncierCurrentInfo" style="font-size:12px; color:#6b7280; margin-top:6px; display:none;">
+                            <i class="fas fa-paperclip" style="color:#2563eb; margin-right:4px;"></i>
+                            <span id="titreFoncierCurrentText"></span>
+                            <span style="color:#9ca3af;"> — aucun nouveau fichier sélectionné</span>
+                        </p>
+                    </div>
+
                     <button type="submit" class="hover-lift"
                         style="width:100%; background:#2563eb; color:#fff; font-weight:700; padding:16px; border-radius:16px; border:none; cursor:pointer; margin-top:8px;">
                         Enregistrer
@@ -973,19 +1004,25 @@
             }
 
             grid.innerHTML = mesBiens.map(b => {
+                const sp    = b.statutPublication || 'En attente';
                 const isOff = !b.estDisponible;
 
                 const badgeStatut = b.statut?.toLowerCase() === 'vente'
                     ? `<span class="absolute top-3 left-3 bg-amber-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow">Vente</span>`
                     : `<span class="absolute top-3 left-3 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow">Location</span>`;
 
-                const badgeOff = isOff
-                    ? `<span class="absolute top-3 right-3 bg-gray-900/80 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">Désactivée</span>`
-                    : '';
+                // Badge de modération (coin haut-droit de l'image)
+                const badgeMod = sp === 'Validée' && !isOff ? ''
+                    : sp === 'Validée' && isOff
+                        ? `<span class="absolute top-3 right-3 bg-gray-900/80 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">Retirée</span>`
+                    : sp === 'Rejetée'
+                        ? `<span class="absolute top-3 right-3 bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">Rejeté</span>`
+                        : `<span class="absolute top-3 right-3 bg-amber-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">En attente</span>`;
 
+                const dimmed = sp !== 'Validée' || isOff;
                 const imageBlock = b.imageUrl
                     ? `<img src="${escapeHtml(b.imageUrl)}" alt="${escapeHtml(b.titre)}"
-                           class="w-full h-full object-cover transition duration-700 group-hover:scale-110${isOff ? ' grayscale opacity-70' : ''}">`
+                           class="w-full h-full object-cover transition duration-700 group-hover:scale-110${dimmed ? ' grayscale opacity-70' : ''}">`
                     : `<div class="w-full h-full bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
                            <i class="fas fa-house text-5xl text-blue-300"></i>
                        </div>`;
@@ -1000,22 +1037,46 @@
                        </div>`
                     : '';
 
-                const retireBtn = isOff
-                    ? `<button onclick="republierBien(${b.id})"
-                           class="w-full py-2.5 text-xs font-bold rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition flex items-center justify-center gap-1.5 border-none cursor-pointer">
-                           <i class="fas fa-arrow-rotate-left"></i> Republier
-                       </button>`
-                    : `<button onclick="confirmRetirer(${b.id})"
-                           class="w-full py-2.5 text-xs font-bold rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition flex items-center justify-center gap-1.5 border-none cursor-pointer">
-                           <i class="fas fa-eye-slash"></i> Retirer
+                // Motif de rejet
+                const motifHtml = sp === 'Rejetée' && b.motifsRejet
+                    ? `<div style="background:#fee2e2; border-radius:10px; padding:8px 12px; margin-bottom:10px; font-size:12px; color:#991b1b;">
+                           <i class="fas fa-circle-xmark" style="margin-right:5px;"></i><strong>Motif :</strong> ${escapeHtml(b.motifsRejet)}
+                       </div>`
+                    : sp === 'Rejetée'
+                        ? `<div style="background:#fee2e2; border-radius:10px; padding:8px 12px; margin-bottom:10px; font-size:12px; color:#991b1b;">
+                               <i class="fas fa-circle-xmark" style="margin-right:5px;"></i>Annonce rejetée par l'admin.
+                           </div>`
+                    : sp === 'En attente'
+                        ? `<div style="background:#fef3c7; border-radius:10px; padding:8px 12px; margin-bottom:10px; font-size:12px; color:#92400e;">
+                               <i class="fas fa-clock" style="margin-right:5px;"></i>En attente de validation par l'admin régional.
+                           </div>`
+                        : '';
+
+                // Bouton d'action selon statut de modération
+                let actionBtn = '';
+                if (sp === 'Validée') {
+                    actionBtn = isOff
+                        ? `<button onclick="republierBien(${b.id})"
+                               class="w-full py-2.5 text-xs font-bold rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition flex items-center justify-center gap-1.5 border-none cursor-pointer">
+                               <i class="fas fa-arrow-rotate-left"></i> Republier
+                           </button>`
+                        : `<button onclick="confirmRetirer(${b.id})"
+                               class="w-full py-2.5 text-xs font-bold rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition flex items-center justify-center gap-1.5 border-none cursor-pointer">
+                               <i class="fas fa-eye-slash"></i> Retirer
+                           </button>`;
+                } else if (sp === 'Rejetée') {
+                    actionBtn = `<button onclick="resoumettreAnnonce(${b.id})"
+                           class="w-full py-2.5 text-xs font-bold rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 transition flex items-center justify-center gap-1.5 border-none cursor-pointer">
+                           <i class="fas fa-paper-plane"></i> Resoumettre à la modération
                        </button>`;
+                }
 
                 return `
                 <div class="group opacity-0 translate-y-10 transition-all duration-700 ease-out bg-white rounded-2xl shadow-xl overflow-hidden hover:-translate-y-2 hover:shadow-2xl">
                     <div class="relative h-52 overflow-hidden cursor-pointer" onclick="ouvrirPhoto('${escapeHtml(b.imageUrl || '')}')">
                         ${imageBlock}
                         ${badgeStatut}
-                        ${badgeOff}
+                        ${badgeMod}
                     </div>
                     ${galerieHtml}
                     <div class="p-5">
@@ -1031,6 +1092,7 @@
                             <span><i class="fas fa-bath mr-0.5"></i> ${b.sallesDeBain} sdb</span>
                             <span><i class="fas fa-ruler-combined mr-0.5"></i> ${b.surface} m²</span>
                         </div>
+                        ${motifHtml}
                         <div class="grid grid-cols-2 gap-2 mb-2">
                             <button onclick="openDetails(${b.id})"
                                 class="flex items-center justify-center gap-1.5 py-2.5 border border-blue-600 text-blue-600 text-xs font-bold rounded-xl hover:bg-blue-50 transition cursor-pointer bg-transparent">
@@ -1041,7 +1103,7 @@
                                 <i class="fas fa-pen"></i> Modifier
                             </button>
                         </div>
-                        ${retireBtn}
+                        ${actionBtn}
                     </div>
                 </div>`;
             }).join('');
@@ -1179,28 +1241,36 @@
             modal.classList.remove('modal-visible');
             editingBienId = null;
             resetImageFields();
+            clearTitreFoncier();
+            document.getElementById('titreFoncierCurrentInfo').style.display = 'none';
+        }
+
+        // Afficher/masquer le champ titre foncier selon statut vente/location
+        document.getElementById('pfStatut').addEventListener('change', function () {
+            const req = document.getElementById('titreFoncierReq');
+            req.textContent = this.value === 'vente' ? '(obligatoire pour la vente)' : '(optionnel pour la location)';
+        });
+
+        let _titreFoncierFile = null;
+        function selectTitreFoncier(file) {
+            if (!file) return;
+            _titreFoncierFile = file;
+            document.getElementById('titreFoncierPlaceholder').style.display = 'none';
+            const sel = document.getElementById('titreFoncierSelected');
+            sel.style.display = 'flex';
+            document.getElementById('titreFoncierName').textContent = file.name;
+        }
+        function clearTitreFoncier() {
+            _titreFoncierFile = null;
+            document.getElementById('pfTitreFoncierFile').value = '';
+            document.getElementById('titreFoncierPlaceholder').style.display = '';
+            document.getElementById('titreFoncierSelected').style.display = 'none';
         }
 
         document.getElementById('propertyForm').addEventListener('submit', async function (e) {
             e.preventDefault();
 
-            const payload = {
-                Titre: document.getElementById('pfTitre').value,
-                Type: document.getElementById('pfType').value,
-                Statut: document.getElementById('pfStatut').value,
-                Prix: document.getElementById('pfPrix').value,
-                Chambres: parseInt(document.getElementById('pfChambres').value) || 0,
-                SallesDeBain: parseInt(document.getElementById('pfSallesDeBain').value) || 0,
-                Surface: parseInt(document.getElementById('pfSurface').value) || 0,
-                Localisation: document.getElementById('pfLocalisation').value,
-                Description: document.getElementById('pfDescription').value,
-                ImageUrl: document.getElementById('pfImageUrl').value,
-                GalerieUrls: document.getElementById('pfGalerieUrls').value,
-                Equipements: document.getElementById('pfEquipements').value,
-                Standing: document.getElementById('pfStanding').value,
-                Latitude:  document.getElementById('pfLatitude').value  ? parseFloat(document.getElementById('pfLatitude').value)  : null,
-                Longitude: document.getElementById('pfLongitude').value ? parseFloat(document.getElementById('pfLongitude').value) : null,
-            };
+            const statut = document.getElementById('pfStatut').value;
 
             const btn = this.querySelector('button[type="submit"]');
             const original = btn.innerHTML;
@@ -1209,18 +1279,65 @@
 
             let result;
             if (editingBienId) {
-                payload.EstDisponible = mesBiens.find(b => b.id === editingBienId)?.estDisponible ?? true;
+                // Modification : JSON (pas de changement de titre foncier via edit)
+                const payload = {
+                    Titre: document.getElementById('pfTitre').value,
+                    Type: document.getElementById('pfType').value,
+                    Statut: statut,
+                    Prix: document.getElementById('pfPrix').value,
+                    Chambres: parseInt(document.getElementById('pfChambres').value) || 0,
+                    SallesDeBain: parseInt(document.getElementById('pfSallesDeBain').value) || 0,
+                    Surface: parseInt(document.getElementById('pfSurface').value) || 0,
+                    Localisation: document.getElementById('pfLocalisation').value,
+                    Description: document.getElementById('pfDescription').value,
+                    ImageUrl: document.getElementById('pfImageUrl').value,
+                    GalerieUrls: document.getElementById('pfGalerieUrls').value,
+                    Equipements: document.getElementById('pfEquipements').value,
+                    Standing: document.getElementById('pfStanding').value,
+                    Latitude:  document.getElementById('pfLatitude').value  ? parseFloat(document.getElementById('pfLatitude').value)  : null,
+                    Longitude: document.getElementById('pfLongitude').value ? parseFloat(document.getElementById('pfLongitude').value) : null,
+                    EstDisponible: mesBiens.find(b => b.id === editingBienId)?.estDisponible ?? true,
+                };
                 result = await apiFetch(`${API}/biens/${editingBienId}`, { method: 'PUT', body: JSON.stringify(payload) });
             } else {
-                result = await apiFetch(`${API}/biens`, { method: 'POST', body: JSON.stringify(payload) });
+                // Création : FormData (avec titre foncier)
+                const fd = new FormData();
+                fd.append('Titre', document.getElementById('pfTitre').value);
+                fd.append('Type', document.getElementById('pfType').value);
+                fd.append('Statut', statut);
+                fd.append('Prix', document.getElementById('pfPrix').value);
+                fd.append('Chambres', parseInt(document.getElementById('pfChambres').value) || 0);
+                fd.append('SallesDeBain', parseInt(document.getElementById('pfSallesDeBain').value) || 0);
+                fd.append('Surface', parseInt(document.getElementById('pfSurface').value) || 0);
+                fd.append('Localisation', document.getElementById('pfLocalisation').value);
+                fd.append('Description', document.getElementById('pfDescription').value);
+                fd.append('ImageUrl', document.getElementById('pfImageUrl').value);
+                fd.append('GalerieUrls', document.getElementById('pfGalerieUrls').value);
+                fd.append('Equipements', document.getElementById('pfEquipements').value);
+                fd.append('Standing', document.getElementById('pfStanding').value);
+                const lat = document.getElementById('pfLatitude').value;
+                const lng = document.getElementById('pfLongitude').value;
+                if (lat) fd.append('Latitude', parseFloat(lat));
+                if (lng) fd.append('Longitude', parseFloat(lng));
+                if (_titreFoncierFile) fd.append('TitreFoncier', _titreFoncierFile);
+
+                const token = localStorage.getItem('token');
+                const resp = await fetch(`${API}/biens`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}` },
+                    body: fd
+                });
+                result = await resp.json();
             }
 
             btn.innerHTML = original;
             btn.disabled = false;
 
             if (result.success) {
+                clearTitreFoncier();
                 closePropertyForm();
-                showToast('success', editingBienId ? 'Annonce mise à jour !' : 'Annonce publiée !', result.message || '');
+                const msg = editingBienId ? 'Annonce mise à jour !' : 'Annonce soumise à la modération !';
+                showToast('success', msg, result.message || '');
                 await loadAllData();
             } else {
                 showToast('error', 'Erreur', result.message || 'Une erreur est survenue.');
@@ -1265,6 +1382,24 @@
             } else {
                 showToast('error', 'Erreur', result.message || 'Une erreur est survenue.');
             }
+        }
+
+        async function resoumettreAnnonce(bienId) {
+            openConfirmModal({
+                title: 'Resoumettre à la modération ?',
+                message: 'L\'annonce sera envoyée à l\'admin régional pour une nouvelle vérification terrain.',
+                icon: 'fa-paper-plane',
+                confirmLabel: 'Resoumettre',
+                onConfirm: async () => {
+                    const result = await apiFetch(`${API}/biens/${bienId}/resoumettre`, { method: 'PUT' });
+                    if (result.success) {
+                        showToast('success', 'Resoumis !', 'Votre annonce est de nouveau en attente de validation.');
+                        await loadAllData();
+                    } else {
+                        showToast('error', 'Erreur', result.message || 'Une erreur est survenue.');
+                    }
+                }
+            });
         }
 
         // ═══════════════════════════════════════════════════════════════════
