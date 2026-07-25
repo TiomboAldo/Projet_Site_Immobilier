@@ -333,11 +333,36 @@ namespace SaidAfricaBackend.Controllers
             return Ok(new { success = true, message = "Annonce retirée." });
         }
 
+        // ─── POST /api/biens/upload-titre-foncier ────────────────────────────
+        [HttpPost("upload-titre-foncier")]
+        [Authorize(Roles = "Proprietaire,UserIndep,AdminRegion,AdminPays,DirecteurProjet")]
+        [RequestSizeLimit(11 * 1024 * 1024)]
+        public async Task<IActionResult> UploadTitreFoncier(IFormFile? file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new { success = false, message = "Aucun fichier envoyé." });
+
+            if (file.Length > 10 * 1024 * 1024)
+                return BadRequest(new { success = false, message = "Le titre foncier ne doit pas dépasser 10 Mo." });
+
+            var allowed = new[] { "image/jpeg", "image/jpg", "image/png", "application/pdf" };
+            if (!allowed.Contains(file.ContentType.ToLowerInvariant()))
+                return BadRequest(new { success = false, message = "Format accepté : JPG, PNG ou PDF." });
+
+            var dir = Path.Combine(_env.ContentRootPath, "Uploads", "Biens");
+            Directory.CreateDirectory(dir);
+            var ext = Path.GetExtension(file.FileName);
+            var filename = $"tf_{Guid.NewGuid()}{ext}";
+            using var s = System.IO.File.Create(Path.Combine(dir, filename));
+            await file.CopyToAsync(s);
+
+            return Ok(new { success = true, filename });
+        }
+
         // ─── POST /api/biens ──────────────────────────────────────────────────
         [HttpPost]
         [Authorize(Roles = "Proprietaire,UserIndep,AdminRegion,AdminPays,DirecteurProjet")]
-        [RequestSizeLimit(15 * 1024 * 1024)]
-        public async Task<IActionResult> Create([FromForm] CreateBienRequest req)
+        public async Task<IActionResult> Create([FromBody] CreateBienRequest req)
         {
             var proprietaireId = CurrentUserId();
             var proprio = await _context.Users.FindAsync(proprietaireId);
@@ -350,25 +375,9 @@ namespace SaidAfricaBackend.Controllers
                     kycRequired = true
                 });
 
-            // Titre foncier : requis pour la vente (pour les propriétaires non-admins)
-            string? titreFoncierFileName = null;
-            if (req.TitreFoncier != null && req.TitreFoncier.Length > 0)
-            {
-                if (req.TitreFoncier.Length > 10 * 1024 * 1024)
-                    return BadRequest(new { success = false, message = "Le titre foncier ne doit pas dépasser 10 Mo." });
-
-                var allowed = new[] { "image/jpeg", "image/jpg", "image/png", "application/pdf" };
-                if (!allowed.Contains(req.TitreFoncier.ContentType.ToLowerInvariant()))
-                    return BadRequest(new { success = false, message = "Titre foncier : format accepté JPG, PNG ou PDF." });
-
-                var dir = Path.Combine(_env.ContentRootPath, "Uploads", "Biens");
-                Directory.CreateDirectory(dir);
-                var ext = Path.GetExtension(req.TitreFoncier.FileName);
-                titreFoncierFileName = $"tf_{Guid.NewGuid()}{ext}";
-                using var s = System.IO.File.Create(Path.Combine(dir, titreFoncierFileName));
-                await req.TitreFoncier.CopyToAsync(s);
-            }
-            else if (req.Statut?.ToLower() == "vente" && CurrentRole() is "Proprietaire" or "UserIndep")
+            if (req.Statut?.ToLower() == "vente"
+                && CurrentRole() is "Proprietaire" or "UserIndep"
+                && string.IsNullOrWhiteSpace(req.TitreFoncierPath))
             {
                 return BadRequest(new { success = false, message = "Le titre foncier est obligatoire pour les biens en vente." });
             }
@@ -393,7 +402,7 @@ namespace SaidAfricaBackend.Controllers
                 ProprietaireId    = proprietaireId,
                 EstDisponible     = false,
                 StatutPublication = "En attente",
-                TitreFoncierPath  = titreFoncierFileName,
+                TitreFoncierPath  = req.TitreFoncierPath,
             };
 
             _context.Biens.Add(bien);
@@ -515,7 +524,7 @@ namespace SaidAfricaBackend.Controllers
         public string     Standing     { get; set; } = string.Empty;
         public double?    Latitude     { get; set; }
         public double?    Longitude    { get; set; }
-        public IFormFile? TitreFoncier { get; set; }
+        public string?    TitreFoncierPath { get; set; }
     }
 
     public class UpdateBienRequest

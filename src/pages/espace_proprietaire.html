@@ -1300,34 +1300,56 @@
                 };
                 result = await apiFetch(`${API}/biens/${editingBienId}`, { method: 'PUT', body: JSON.stringify(payload) });
             } else {
-                // Création : FormData (avec titre foncier)
-                const fd = new FormData();
-                fd.append('Titre', document.getElementById('pfTitre').value);
-                fd.append('Type', document.getElementById('pfType').value);
-                fd.append('Statut', statut);
-                fd.append('Prix', document.getElementById('pfPrix').value);
-                fd.append('Chambres', parseInt(document.getElementById('pfChambres').value) || 0);
-                fd.append('SallesDeBain', parseInt(document.getElementById('pfSallesDeBain').value) || 0);
-                fd.append('Surface', parseInt(document.getElementById('pfSurface').value) || 0);
-                fd.append('Localisation', document.getElementById('pfLocalisation').value);
-                fd.append('Description', document.getElementById('pfDescription').value);
-                fd.append('ImageUrl', document.getElementById('pfImageUrl').value);
-                fd.append('GalerieUrls', document.getElementById('pfGalerieUrls').value);
-                fd.append('Equipements', document.getElementById('pfEquipements').value);
-                fd.append('Standing', document.getElementById('pfStanding').value);
-                const lat = document.getElementById('pfLatitude').value;
-                const lng = document.getElementById('pfLongitude').value;
-                if (lat) fd.append('Latitude', parseFloat(lat));
-                if (lng) fd.append('Longitude', parseFloat(lng));
-                if (_titreFoncierFile) fd.append('TitreFoncier', _titreFoncierFile);
+                // Création étape 1 : upload titre foncier si sélectionné
+                let titreFoncierPath = null;
+                if (_titreFoncierFile) {
+                    const fdUpload = new FormData();
+                    fdUpload.append('file', _titreFoncierFile);
+                    try {
+                        const jwtToken = localStorage.getItem('jwtToken');
+                        const uploadResp = await fetch(`${API}/biens/upload-titre-foncier`, {
+                            method: 'POST',
+                            headers: jwtToken ? { Authorization: `Bearer ${jwtToken}` } : {},
+                            body: fdUpload
+                        });
+                        const uploadResult = await uploadResp.json();
+                        if (!uploadResult.success) {
+                            btn.innerHTML = original;
+                            btn.disabled = false;
+                            showToast('error', 'Erreur', uploadResult.message || 'Erreur upload titre foncier.');
+                            return;
+                        }
+                        titreFoncierPath = uploadResult.filename;
+                    } catch (e) {
+                        btn.innerHTML = original;
+                        btn.disabled = false;
+                        showToast('error', 'Erreur', 'Erreur réseau lors de l\'upload du titre foncier.');
+                        return;
+                    }
+                }
 
-                const token = localStorage.getItem('token');
-                const resp = await fetch(`${API}/biens`, {
+                // Création étape 2 : soumettre le bien en JSON
+                result = await apiFetch(`${API}/biens`, {
                     method: 'POST',
-                    headers: { Authorization: `Bearer ${token}` },
-                    body: fd
+                    body: JSON.stringify({
+                        Titre:        document.getElementById('pfTitre').value,
+                        Type:         document.getElementById('pfType').value,
+                        Statut:       statut,
+                        Prix:         document.getElementById('pfPrix').value,
+                        Chambres:     parseInt(document.getElementById('pfChambres').value)     || 0,
+                        SallesDeBain: parseInt(document.getElementById('pfSallesDeBain').value) || 0,
+                        Surface:      parseInt(document.getElementById('pfSurface').value)      || 0,
+                        Localisation: document.getElementById('pfLocalisation').value,
+                        Description:  document.getElementById('pfDescription').value,
+                        ImageUrl:     document.getElementById('pfImageUrl').value,
+                        GalerieUrls:  document.getElementById('pfGalerieUrls').value,
+                        Equipements:  document.getElementById('pfEquipements').value,
+                        Standing:     document.getElementById('pfStanding').value,
+                        Latitude:     document.getElementById('pfLatitude').value  ? parseFloat(document.getElementById('pfLatitude').value)  : null,
+                        Longitude:    document.getElementById('pfLongitude').value ? parseFloat(document.getElementById('pfLongitude').value) : null,
+                        TitreFoncierPath: titreFoncierPath,
+                    })
                 });
-                result = await resp.json();
             }
 
             btn.innerHTML = original;
@@ -1340,7 +1362,12 @@
                 showToast('success', msg, result.message || '');
                 await loadAllData();
             } else {
-                showToast('error', 'Erreur', result.message || 'Une erreur est survenue.');
+                console.error('[Form submit error]', result);
+                const errMsg = result.message
+                    || result.title
+                    || (result.errors ? Object.values(result.errors).flat().join(' | ') : null)
+                    || 'Une erreur est survenue.';
+                showToast('error', 'Erreur', errMsg);
             }
         });
 
