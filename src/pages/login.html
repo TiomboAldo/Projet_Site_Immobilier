@@ -99,7 +99,7 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background: url('https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
+            background: url('../assets/images/bureau_luxe.jpg') no-repeat center center fixed;
             background-size: cover;
             position: relative;
             overflow: hidden;
@@ -459,16 +459,30 @@
                     localStorage.setItem('userRole', result.user.role || 'Client');
                     localStorage.setItem('jwtToken', result.token);
 
-                    showMessage("Succès !", `Ravi de vous revoir ${result.user.prenom}.`, "success", true);
+                    // Propriétaire bloqué → accès limité à l'espace client
+                    const estBloque = result.user.estBloque === true;
+                    localStorage.setItem('userEstBloque', estBloque ? 'true' : 'false');
+
+                    const msg = estBloque && result.user.role === 'Proprietaire'
+                        ? `Ravi de vous revoir ${result.user.prenom}. Votre espace propriétaire est temporairement suspendu.`
+                        : `Ravi de vous revoir ${result.user.prenom}.`;
+                    showMessage("Succès !", msg, "success", true);
+
                     setTimeout(() => {
+                        // Un propriétaire bloqué est redirigé vers l'espace client
+                        if (estBloque && result.user.role === 'Proprietaire') {
+                            window.location.href = './accueil_user.html';
+                            return;
+                        }
+
                         const pendingAction = localStorage.getItem('redirectAfterLogin');
+                        localStorage.removeItem('redirectAfterLogin');
 
-                        if (pendingAction) {
-                            localStorage.removeItem('redirectAfterLogin');
+                        // Ignore la redirection générique "accueil_user.html" pour les rôles non-client
+                        const isGenericRedirect = !pendingAction || pendingAction === 'accueil_user.html';
+                        if (!isGenericRedirect) {
                             window.location.href = pendingAction;
-
                         } else {
-                      
                             redirectUserByRole(result.user.role);
                         }
                     }, 2500);

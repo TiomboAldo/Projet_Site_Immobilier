@@ -7,8 +7,8 @@
     <title>Espace Propriétaire - Said Africa</title>
     <link rel="icon" type="image/png" href="/src/assets/images/logo.jpeg">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.5.2/dist/maplibre-gl.css">
+    <script src="https://unpkg.com/maplibre-gl@4.5.2/dist/maplibre-gl.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
@@ -186,10 +186,16 @@
         }
         .msg-mine { background: #2563eb; color: #fff; border-bottom-right-radius: 4px; align-self: flex-end; }
         .msg-other { background: #f3f4f6; color: #111827; border-bottom-left-radius: 4px; align-self: flex-start; }
+
     </style>
 </head>
 
 <body>
+<div id="ps" style="position:fixed;inset:0;z-index:9999;background:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;transition:opacity .25s">
+  <div style="width:44px;height:44px;border:4px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;animation:ps-spin .75s linear infinite;"></div>
+  <p style="color:#6b7280;margin-top:14px;font-size:14px;font-family:sans-serif;">Chargement…</p>
+</div>
+<style>@keyframes ps-spin{to{transform:rotate(360deg)}}</style>
     <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
     <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar">
@@ -198,7 +204,11 @@
             <span class="sidebar-logo-text">Espace Pro</span>
         </div>
         <nav class="sidebar-nav">
-            <button onclick="switchSection('annonces', this)" class="sidebar-item active">
+            <button onclick="switchSection('dashboard', this)" class="sidebar-item active">
+                <i class="fas fa-chart-line"></i>
+                <span>Tableau de bord</span>
+            </button>
+            <button onclick="switchSection('annonces', this)" class="sidebar-item">
                 <i class="fas fa-house-flag"></i>
                 <span>Mes annonces</span>
             </button>
@@ -224,6 +234,10 @@
             </button>
         </nav>
         <div class="sidebar-footer">
+            <a href="../../index.html" class="sidebar-item" style="text-decoration:none;">
+                <i class="fas fa-globe"></i>
+                <span>Voir les biens</span>
+            </a>
             <button onclick="switchToClient()" class="sidebar-item">
                 <i class="fas fa-right-left"></i>
                 <span>Espace Client</span>
@@ -263,17 +277,49 @@
         </header>
 
         <div class="p-8" style="padding:32px;">
+            <!-- DASHBOARD -->
+            <section id="section-dashboard" class="section-fade active">
+                <div style="margin-bottom:28px;">
+                    <h1 style="font-size:28px;font-weight:800;color:#111827;">Tableau de bord</h1>
+                    <p id="propDashGreeting" style="font-size:14px;color:#6b7280;margin-top:4px;">Chargement…</p>
+                </div>
+                <!-- KPI -->
+                <div id="propKpiGrid" style="display:flex;flex-wrap:wrap;gap:18px;justify-content:center;margin-bottom:28px;"></div>
+                <!-- Activité -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:28px;">
+                    <div style="background:#fff;border-radius:20px;border:1px solid #f3f4f6;padding:22px;">
+                        <h3 style="font-size:15px;font-weight:800;color:#111827;margin-bottom:16px;">
+                            <i class="fas fa-house" style="color:#2563eb;margin-right:8px;"></i>Mes dernières annonces
+                        </h3>
+                        <div id="propDashBiens"></div>
+                    </div>
+                    <div style="background:#fff;border-radius:20px;border:1px solid #f3f4f6;padding:22px;">
+                        <h3 style="font-size:15px;font-weight:800;color:#111827;margin-bottom:16px;">
+                            <i class="fas fa-calendar-check" style="color:#059669;margin-right:8px;"></i>Demandes de visite récentes
+                        </h3>
+                        <div id="propDashResas"></div>
+                    </div>
+                </div>
+            </section>
+
             <!-- MES ANNONCES -->
-            <section id="section-annonces" class="section-fade active">
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
+            <section id="section-annonces" class="section-fade">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
                     <h1 style="font-size:28px; font-weight:800; color:#111827;">Mes annonces</h1>
+                </div>
+                <div style="position:relative;margin-bottom:20px;max-width:420px;">
+                    <i class="fas fa-search" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:14px;pointer-events:none;"></i>
+                    <input type="text" id="annonceSearchInput" placeholder="Rechercher par titre ou localisation..."
+                           oninput="annonceSearch=this.value.trim().toLowerCase();renderAnnonces()"
+                           style="width:100%;padding:11px 16px 11px 42px;border:1.5px solid #e5e7eb;border-radius:14px;font-size:14px;outline:none;background:#fff;color:#111827;"
+                           onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e5e7eb'">
                 </div>
                 <div id="myBiensGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
             </section>
 
             <!-- RESERVATIONS -->
             <section id="section-reservations" class="section-fade">
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
                     <h1 style="font-size:28px; font-weight:800; color:#111827;">Réservations reçues</h1>
                     <div style="display:flex; gap:6px; flex-wrap:wrap;" id="resaTabs">
                         <button onclick="filterResas('all', this)" class="resa-tab-btn resa-tab-active">Toutes</button>
@@ -282,6 +328,13 @@
                         <button onclick="filterResas('Refusée', this)" class="resa-tab-btn">Refusées</button>
                         <button onclick="filterResas('Annulée', this)" class="resa-tab-btn">Annulées</button>
                     </div>
+                </div>
+                <div style="position:relative;margin-bottom:20px;max-width:420px;">
+                    <i class="fas fa-search" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:14px;pointer-events:none;"></i>
+                    <input type="text" id="resaSearchInput" placeholder="Rechercher par client ou bien..."
+                           oninput="resaSearch=this.value.trim().toLowerCase();renderReservations()"
+                           style="width:100%;padding:11px 16px 11px 42px;border:1.5px solid #e5e7eb;border-radius:14px;font-size:14px;outline:none;background:#fff;color:#111827;"
+                           onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e5e7eb'">
                 </div>
                 <div id="reservationsGrid"></div>
             </section>
@@ -401,6 +454,7 @@
                 <h1 style="font-size:28px; font-weight:800; color:#111827; margin-bottom:24px;">Notifications</h1>
                 <div id="notificationsGrid" style="display:flex; flex-direction:column; gap:12px;"></div>
             </section>
+
         </div>
     </main>
 
@@ -420,18 +474,17 @@
                         <div class="form-group"><label>Titre</label><input type="text" id="pfTitre" required></div>
                         <div class="form-group"><label>Standing</label>
                             <select id="pfStanding">
-                                <option value="Elite">Elite</option>
-                                <option value="Penthouse">Penthouse</option>
+                                <option value="">Standard</option>
                                 <option value="Business">Business</option>
+                                <option value="Penthouse">Penthouse</option>
+                                <option value="Elite">Elite</option>
                             </select>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group"><label>Type</label>
                             <select id="pfType">
-                                <option value="villa">Villa</option>
-                                <option value="appartement">Appartement</option>
-                                <option value="terrain">Terrain</option>
+                                <option value="">Choisir…</option>
                             </select>
                         </div>
                         <div class="form-group"><label>Statut</label>
@@ -498,9 +551,11 @@
                                 <p style="font-size:13px; color:#4b5563; font-weight:600;">Cliquer ou glisser-déposer une image</p>
                                 <p style="font-size:11px; color:#9ca3af; margin-top:4px;">JPG, PNG, WEBP — max 10 Mo</p>
                             </div>
-                            <div id="mainImgLoader" style="display:none;">
-                                <i class="fas fa-spinner fa-spin" style="font-size:24px; color:#2563eb;"></i>
-                                <p style="font-size:13px; color:#2563eb; margin-top:8px; font-weight:600;">Upload en cours…</p>
+                            <div id="mainImgLoader" style="display:none; padding:12px 8px;">
+                                <p id="mainImgLoaderText" style="font-size:13px; color:#2563eb; font-weight:600; margin-bottom:10px;">Compression…</p>
+                                <div style="width:100%; height:7px; background:#dbeafe; border-radius:4px; overflow:hidden;">
+                                    <div id="mainImgProgressBar" style="width:0%; height:100%; background:#2563eb; border-radius:4px; transition:width 0.15s ease;"></div>
+                                </div>
                             </div>
                         </div>
                         <input type="file" id="mainImgFile" accept="image/*" style="display:none;" onchange="uploadMainImage(this.files[0])">
@@ -522,9 +577,11 @@
                                 <p style="font-size:13px; color:#4b5563; font-weight:600;">Cliquer ou glisser-déposer des photos</p>
                                 <p style="font-size:11px; color:#9ca3af; margin-top:2px;">Plusieurs fichiers acceptés</p>
                             </div>
-                            <div id="galerieLoader" style="display:none; align-items:center; gap:10px; justify-content:center;">
-                                <i class="fas fa-spinner fa-spin" style="font-size:18px; color:#2563eb;"></i>
-                                <span id="galerieLoaderText" style="font-size:13px; color:#2563eb; font-weight:600;">Upload en cours…</span>
+                            <div id="galerieLoader" style="display:none; flex-direction:column; align-items:center; gap:8px; padding:8px 16px;">
+                                <span id="galerieLoaderText" style="font-size:13px; color:#2563eb; font-weight:600;">Compression…</span>
+                                <div style="width:100%; height:6px; background:#dbeafe; border-radius:4px; overflow:hidden;">
+                                    <div id="galerieProgressBar" style="width:0%; height:100%; background:#2563eb; border-radius:4px; transition:width 0.2s ease;"></div>
+                                </div>
                             </div>
                         </div>
                         <input type="file" id="galerieFiles" accept="image/*" multiple style="display:none;" onchange="uploadGalerieImages(this.files)">
@@ -664,20 +721,45 @@
         const API = 'http://localhost:5257/api';
         const getUserId = () => parseInt(localStorage.getItem('userId') || '0');
 
-        // ─── CLOUDINARY ───────────────────────────────────────────────────────
-        const CLOUDINARY_CLOUD  = 'cwepzu0w';
-        const CLOUDINARY_PRESET = 'said_africa_biens';
-        const CLOUDINARY_URL    = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`;
+        // ─── UPLOAD IMAGES (serveur local) ───────────────────────────────────
+        function compressImage(file, maxPx = 1600, quality = 0.82) {
+            return new Promise(resolve => {
+                const img = new Image();
+                const burl = URL.createObjectURL(file);
+                img.onload = () => {
+                    URL.revokeObjectURL(burl);
+                    const scale  = Math.min(1, maxPx / Math.max(img.width, img.height));
+                    const canvas = document.createElement('canvas');
+                    canvas.width  = Math.round(img.width  * scale);
+                    canvas.height = Math.round(img.height * scale);
+                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                    canvas.toBlob(b => resolve(b || file), 'image/jpeg', quality);
+                };
+                img.onerror = () => { URL.revokeObjectURL(burl); resolve(file); };
+                img.src = burl;
+            });
+        }
 
-        async function uploadToCloudinary(file) {
-            const fd = new FormData();
-            fd.append('file', file);
-            fd.append('upload_preset', CLOUDINARY_PRESET);
-            const res = await fetch(CLOUDINARY_URL, { method: 'POST', body: fd });
-            if (!res.ok) throw new Error('Upload échoué');
-            const data = await res.json();
-            // Optimisation automatique : format + qualité auto pour chargement rapide
-            return data.secure_url.replace('/upload/', '/upload/f_auto,q_auto,w_1200/');
+        async function uploadImage(file, onProgress) {
+            const blob = await compressImage(file);
+            return new Promise((resolve, reject) => {
+                const fd = new FormData();
+                fd.append('file', blob, 'image.jpg');
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', `${API}/upload/image`);
+                const token = localStorage.getItem('jwtToken');
+                if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                xhr.upload.onprogress = e => {
+                    if (e.lengthComputable && onProgress) onProgress(Math.round(e.loaded / e.total * 100));
+                };
+                xhr.onload = () => {
+                    if (xhr.status < 200 || xhr.status >= 300) { reject(new Error('Upload échoué')); return; }
+                    try { resolve(JSON.parse(xhr.responseText).url); }
+                    catch { reject(new Error('Réponse invalide')); }
+                };
+                xhr.onerror = () => reject(new Error('Erreur réseau'));
+                xhr.send(fd);
+            });
         }
 
         function validateImageFile(file) {
@@ -690,14 +772,23 @@
 
         async function uploadMainImage(file) {
             if (!file || !validateImageFile(file)) return;
-            const loader = document.getElementById('mainImgLoader');
+            const loader   = document.getElementById('mainImgLoader');
+            const loaderTxt = document.getElementById('mainImgLoaderText');
+            const bar      = document.getElementById('mainImgProgressBar');
             const placeholder = document.getElementById('mainImgPlaceholder');
-            const preview = document.getElementById('mainImgPreview');
+            const preview  = document.getElementById('mainImgPreview');
+
             loader.style.display = 'block';
             placeholder.style.display = 'none';
             preview.style.display = 'none';
+            if (loaderTxt) loaderTxt.textContent = 'Compression…';
+            if (bar) bar.style.width = '5%';
+
             try {
-                const url = await uploadToCloudinary(file);
+                const url = await uploadImage(file, pct => {
+                    if (loaderTxt) loaderTxt.textContent = `Upload… ${pct}%`;
+                    if (bar) bar.style.width = pct + '%';
+                });
                 document.getElementById('pfImageUrl').value = url;
                 document.getElementById('mainImgThumb').src = url;
                 preview.style.display = 'block';
@@ -707,104 +798,129 @@
                 showToast('error', 'Erreur upload', 'Vérifiez votre connexion et réessayez.');
             } finally {
                 loader.style.display = 'none';
+                if (bar) bar.style.width = '0%';
             }
         }
 
         // ═══════════════════════════════════════════════════════════════════════
-        // SÉLECTEUR DE POSITION GPS (Leaflet)
         // ═══════════════════════════════════════════════════════════════════════
-        let _pickMap = null;
-        let _pickMarker = null;
+        // SÉLECTEUR DE POSITION GPS (MapLibre GL + MapTiler)
+        // Clé gratuite sur maptiler.com → remplacer MAPTILER_KEY ci-dessous
+        // ═══════════════════════════════════════════════════════════════════════
+        const MAPTILER_KEY = 'bCigMZttWKkPqccJrF34';
+        const MAP_STYLE    = `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`;
+        const CM_CENTER    = [11.502, 3.848]; // Cameroun [lng, lat]
+
+        let _pickMap = null, _pickMarker = null;
+
+        function _makeMap(containerId, center, zoom) {
+            return new maplibregl.Map({
+                container: containerId,
+                style: MAP_STYLE,
+                center,
+                zoom,
+                attributionControl: false
+            }).addControl(new maplibregl.AttributionControl({ compact: true }));
+        }
+
+        function _makeMarker(lngLat) {
+            return new maplibregl.Marker({ color: '#2563eb', draggable: true })
+                .setLngLat(lngLat);
+        }
+
+        function _markerDragEnd(marker, latId, lngId) {
+            marker.on('dragend', () => {
+                const { lat, lng } = marker.getLngLat();
+                document.getElementById(latId).value = lat.toFixed(6);
+                document.getElementById(lngId).value = lng.toFixed(6);
+                showPickCoords(lat, lng);
+            });
+        }
 
         function initPickMap() {
-            const placeholder = document.getElementById('pickMapPlaceholder');
-            const container   = document.getElementById('pickMapContainer');
-            if (!placeholder || !container) return;
-            placeholder.style.display = 'none';
-            container.style.display   = 'block';
+            const ph  = document.getElementById('pickMapPlaceholder');
+            const cnt = document.getElementById('pickMapContainer');
+            if (!ph || !cnt) return;
+            ph.style.display  = 'none';
+            cnt.style.display = 'block';
+            if (_pickMap) { _pickMap.resize(); return; }
 
-            if (_pickMap) { _pickMap.invalidateSize(); return; }
-
-            // Centre par défaut : Cameroun
-            _pickMap = L.map('pickMapContainer').setView([3.848, 11.502], 6);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap',
-                maxZoom: 19
-            }).addTo(_pickMap);
-
-            // Restaurer marqueur existant si coordonnées déjà définies
-            const latVal = document.getElementById('pfLatitude').value;
-            const lngVal = document.getElementById('pfLongitude').value;
-            if (latVal && lngVal) {
-                const lat = parseFloat(latVal), lng = parseFloat(lngVal);
-                _pickMarker = L.marker([lat, lng]).addTo(_pickMap);
-                _pickMap.setView([lat, lng], 13);
-                showPickCoords(lat, lng);
-            }
-
-            _pickMap.on('click', function(e) {
-                const { lat, lng } = e.latlng;
-                if (_pickMarker) _pickMap.removeLayer(_pickMarker);
-                _pickMarker = L.marker([lat, lng]).addTo(_pickMap);
+            _pickMap = _makeMap('pickMapContainer', CM_CENTER, 5);
+            _pickMap.on('load', () => {
+                const latVal = document.getElementById('pfLatitude').value;
+                const lngVal = document.getElementById('pfLongitude').value;
+                if (latVal && lngVal) {
+                    const lat = parseFloat(latVal), lng = parseFloat(lngVal);
+                    _pickMarker = _makeMarker([lng, lat]).addTo(_pickMap);
+                    _markerDragEnd(_pickMarker, 'pfLatitude', 'pfLongitude');
+                    _pickMap.flyTo({ center: [lng, lat], zoom: 13 });
+                    showPickCoords(lat, lng);
+                }
+            });
+            _pickMap.on('click', (e) => {
+                const { lat, lng } = e.lngLat;
+                if (_pickMarker) _pickMarker.remove();
+                _pickMarker = _makeMarker([lng, lat]).addTo(_pickMap);
+                _markerDragEnd(_pickMarker, 'pfLatitude', 'pfLongitude');
                 document.getElementById('pfLatitude').value  = lat.toFixed(6);
                 document.getElementById('pfLongitude').value = lng.toFixed(6);
                 showPickCoords(lat, lng);
             });
-
-            setTimeout(() => _pickMap.invalidateSize(), 100);
         }
 
         function showPickCoords(lat, lng) {
-            const coordsBar  = document.getElementById('pickMapCoords');
-            const coordsText = document.getElementById('pickMapCoordsText');
-            if (coordsBar)  coordsBar.style.display  = 'block';
-            if (coordsText) coordsText.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            const bar = document.getElementById('pickMapCoords');
+            const txt = document.getElementById('pickMapCoordsText');
+            if (bar) bar.style.display = 'block';
+            if (txt) txt.textContent   = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
         }
 
         function clearPickMap() {
             document.getElementById('pfLatitude').value  = '';
             document.getElementById('pfLongitude').value = '';
             document.getElementById('pickMapCoords').style.display = 'none';
-            if (_pickMarker && _pickMap) { _pickMap.removeLayer(_pickMarker); _pickMarker = null; }
+            if (_pickMarker) { _pickMarker.remove(); _pickMarker = null; }
         }
 
         function resetPickMap() {
             clearPickMap();
-            // Remettre le placeholder et masquer la carte
-            const placeholder = document.getElementById('pickMapPlaceholder');
-            const container   = document.getElementById('pickMapContainer');
-            if (placeholder) placeholder.style.display = 'flex';
-            if (container)   container.style.display   = 'none';
-            // Détruire la carte pour qu'elle soit recréée proprement à la prochaine ouverture
-            if (_pickMap) { _pickMap.remove(); _pickMap = null; _pickMarker = null; }
+            const ph  = document.getElementById('pickMapPlaceholder');
+            const cnt = document.getElementById('pickMapContainer');
+            if (ph)  ph.style.display  = 'flex';
+            if (cnt) cnt.style.display = 'none';
+            if (_pickMap) { _pickMap.remove(); _pickMap = null; }
         }
 
         function prefillPickMap(lat, lng) {
             if (!lat || !lng) return;
             document.getElementById('pfLatitude').value  = lat;
             document.getElementById('pfLongitude').value = lng;
-            // Ouvrir directement la carte avec le marqueur existant
-            const placeholder = document.getElementById('pickMapPlaceholder');
-            const container   = document.getElementById('pickMapContainer');
-            if (placeholder) placeholder.style.display = 'none';
-            if (container)   container.style.display   = 'block';
+            const ph  = document.getElementById('pickMapPlaceholder');
+            const cnt = document.getElementById('pickMapContainer');
+            if (ph)  ph.style.display  = 'none';
+            if (cnt) cnt.style.display = 'block';
             if (!_pickMap) {
-                _pickMap = L.map('pickMapContainer').setView([lat, lng], 13);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap', maxZoom: 19
-                }).addTo(_pickMap);
-                _pickMap.on('click', function(e) {
-                    const { lat: la, lng: ln } = e.latlng;
-                    if (_pickMarker) _pickMap.removeLayer(_pickMarker);
-                    _pickMarker = L.marker([la, ln]).addTo(_pickMap);
+                _pickMap = _makeMap('pickMapContainer', [lng, lat], 13);
+                _pickMap.on('load', () => {
+                    _pickMarker = _makeMarker([lng, lat]).addTo(_pickMap);
+                    _markerDragEnd(_pickMarker, 'pfLatitude', 'pfLongitude');
+                    showPickCoords(lat, lng);
+                });
+                _pickMap.on('click', (e) => {
+                    const { lat: la, lng: ln } = e.lngLat;
+                    if (_pickMarker) _pickMarker.remove();
+                    _pickMarker = _makeMarker([ln, la]).addTo(_pickMap);
+                    _markerDragEnd(_pickMarker, 'pfLatitude', 'pfLongitude');
                     document.getElementById('pfLatitude').value  = la.toFixed(6);
                     document.getElementById('pfLongitude').value = ln.toFixed(6);
                     showPickCoords(la, ln);
                 });
+                return;
             }
-            if (_pickMarker) _pickMap.removeLayer(_pickMarker);
-            _pickMarker = L.marker([lat, lng]).addTo(_pickMap);
-            setTimeout(() => _pickMap.invalidateSize(), 100);
+            if (_pickMarker) _pickMarker.remove();
+            _pickMarker = _makeMarker([lng, lat]).addTo(_pickMap);
+            _markerDragEnd(_pickMarker, 'pfLatitude', 'pfLongitude');
+            _pickMap.flyTo({ center: [lng, lat], zoom: 13 });
             showPickCoords(lat, lng);
         }
 
@@ -833,17 +949,34 @@
             loader.style.display = 'flex';
             placeholder.style.display = 'none';
 
-            for (let i = 0; i < toUpload.length; i++) {
-                if (loaderTxt) loaderTxt.textContent = `Upload ${i + 1} / ${toUpload.length}…`;
-                try {
-                    const url = await uploadToCloudinary(toUpload[i]);
-                    galerieUrls.push(url);
-                    renderGaleriePreviews();
-                } catch (e) { showToast('error','Erreur','Une photo n\'a pas pu être uploadée.'); }
-            }
+            const bar = document.getElementById('galerieProgressBar');
+            if (loaderTxt) loaderTxt.textContent = 'Compression…';
+            if (bar) bar.style.width = '5%';
 
+            // Progression agrégée : chaque fichier contribue à sa part du total
+            const perFile = 100 / toUpload.length;
+            const progress = new Array(toUpload.length).fill(0);
+            const updateBar = () => {
+                const total = progress.reduce((s, v) => s + v, 0) / toUpload.length;
+                if (bar) bar.style.width = Math.min(total, 99) + '%';
+                if (loaderTxt) loaderTxt.textContent = `Upload ${Math.round(total)}%…`;
+            };
+
+            let done = 0;
+            const results = await Promise.allSettled(toUpload.map(async (f, i) => {
+                const url = await uploadImage(f, pct => { progress[i] = pct; updateBar(); });
+                done++;
+                return url;
+            }));
+
+            for (const r of results) {
+                if (r.status === 'fulfilled') galerieUrls.push(r.value);
+                else showToast('error', 'Erreur', 'Une photo n\'a pas pu être uploadée.');
+            }
+            renderGaleriePreviews();
             document.getElementById('pfGalerieUrls').value = galerieUrls.join('|');
             loader.style.display = 'none';
+            if (bar) bar.style.width = '0%';
             if (galerieUrls.length < MAX) placeholder.style.display = 'block';
             showToast('success','Photos ajoutées',`${galerieUrls.length} photo(s) dans la galerie.`);
         }
@@ -935,6 +1068,8 @@
 
         let mesBiens = [];
         let reservations = [];
+        let annonceSearch = '';
+        let resaSearch = '';
         let editingBienId = null;
 
         // ── Messagerie ──
@@ -990,20 +1125,48 @@
         }
 
         // ═══════════════════════════════════════════════════════════════════
+        // LIKES
+        // ═══════════════════════════════════════════════════════════════════
+        async function toggleLikeProp(id) {
+            const res = await apiFetch(`${API}/biens/${id}/like`, { method: 'POST' });
+            if (!res.success) return;
+
+            const b = mesBiens.find(x => x.id === id);
+            if (b) { b.estLikeParMoi = res.liked; b.likes = res.total; }
+
+            const icon    = document.getElementById(`plk-icon-${id}`);
+            const countEl = document.getElementById(`plk-count-${id}`);
+            const btn     = icon?.parentElement;
+
+            if (icon) icon.className = `${res.liked ? 'fas' : 'far'} fa-heart mr-0.5`;
+            if (countEl) countEl.textContent = res.total;
+            if (btn) {
+                if (res.liked) btn.classList.add('text-red-400');
+                else btn.classList.remove('text-red-400');
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
         // RENDU : MES ANNONCES
         // ═══════════════════════════════════════════════════════════════════
         function renderAnnonces() {
             const grid = document.getElementById('myBiensGrid');
-            if (!mesBiens.length) {
+            const list = annonceSearch
+                ? mesBiens.filter(b =>
+                    (b.titre || '').toLowerCase().includes(annonceSearch) ||
+                    (b.localisation || '').toLowerCase().includes(annonceSearch))
+                : mesBiens;
+
+            if (!list.length) {
                 grid.innerHTML = `
                     <div class="col-span-full flex flex-col items-center justify-center py-16 bg-white rounded-3xl border-2 border-dashed border-gray-200">
                         <i class="fas fa-house-circle-xmark text-4xl text-gray-300 mb-3"></i>
-                        <p class="text-gray-400 font-semibold">Aucune annonce publiée pour l'instant.</p>
+                        <p class="text-gray-400 font-semibold">${annonceSearch ? 'Aucune annonce ne correspond à votre recherche.' : 'Aucune annonce publiée pour l\'instant.'}</p>
                     </div>`;
                 return;
             }
 
-            grid.innerHTML = mesBiens.map(b => {
+            grid.innerHTML = list.map(b => {
                 const sp    = b.statutPublication || 'En attente';
                 const isOff = !b.estDisponible;
 
@@ -1088,6 +1251,10 @@
                         <p class="text-lg font-extrabold text-blue-600 mb-3">${escapeHtml(b.prix)}</p>
                         <div class="flex items-center justify-between text-xs text-gray-400 font-semibold border-t border-gray-100 pt-3 mb-4">
                             <span><i class="fas fa-eye mr-0.5"></i> ${b.vues}</span>
+                            <button onclick="toggleLikeProp(${b.id})" class="flex items-center gap-0.5 hover:text-red-400 transition-colors ${b.likes > 0 || b.estLikeParMoi ? 'text-red-400' : 'text-gray-400'}" style="background:none;border:none;cursor:pointer;padding:0;font-size:inherit;font-weight:600;" aria-label="Like">
+                                <i id="plk-icon-${b.id}" class="${b.estLikeParMoi ? 'fas' : 'far'} fa-heart mr-0.5"></i>
+                                <span id="plk-count-${b.id}">${b.likes ?? 0}</span>
+                            </button>
                             <span><i class="fas fa-bed mr-0.5"></i> ${b.chambres} ch.</span>
                             <span><i class="fas fa-bath mr-0.5"></i> ${b.sallesDeBain} sdb</span>
                             <span><i class="fas fa-ruler-combined mr-0.5"></i> ${b.surface} m²</span>
@@ -1358,7 +1525,7 @@
             if (result.success) {
                 clearTitreFoncier();
                 closePropertyForm();
-                const msg = editingBienId ? 'Annonce mise à jour !' : 'Annonce soumise à la modération !';
+                const msg = editingBienId ? 'Modifications soumises !' : 'Annonce soumise à la modération !';
                 showToast('success', msg, result.message || '');
                 await loadAllData();
             } else {
@@ -1434,12 +1601,19 @@
         // ═══════════════════════════════════════════════════════════════════
         function renderReservations() {
             const grid = document.getElementById('reservationsGrid');
-            const list = resaFilter === 'all' ? reservations : reservations.filter(r => r.statut === resaFilter);
+            let list = resaFilter === 'all' ? reservations : reservations.filter(r => r.statut === resaFilter);
+            if (resaSearch) {
+                list = list.filter(r =>
+                    (r.bienTitre || '').toLowerCase().includes(resaSearch) ||
+                    (r.prenom || '').toLowerCase().includes(resaSearch) ||
+                    (r.nom || '').toLowerCase().includes(resaSearch) ||
+                    (r.email || '').toLowerCase().includes(resaSearch));
+            }
 
             if (!list.length) {
                 grid.innerHTML = `<div style="text-align:center; padding:60px 0; background:#fff; border-radius:24px; border:2px dashed #e5e7eb;">
                     <i class="fas fa-calendar-xmark" style="font-size:36px; color:#d1d5db; display:block; margin-bottom:12px;"></i>
-                    <p style="color:#9ca3af; font-weight:600;">Aucune réservation${resaFilter !== 'all' ? ' pour ce filtre' : ''} pour l'instant.</p>
+                    <p style="color:#9ca3af; font-weight:600;">${resaSearch ? 'Aucune réservation ne correspond à votre recherche.' : resaFilter !== 'all' ? 'Aucune réservation pour ce filtre.' : 'Aucune réservation pour l\'instant.'}</p>
                 </div>`;
                 return;
             }
@@ -1614,7 +1788,7 @@ moderation:     { icon: 'fa-shield-halved', bg: '#fef3c7', color: '#92400e' },
                 icon: 'fa-sign-out-alt',
                 confirmLabel: 'Déconnexion',
                 onConfirm: () => {
-                    ['isLoggedIn', 'userPrenom', 'userNom', 'userEmail', 'userId', 'userRole', 'userPhoto', 'jwtToken'].forEach(k => localStorage.removeItem(k));
+                    ['isLoggedIn', 'userPrenom', 'userNom', 'userEmail', 'userId', 'userRole', 'userPhoto', 'userEstBloque', 'jwtToken'].forEach(k => localStorage.removeItem(k));
                     showToast('success', 'À bientôt !', 'Vous avez été déconnecté avec succès.', 1800);
                     setTimeout(() => { window.location.href = './login.html'; }, 1200);
                 }
@@ -1677,6 +1851,82 @@ moderation:     { icon: 'fa-shield-halved', bg: '#fef3c7', color: '#92400e' },
         // ═══════════════════════════════════════════════════════════════════
         // NAVIGATION
         // ═══════════════════════════════════════════════════════════════════
+        // ═══════════════════════════════════════════════════════════════════
+        // DASHBOARD PROPRIETAIRE
+        // ═══════════════════════════════════════════════════════════════════
+        function renderDashboard() {
+            const prenom = localStorage.getItem('userPrenom') || 'Propriétaire';
+            const greetEl = document.getElementById('propDashGreeting');
+            if (greetEl) greetEl.textContent = `Bienvenue, ${prenom} ! Voici un aperçu de votre activité.`;
+
+            const kpiGrid  = document.getElementById('propKpiGrid');
+            const biensEl  = document.getElementById('propDashBiens');
+            const resasEl  = document.getElementById('propDashResas');
+
+            const biensTotal    = mesBiens.length;
+            const biensEnLigne  = mesBiens.filter(b => b.estDisponible).length;
+            const biensMasques  = biensTotal - biensEnLigne;
+            const totalResas    = reservations.length;
+            const resasAttente  = reservations.filter(r => r.statut === 'En attente').length;
+
+            // ── KPI ──────────────────────────────────────────────────────
+            if (kpiGrid) kpiGrid.innerHTML = [
+                { icon:'fa-house',          color:'#2563eb', bg:'#eff6ff', label:'Mes biens',            value:biensTotal,   sub:`${biensEnLigne} en ligne` },
+                { icon:'fa-eye',            color:'#059669', bg:'#ecfdf5', label:'Biens visibles',        value:biensEnLigne, sub:`${biensMasques} masqué${biensMasques!==1?'s':''}` },
+                { icon:'fa-calendar-check', color:'#7c3aed', bg:'#f5f3ff', label:'Demandes de visite',    value:totalResas,   sub:`${resasAttente} en attente` },
+                { icon:'fa-heart',          color:'#f43f5e', bg:'#fff1f2', label:'Total likes',           value:mesBiens.reduce((s,b)=>s+(b.likes||0),0), sub:'sur tous les biens' },
+            ].map(k => `
+                <div style="flex:1 1 220px;max-width:280px;background:#fff;border-radius:20px;border:1px solid #f3f4f6;padding:20px 22px;display:flex;align-items:center;gap:16px;box-shadow:0 2px 12px rgba(0,0,0,0.05);">
+                    <div style="width:52px;height:52px;border-radius:16px;background:${k.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="fas ${k.icon}" style="font-size:22px;color:${k.color};"></i>
+                    </div>
+                    <div>
+                        <p style="font-size:30px;font-weight:900;color:#111827;line-height:1;margin:0;">${k.value}</p>
+                        <p style="font-size:13px;font-weight:700;color:#374151;margin:3px 0 1px;">${k.label}</p>
+                        <p style="font-size:11px;color:#9ca3af;margin:0;">${k.sub}</p>
+                    </div>
+                </div>`).join('');
+
+            // ── Derniers biens ────────────────────────────────────────────
+            if (biensEl) biensEl.innerHTML = mesBiens.length
+                ? mesBiens.slice(0, 5).map(b => {
+                    const statutColor = b.statutPublication === 'Validée' ? '#059669' : b.statutPublication === 'Rejetée' ? '#dc2626' : '#f59e0b';
+                    const statutLabel = b.statutPublication === 'Validée' ? 'Validé' : b.statutPublication === 'Rejetée' ? 'Rejeté' : 'En attente';
+                    return `
+                    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f9fafb;">
+                        <div style="width:44px;height:44px;border-radius:10px;overflow:hidden;flex-shrink:0;">
+                            ${b.imageUrl
+                                ? `<img src="${escapeHtml(b.imageUrl)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
+                                : `<div style="width:100%;height:100%;background:#eff6ff;display:flex;align-items:center;justify-content:center;"><i class="fas fa-house" style="color:#93c5fd;font-size:18px;"></i></div>`
+                            }
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                            <p style="font-size:13px;font-weight:700;color:#111827;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(b.titre)}</p>
+                            <p style="font-size:11px;color:#9ca3af;margin:2px 0 0;">${escapeHtml(b.localisation)}</p>
+                        </div>
+                        <span style="font-size:10px;font-weight:700;color:${statutColor};background:${statutColor}18;padding:3px 9px;border-radius:999px;flex-shrink:0;">${statutLabel}</span>
+                    </div>`}).join('')
+                : `<p style="text-align:center;color:#9ca3af;padding:24px 0;font-size:13px;">Aucune annonce publiée.</p>`;
+
+            // ── Dernières réservations ─────────────────────────────────────
+            if (resasEl) resasEl.innerHTML = reservations.length
+                ? reservations.slice(0, 5).map(r => {
+                    const sc = r.statut === 'Confirmée' ? '#059669' : r.statut === 'Refusée' ? '#dc2626' : '#f59e0b';
+                    const bien = mesBiens.find(b => b.id === r.bienId);
+                    return `
+                    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f9fafb;">
+                        <div style="width:36px;height:36px;border-radius:50%;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800;color:#2563eb;font-size:12px;">
+                            ${((r.prenom||'?')[0]+(r.nom||'?')[0]).toUpperCase()}
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                            <p style="font-size:13px;font-weight:700;color:#111827;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(r.prenom||'')} ${escapeHtml(r.nom||'')}</p>
+                            <p style="font-size:11px;color:#9ca3af;margin:2px 0 0;">${bien ? escapeHtml(bien.titre) : ''} — ${new Date(r.dateVisite).toLocaleDateString('fr-FR')}</p>
+                        </div>
+                        <span style="font-size:10px;font-weight:700;color:${sc};background:${sc}18;padding:3px 9px;border-radius:999px;flex-shrink:0;">${r.statut}</span>
+                    </div>`}).join('')
+                : `<p style="text-align:center;color:#9ca3af;padding:24px 0;font-size:13px;">Aucune demande de visite.</p>`;
+        }
+
         function switchSection(id, btn) {
             document.querySelectorAll('.section-fade').forEach(s => s.classList.remove('active'));
             const section = document.getElementById(`section-${id}`);
@@ -1685,6 +1935,7 @@ moderation:     { icon: 'fa-shield-halved', bg: '#fef3c7', color: '#92400e' },
             if (btn) btn.classList.add('active');
             closeSidebar();
 
+            if (id === 'dashboard')    renderDashboard();
             if (id === 'reservations') renderReservations();
             if (id === 'stats')        renderStats();
             if (id === 'notifications') renderNotifications();
@@ -1717,17 +1968,19 @@ moderation:     { icon: 'fa-shield-halved', bg: '#fef3c7', color: '#92400e' },
         function renderStats() {
             // KPI cards
             const totalBiens = mesBiens.length;
-            const totalVues  = mesBiens.reduce((s, b) => s + (b.vues || 0), 0);
+            const totalVues  = mesBiens.reduce((s, b) => s + (b.vues  || 0), 0);
+            const totalLikes = mesBiens.reduce((s, b) => s + (b.likes || 0), 0);
             const totalResas = reservations.length;
             const confirmees = reservations.filter(r => r.statut === 'Confirmée').length;
             const traitees   = reservations.filter(r => r.statut !== 'En attente').length;
             const taux = traitees ? Math.round((confirmees / traitees) * 100) : 0;
 
             const kpis = [
-                { icon: 'fa-house', bg: '#dbeafe', color: '#2563eb', label: 'Annonces publiées', value: totalBiens },
-                { icon: 'fa-eye', bg: '#ede9fe', color: '#7c3aed', label: 'Vues cumulées', value: totalVues },
+                { icon: 'fa-house',          bg: '#dbeafe', color: '#2563eb', label: 'Annonces publiées',   value: totalBiens },
+                { icon: 'fa-eye',            bg: '#ede9fe', color: '#7c3aed', label: 'Vues cumulées',       value: totalVues  },
+                { icon: 'fa-heart',          bg: '#ffe4e6', color: '#e11d48', label: 'Likes reçus',         value: totalLikes },
                 { icon: 'fa-calendar-check', bg: '#d1fae5', color: '#059669', label: 'Réservations reçues', value: totalResas },
-                { icon: 'fa-percent', bg: '#fef3c7', color: '#d97706', label: 'Taux de confirmation', value: taux + '%' },
+                { icon: 'fa-percent',        bg: '#fef3c7', color: '#d97706', label: 'Taux de confirmation',value: taux + '%' },
             ];
             document.getElementById('statsCards').innerHTML = kpis.map(c => `
                 <div class="stat-card">
@@ -2049,12 +2302,47 @@ moderation:     { icon: 'fa-shield-halved', bg: '#fef3c7', color: '#92400e' },
         // ═══════════════════════════════════════════════════════════════════
         // INIT
         // ═══════════════════════════════════════════════════════════════════
-        document.addEventListener('DOMContentLoaded', () => {
+        const BIEN_TYPES = [
+            { value: 'villa',       label: 'Villa'       },
+            { value: 'appartement', label: 'Appartement' },
+            { value: 'studio',      label: 'Studio'      },
+            { value: 'terrain',     label: 'Terrain'     },
+            { value: 'bureau',      label: 'Bureau'      },
+            { value: 'commerce',    label: 'Commerce'    },
+        ];
+        function populateTypeSelect(selectId, selected = '') {
+            const sel = document.getElementById(selectId);
+            if (!sel) return;
+            sel.innerHTML = '<option value="">Choisir…</option>' +
+                BIEN_TYPES.map(t =>
+                    `<option value="${t.value}"${t.value === selected ? ' selected' : ''}>${t.label}</option>`
+                ).join('');
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            populateTypeSelect('pfType');
             const prenom = localStorage.getItem('userPrenom') || 'Propriétaire';
             document.getElementById('welcomeName').textContent = `Bienvenue, ${prenom}`;
-            loadAllData();
+
+            // Vérifier si le compte est suspendu (vérification fraîche depuis le backend)
+            try {
+                const meRes = await apiFetch(`${API}/auth/me`);
+                if (meRes.success && meRes.data?.estBloque) {
+                    localStorage.setItem('userEstBloque', 'true');
+                    showToast('error', 'Accès suspendu',
+                        'Votre espace propriétaire est temporairement suspendu. Vous êtes redirigé vers votre espace client.', 4000);
+                    setTimeout(() => { window.location.href = './accueil_user.html'; }, 3000);
+                    return;
+                }
+                localStorage.setItem('userEstBloque', 'false');
+            } catch (_) { /* silencieux si le backend est down */ }
+
+            await loadAllData();
+            renderDashboard();
+            document.getElementById('ps')?.remove();
             refreshNotifBadge();
             setInterval(refreshNotifBadge, 30000);
+            if ('serviceWorker' in navigator) navigator.serviceWorker.register('../sw.js').catch(() => {});
         });
     </script>
     <script type="module" src="/src/js/main.js"></script>

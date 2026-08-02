@@ -16,6 +16,8 @@ namespace SaidAfricaBackend
         public DbSet<Notification>        Notifications       { get; set; }
         public DbSet<Message>             Messages            { get; set; }
         public DbSet<Disponibilite>       Disponibilites      { get; set; }
+        public DbSet<BienLike>            BienLikes           { get; set; }
+        public DbSet<BienVue>             BienVues            { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -110,6 +112,36 @@ namespace SaidAfricaBackend
                 .WithMany()
                 .HasForeignKey(d => d.BienId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<BienLike>()
+                .HasIndex(l => new { l.BienId, l.UserId }).IsUnique();
+
+            modelBuilder.Entity<BienLike>()
+                .HasOne(l => l.Bien)
+                .WithMany(b => b.BienLikes)
+                .HasForeignKey(l => l.BienId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<BienLike>()
+                .HasOne(l => l.User)
+                .WithMany()
+                .HasForeignKey(l => l.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<BienVue>()
+                .HasIndex(v => new { v.BienId, v.UserId }).IsUnique();
+
+            modelBuilder.Entity<BienVue>()
+                .HasOne(v => v.Bien)
+                .WithMany()
+                .HasForeignKey(v => v.BienId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<BienVue>()
+                .HasOne(v => v.User)
+                .WithMany()
+                .HasForeignKey(v => v.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 
@@ -119,14 +151,19 @@ namespace SaidAfricaBackend
         public int    Id       { get; set; }
         public string Nom      { get; set; } = string.Empty;
         public string Prenom   { get; set; } = string.Empty;
-        public string Email    { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
+        public string  Email     { get; set; } = string.Empty;
+        public string  Password  { get; set; } = string.Empty;
+        public string  Telephone { get; set; } = string.Empty;
+        public string? PhotoUrl  { get; set; }
 
         /// <summary>Rôles possibles : "Client", "Proprietaire"; "UserIndep", "AdminRegion", "AdminPays", "DirecteurProjet"</summary>
         public string Role     { get; set; } = "Client";
 
         /// <summary>Validation par un Admin région, requise pour les rôles professionnels (Proprietaire/UserIndep).</summary>
         public bool EstValide { get; set; } = true;
+
+        /// <summary>Compte suspendu manuellement par un admin (empêche la connexion).</summary>
+        public bool EstBloque { get; set; } = false;
 
         /// <summary>Région administrative de rattachement (utile pour AdminRegion et le scoping futur des Biens).</summary>
         public string? Region { get; set; }
@@ -206,6 +243,7 @@ namespace SaidAfricaBackend
         public User?                    ValideParAdmin  { get; set; }
         public ICollection<Reservation> Reservations   { get; set; } = new List<Reservation>();
         public ICollection<Favori>      Favoris        { get; set; } = new List<Favori>();
+        public ICollection<BienLike>    BienLikes      { get; set; } = new List<BienLike>();
     }
 
     // ─── RÉSERVATION / DEMANDE DE VISITE ─────────────────────────────────────
@@ -363,5 +401,31 @@ namespace SaidAfricaBackend
 
         // Navigation
         public Bien? Bien { get; set; }
+    }
+
+    // ─── LIKE SUR UN BIEN ─────────────────────────────────────────────────────
+    public class BienLike
+    {
+        public int      Id        { get; set; }
+        public int      BienId    { get; set; }
+        public int      UserId    { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        // Navigation
+        public Bien? Bien { get; set; }
+        public User? User { get; set; }
+    }
+
+    // ─── VUE UNIQUE SUR UN BIEN (une seule vue comptée par utilisateur) ───────
+    public class BienVue
+    {
+        public int      Id       { get; set; }
+        public int      BienId   { get; set; }
+        public int      UserId   { get; set; }
+        public DateTime ViewedAt { get; set; } = DateTime.UtcNow;
+
+        // Navigation
+        public Bien? Bien { get; set; }
+        public User? User { get; set; }
     }
 }

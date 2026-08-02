@@ -323,6 +323,7 @@ namespace SaidAfricaBackend.Controllers
         public string?   Region         { get; set; }
         public int       NbBiensPublies { get; set; }
         public DateTime? DateValidation { get; set; }
+        public bool      EstBloque      { get; set; }
 
         public ProprietaireDto(User u, int nbBiens, DateTime? dateValidation)
         {
@@ -333,6 +334,7 @@ namespace SaidAfricaBackend.Controllers
             Region         = u.Region;
             NbBiensPublies = nbBiens;
             DateValidation = dateValidation;
+            EstBloque      = u.EstBloque;
         }
     }
 

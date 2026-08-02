@@ -5,7 +5,21 @@ namespace SaidAfricaBackend
         public static void Seed(ApplicationDbContext context)
         {
             FixBlankRoles(context);
-            SeedBiens(context);
+            PurgeDemoBiens(context);
+        }
+
+        // ─── PURGE : supprime les biens démo insérés avec des images Unsplash ────
+        private static void PurgeDemoBiens(ApplicationDbContext context)
+        {
+            var demos = context.Biens
+                .Where(b => b.ImageUrl.StartsWith("https://images.unsplash.com"))
+                .ToList();
+
+            if (demos.Count == 0) return;
+
+            context.Biens.RemoveRange(demos);
+            context.SaveChanges();
+            Console.WriteLine($"🗑️  {demos.Count} bien(s) demo supprimes.");
         }
 
         // ─── CORRECTIF : anciens comptes avec un Role vide en base ───────────────

@@ -104,15 +104,14 @@ nav a:not(.bg-blue-600):hover::after {
   /* Le texte s'arrête quand on le survole */
 }
 
-/* Ajoute dans ton CSS pour un meilleur feedback utilisateur */
 @keyframes shimmer {
-  0% {
-    background-position: -1000px 0;
-  }
+  0%   { background-position: -1000px 0; }
+  100% { background-position:  1000px 0; }
+}
 
-  100% {
-    background-position: 1000px 0;
-  }
+@keyframes card-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
     /* Animation Ken Burns */
     @keyframes kenburns {

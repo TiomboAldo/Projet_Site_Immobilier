@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -118,6 +119,76 @@ namespace SaidAfricaBackend.Controllers
             return Ok(new { success = true, message = "Compte administrateur racine créé. Ce point d'entrée est désormais désactivé." });
         }
 
+        private int CurrentUserId() =>
+            int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        // --- MON PROFIL : GET ---
+        [HttpGet("me")]
+        [Authorize]
+        public async Task<IActionResult> GetMe()
+        {
+            var user = await _context.Users.FindAsync(CurrentUserId());
+            if (user == null) return NotFound(new { success = false });
+            return Ok(new
+            {
+                success = true,
+                data = new { user.Id, user.Nom, user.Prenom, user.Email, user.Telephone, user.PhotoUrl, user.Role, user.EstBloque }
+            });
+        }
+
+        // --- MON PROFIL : PUT ---
+        [HttpPut("profile")]
+        [Authorize]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest req)
+        {
+            var user = await _context.Users.FindAsync(CurrentUserId());
+            if (user == null) return NotFound(new { success = false });
+
+            user.Nom       = req.Nom?.Trim()       ?? user.Nom;
+            user.Prenom    = req.Prenom?.Trim()     ?? user.Prenom;
+            user.Telephone = req.Telephone?.Trim()  ?? user.Telephone;
+            if (req.PhotoUrl != null) user.PhotoUrl = req.PhotoUrl.Trim();
+
+            await _context.SaveChangesAsync();
+            return Ok(new { success = true, message = "Profil mis à jour." });
+        }
+
+        // --- CHANGEMENT DE MOT DE PASSE ---
+        [HttpPut("changepassword")]
+        [Authorize]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest req)
+        {
+            var user = await _context.Users.FindAsync(CurrentUserId());
+            if (user == null) return NotFound(new { success = false });
+
+            if (!BCrypt.Net.BCrypt.Verify(req.CurrentPassword, user.Password))
+                return BadRequest(new { success = false, message = "Mot de passe actuel incorrect." });
+
+            if (string.IsNullOrWhiteSpace(req.NewPassword) || req.NewPassword.Length < 6)
+                return BadRequest(new { success = false, message = "Le nouveau mot de passe doit contenir au moins 6 caractères." });
+
+            user.Password = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
+            await _context.SaveChangesAsync();
+            return Ok(new { success = true, message = "Mot de passe modifié avec succès." });
+        }
+
+        // --- BLOQUER / DÉBLOQUER UN COMPTE ---
+        [HttpPut("users/{id}/toggle-bloc")]
+        [Authorize(Roles = "AdminRegion,AdminPays,DirecteurProjet")]
+        public async Task<IActionResult> ToggleBloc(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null) return NotFound(new { success = false, message = "Utilisateur introuvable." });
+            user.EstBloque = !user.EstBloque;
+            await _context.SaveChangesAsync();
+            return Ok(new
+            {
+                success   = true,
+                estBloque = user.EstBloque,
+                message   = user.EstBloque ? "Compte suspendu avec succès." : "Compte réactivé avec succès."
+            });
+        }
+
         // --- CONNEXION ---
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
@@ -133,7 +204,7 @@ namespace SaidAfricaBackend.Controllers
                     return Unauthorized(new { success = false, message = "Email ou mot de passe incorrect." });
                 }
 
-                // 3. Succès !
+                // 3. Succès ! (les propriétaires bloqués peuvent se connecter en espace client)
                 var token = GenerateJwt(user);
 
                 return Ok(new
@@ -148,7 +219,8 @@ namespace SaidAfricaBackend.Controllers
                         user.Prenom,
                         user.Email,
                         user.Role,
-                        user.EstValide
+                        user.EstValide,
+                        user.EstBloque
                     }
                 });
             }
@@ -181,5 +253,19 @@ namespace SaidAfricaBackend.Controllers
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
         public string Region { get; set; } = string.Empty;
+    }
+
+    public class ChangePasswordRequest
+    {
+        public string CurrentPassword { get; set; } = string.Empty;
+        public string NewPassword     { get; set; } = string.Empty;
+    }
+
+    public class UpdateProfileRequest
+    {
+        public string? Nom       { get; set; }
+        public string? Prenom    { get; set; }
+        public string? Telephone { get; set; }
+        public string? PhotoUrl  { get; set; }
     }
 }

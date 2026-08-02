@@ -7,6 +7,9 @@
     <title>Espace Admin Région - Said Africa</title>
     <link rel="icon" type="image/png" href="/src/assets/images/logo.jpeg">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.5.2/dist/maplibre-gl.css">
+    <script src="https://unpkg.com/maplibre-gl@4.5.2/dist/maplibre-gl.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
@@ -39,6 +42,23 @@
 
         .modal-hidden { display: none !important; pointer-events: none; }
         .modal-visible { display: flex !important; pointer-events: auto; }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group label {
+            display: block; margin-bottom: 8px; font-size: 12px; font-weight: 700;
+            text-transform: uppercase; color: #6b7280; letter-spacing: 0.05em;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 12px 16px; border: none; background-color: #f3f4f6;
+            border-radius: 16px; font-size: 14px; font-weight: 600; color: #1f2937; transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none; background-color: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+        }
+        .form-group textarea { resize: vertical; min-height: 70px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .form-row { grid-template-columns: 1fr; } }
 
         .filter-btn.active {
             background: #2563eb !important;
@@ -134,10 +154,38 @@
             from { transform: scale(0.88); opacity: 0; }
             to   { transform: scale(1);    opacity: 1; }
         }
+
+        /* ─── PARAMÈTRES ADMIN ─── */
+        .ps-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+        @media(max-width:700px){ .ps-grid { grid-template-columns:1fr; } }
+        .ps-card { background:#fff; border-radius:18px; padding:20px 22px; border:1px solid #f3f4f6; box-shadow:0 1px 3px rgba(0,0,0,.04); }
+        .ps-card-icon { width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .ps-label { display:block; font-size:10px; font-weight:700; color:#6b7280; margin-bottom:6px; text-transform:uppercase; letter-spacing:.06em; }
+        .ps-input-wrap { display:flex; align-items:center; gap:8px; background:#f8fafc; border:1.5px solid #e5e7eb; border-radius:11px; padding:0 12px; transition:border-color .2s; }
+        .ps-input-wrap:focus-within { border-color:#2563eb; background:#fff; }
+        .ps-input { flex:1; border:none; background:transparent; padding:10px 0; font-size:13px; color:#111827; font-family:inherit; outline:none; }
+        .ps-input.wa { color:#16a34a; }
+        .ps-input:disabled { color:#9ca3af; cursor:not-allowed; }
+        .ps-save-btn { width:100%; padding:11px; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-size:13px; font-weight:700; border:none; border-radius:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; font-family:inherit; transition:opacity .2s; margin-top:14px; }
+        .ps-save-btn:hover { opacity:.9; }
+        .ps-hint { font-size:10px; color:#9ca3af; margin:4px 0 0 2px; }
+        .ps-eye { background:none; border:none; cursor:pointer; color:#9ca3af; padding:0 2px; }
+        #aFeedback { display:none; padding:7px 12px; border-radius:10px; font-size:12px; font-weight:600; align-items:center; gap:6px; }
+        #aFeedback.ok  { display:flex; background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; }
+        #aFeedback.err { display:flex; background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; }
+        #aPwdFeedback { display:none; padding:6px 12px; border-radius:10px; font-size:12px; font-weight:600; align-items:center; gap:6px; }
+        #aPwdFeedback.ok  { display:flex; background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; }
+        #aPwdFeedback.err { display:flex; background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; }
+        .photo-lbl-a { position:absolute; bottom:0; right:0; width:28px; height:28px; background:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.18); border:2px solid #e5e7eb; }
     </style>
 </head>
 
 <body>
+<div id="ps" style="position:fixed;inset:0;z-index:9999;background:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+  <div style="width:44px;height:44px;border:4px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;animation:ps-spin .75s linear infinite;"></div>
+  <p style="color:#6b7280;margin-top:14px;font-size:14px;font-family:sans-serif;">Chargement...</p>
+</div>
+<style>@keyframes ps-spin{to{transform:rotate(360deg)}}</style>
     <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
     <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar">
@@ -146,7 +194,11 @@
             <span class="sidebar-logo-text">Admin Région</span>
         </div>
         <nav class="sidebar-nav">
-            <button onclick="switchSection('demandes', this)" class="sidebar-item active">
+            <button onclick="switchSection('dashboard', this)" class="sidebar-item active">
+                <i class="fas fa-chart-line"></i>
+                <span>Tableau de bord</span>
+            </button>
+            <button onclick="switchSection('demandes', this)" class="sidebar-item">
                 <i class="fas fa-user-check"></i>
                 <span>Demandes en attente</span>
             </button>
@@ -158,12 +210,28 @@
                 <i class="fas fa-house-circle-xmark"></i>
                 <span>Biens à modérer</span>
             </button>
+            <button onclick="switchSection('nos-biens', this)" class="sidebar-item">
+                <i class="fas fa-building"></i>
+                <span>Nos Biens</span>
+            </button>
+            <button onclick="switchSection('publier', this)" class="sidebar-item">
+                <i class="fas fa-plus-circle"></i>
+                <span>Publier une annonce</span>
+            </button>
             <button onclick="switchSection('notifications', this)" class="sidebar-item">
                 <i class="fas fa-bell"></i>
                 <span>Notifications</span>
             </button>
+            <button onclick="switchSection('parametres', this)" class="sidebar-item">
+                <i class="fas fa-sliders"></i>
+                <span>Paramètres</span>
+            </button>
         </nav>
         <div class="sidebar-footer">
+            <a href="../../index.html" class="sidebar-item" style="text-decoration:none;">
+                <i class="fas fa-globe"></i>
+                <span>Voir les biens</span>
+            </a>
             <button onclick="handleLogout()" class="sidebar-item" style="color: #ef4444;">
                 <i class="fas fa-sign-out-alt"></i>
                 <span>Quitter</span>
@@ -196,10 +264,54 @@
         </header>
 
         <div class="p-8" style="padding:32px;">
+            <!-- DASHBOARD -->
+            <section id="section-dashboard" class="section-fade active">
+                <div style="margin-bottom:28px;">
+                    <h1 style="font-size:28px;font-weight:800;color:#111827;">Tableau de bord</h1>
+                    <p id="dashGreeting" style="font-size:14px;color:#6b7280;margin-top:4px;">Chargement…</p>
+                </div>
+                <!-- KPI -->
+                <div id="adminKpiGrid" style="display:flex;flex-wrap:wrap;gap:18px;justify-content:center;margin-bottom:28px;"></div>
+
+                <!-- Activité récente -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:28px;">
+                    <div style="background:#fff;border-radius:20px;border:1px solid #f3f4f6;padding:22px;">
+                        <h3 style="font-size:15px;font-weight:800;color:#111827;margin-bottom:16px;">
+                            <i class="fas fa-user-clock" style="color:#4f46e5;margin-right:8px;"></i>Demandes en attente
+                        </h3>
+                        <div id="dashDemandesRecentes"></div>
+                    </div>
+                    <div style="background:#fff;border-radius:20px;border:1px solid #f3f4f6;padding:22px;">
+                        <h3 style="font-size:15px;font-weight:800;color:#111827;margin-bottom:16px;">
+                            <i class="fas fa-building" style="color:#2563eb;margin-right:8px;"></i>Biens récents
+                        </h3>
+                        <div id="dashBiensRecents"></div>
+                    </div>
+                </div>
+                <!-- Propriétaires récents -->
+                <div style="background:#fff;border-radius:20px;border:1px solid #f3f4f6;padding:22px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                        <h3 style="font-size:15px;font-weight:800;color:#111827;margin:0;">
+                            <i class="fas fa-user-tie" style="color:#7c3aed;margin-right:8px;"></i>Propriétaires actifs
+                        </h3>
+                        <button onclick="switchSection('proprietaires', document.querySelector('[onclick*=proprietaires]'))"
+                            style="font-size:12px;color:#2563eb;background:none;border:none;cursor:pointer;font-weight:700;">Voir tous →</button>
+                    </div>
+                    <div id="dashPropsRecents"></div>
+                </div>
+            </section>
+
             <!-- DEMANDES -->
-            <section id="section-demandes" class="section-fade active">
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:16px;">
+            <section id="section-demandes" class="section-fade">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:16px;">
                     <h1 style="font-size:28px; font-weight:800; color:#111827;">Demandes de passage au statut Propriétaire</h1>
+                </div>
+                <div style="position:relative;margin-bottom:16px;max-width:420px;">
+                    <i class="fas fa-search" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:14px;pointer-events:none;"></i>
+                    <input type="text" placeholder="Rechercher par nom ou email..."
+                           oninput="demandeSearch=this.value.trim().toLowerCase();renderDemandes()"
+                           style="width:100%;padding:11px 16px 11px 42px;border:1.5px solid #e5e7eb;border-radius:14px;font-size:14px;outline:none;background:#fff;color:#111827;"
+                           onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e5e7eb'">
                 </div>
 
                 <div style="display:flex; gap:10px; margin-bottom:24px; flex-wrap:wrap;">
@@ -218,14 +330,70 @@
 
             <!-- MES PROPRIETAIRES -->
             <section id="section-proprietaires" class="section-fade">
-                <h1 style="font-size:28px; font-weight:800; color:#111827; margin-bottom:24px;">Mes Propriétaires</h1>
+                <h1 style="font-size:28px; font-weight:800; color:#111827; margin-bottom:16px;">Mes Propriétaires</h1>
+                <div style="position:relative;margin-bottom:20px;max-width:420px;">
+                    <i class="fas fa-search" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:14px;pointer-events:none;"></i>
+                    <input type="text" placeholder="Rechercher par nom ou email..."
+                           oninput="propSearch=this.value.trim().toLowerCase();renderProprietairesFiltered()"
+                           style="width:100%;padding:11px 16px 11px 42px;border:1.5px solid #e5e7eb;border-radius:14px;font-size:14px;outline:none;background:#fff;color:#111827;"
+                           onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e5e7eb'">
+                </div>
                 <div id="proprietairesGrid"></div>
             </section>
 
             <!-- BIENS A MODERER -->
             <section id="section-biens" class="section-fade">
-                <h1 style="font-size:28px; font-weight:800; color:#111827; margin-bottom:24px;">Biens à modérer</h1>
+                <h1 style="font-size:28px; font-weight:800; color:#111827; margin-bottom:16px;">Biens à modérer</h1>
+                <div style="position:relative;margin-bottom:20px;max-width:420px;">
+                    <i class="fas fa-search" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:14px;pointer-events:none;"></i>
+                    <input type="text" placeholder="Rechercher par titre ou localisation..."
+                           oninput="bienSearch=this.value.trim().toLowerCase();renderBiensFiltered()"
+                           style="width:100%;padding:11px 16px 11px 42px;border:1.5px solid #e5e7eb;border-radius:14px;font-size:14px;outline:none;background:#fff;color:#111827;"
+                           onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e5e7eb'">
+                </div>
                 <div id="biensGrid"></div>
+            </section>
+
+            <!-- NOS BIENS (publiés par la plateforme) -->
+            <section id="section-nos-biens" class="section-fade">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:16px;">
+                    <h1 style="font-size:28px;font-weight:800;color:#111827;">Nos Biens</h1>
+                    <button onclick="openAdminBienModal()" class="hover-lift"
+                        style="background:#2563eb;color:#fff;border:none;border-radius:14px;padding:12px 24px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">
+                        <i class="fas fa-plus"></i> Nouvelle annonce
+                    </button>
+                </div>
+                <div style="position:relative;margin-bottom:20px;max-width:420px;">
+                    <i class="fas fa-search" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:14px;pointer-events:none;"></i>
+                    <input type="text" placeholder="Rechercher par titre ou localisation..."
+                           oninput="nosBiensSearch=this.value.trim().toLowerCase();renderNosBiensFiltered()"
+                           style="width:100%;padding:11px 16px 11px 42px;border:1.5px solid #e5e7eb;border-radius:14px;font-size:14px;outline:none;background:#fff;color:#111827;"
+                           onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e5e7eb'">
+                </div>
+                <div id="nosBiensGrid"></div>
+            </section>
+
+            <!-- PUBLIER UNE ANNONCE -->
+            <section id="section-publier" class="section-fade">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;flex-wrap:wrap;gap:16px;">
+                    <h1 style="font-size:28px;font-weight:800;color:#111827;">Publier une annonce</h1>
+                    <span style="font-size:13px;color:#6b7280;background:#f3f4f6;padding:6px 14px;border-radius:20px;">
+                        <i class="fas fa-check-circle" style="color:#10b981;margin-right:6px;"></i>Publication directe — validée automatiquement
+                    </span>
+                </div>
+                <div style="background:#fff;border-radius:24px;padding:60px 40px;text-align:center;box-shadow:0 2px 16px rgba(0,0,0,0.06);">
+                    <div style="width:80px;height:80px;background:#dbeafe;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;">
+                        <i class="fas fa-bullhorn" style="font-size:32px;color:#2563eb;"></i>
+                    </div>
+                    <h2 style="font-size:22px;font-weight:800;color:#111827;margin-bottom:8px;">Nouvelle annonce</h2>
+                    <p style="font-size:14px;color:#6b7280;margin-bottom:32px;max-width:420px;margin-left:auto;margin-right:auto;">
+                        Publiez directement un bien immobilier. L'annonce sera validée et visible immédiatement sans modération.
+                    </p>
+                    <button onclick="openAdminBienModal()" class="hover-lift"
+                        style="background:#2563eb;color:#fff;border:none;border-radius:16px;padding:16px 40px;font-size:16px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:10px;">
+                        <i class="fas fa-plus"></i> Créer une annonce
+                    </button>
+                </div>
             </section>
 
             <!-- NOTIFICATIONS -->
@@ -233,8 +401,296 @@
                 <h1 style="font-size:28px; font-weight:800; color:#111827; margin-bottom:24px;">Notifications</h1>
                 <div id="notificationsGrid" style="display:flex; flex-direction:column; gap:12px;"></div>
             </section>
+
+            <!-- PARAMÈTRES -->
+            <section id="section-parametres" class="section-fade">
+                <div style="max-width:920px;margin:0 auto;display:flex;flex-direction:column;gap:14px;">
+
+                    <!-- Bannière compacte -->
+                    <div style="background:linear-gradient(135deg,#1e40af 0%,#4f46e5 100%);border-radius:20px;padding:18px 24px;position:relative;overflow:hidden;">
+                        <div style="position:absolute;top:-40px;right:-30px;width:160px;height:160px;background:rgba(255,255,255,.06);border-radius:50%;"></div>
+                        <div style="display:flex;align-items:center;gap:18px;position:relative;z-index:1;flex-wrap:wrap;">
+                            <div style="position:relative;flex-shrink:0;">
+                                <img id="aProfilePreview" src="https://ui-avatars.com/api/?name=Admin&background=2563eb&color=fff"
+                                    style="width:68px;height:68px;border-radius:50%;border:3px solid rgba(255,255,255,.35);object-fit:cover;">
+                                <div id="aPhotoSpinner" style="position:absolute;inset:0;background:rgba(0,0,0,.45);border-radius:50%;align-items:center;justify-content:center;display:none;">
+                                    <i class="fas fa-spinner fa-spin" style="color:white;font-size:15px;"></i>
+                                </div>
+                                <label for="aFileInput" class="photo-lbl-a" title="Changer la photo">
+                                    <i class="fas fa-camera" style="color:#2563eb;font-size:11px;"></i>
+                                    <input type="file" id="aFileInput" accept="image/*" style="display:none;" onchange="aUploadPhoto(event)">
+                                </label>
+                            </div>
+                            <div style="flex:1;min-width:0;">
+                                <h2 id="aProfileName" style="font-size:17px;font-weight:800;color:white;margin:0 0 4px;">Chargement...</h2>
+                                <p id="aProfilePhone" style="font-size:12px;color:rgba(255,255,255,0.8);margin:0 0 6px;display:none;">
+                                    <i class="fab fa-whatsapp" style="color:#4ade80;font-size:12px;margin-right:4px;"></i>
+                                    <span id="aProfilePhoneText"></span>
+                                </p>
+                                <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.15);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:4px 12px;">
+                                    <i class="fas fa-shield-halved" style="color:#fbbf24;font-size:10px;"></i>
+                                    <span style="color:white;font-size:11px;font-weight:600;">Admin Said Africa</span>
+                                </div>
+                            </div>
+                            <div id="aFeedback" style="max-width:280px;">
+                                <i id="aFeedbackIcon" class="fas fa-check-circle"></i>
+                                <span id="aFeedbackMsg"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2 colonnes : infos + contact & enregistrer -->
+                    <div class="ps-grid">
+
+                        <!-- Infos personnelles -->
+                        <div class="ps-card">
+                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+                                <div class="ps-card-icon" style="background:#eff6ff;"><i class="fas fa-user" style="color:#2563eb;font-size:13px;"></i></div>
+                                <div>
+                                    <h3 style="font-size:13px;font-weight:700;color:#111827;margin:0;">Informations personnelles</h3>
+                                    <p style="font-size:11px;color:#94a3b8;margin:0;">Nom affiché sur la plateforme</p>
+                                </div>
+                            </div>
+                            <div style="display:flex;flex-direction:column;gap:10px;">
+                                <div>
+                                    <label class="ps-label">Prénom</label>
+                                    <div class="ps-input-wrap">
+                                        <i class="fas fa-signature" style="color:#cbd5e1;font-size:12px;"></i>
+                                        <input type="text" id="aPrenom" class="ps-input" placeholder="Votre prénom">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="ps-label">Nom de famille</label>
+                                    <div class="ps-input-wrap">
+                                        <i class="fas fa-signature" style="color:#cbd5e1;font-size:12px;"></i>
+                                        <input type="text" id="aNom" class="ps-input" placeholder="Votre nom">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contact & Sécurité + bouton save -->
+                        <div class="ps-card" style="display:flex;flex-direction:column;">
+                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+                                <div class="ps-card-icon" style="background:#f0fdf4;"><i class="fas fa-shield-halved" style="color:#16a34a;font-size:13px;"></i></div>
+                                <div>
+                                    <h3 style="font-size:13px;font-weight:700;color:#111827;margin:0;">Contact & Sécurité</h3>
+                                    <p style="font-size:11px;color:#94a3b8;margin:0;">Email et numéro de contact</p>
+                                </div>
+                            </div>
+                            <div style="display:flex;flex-direction:column;gap:10px;flex:1;">
+                                <div>
+                                    <label class="ps-label">Adresse Email</label>
+                                    <div class="ps-input-wrap">
+                                        <i class="fas fa-lock" style="color:#cbd5e1;font-size:12px;"></i>
+                                        <input type="email" id="aEmail" class="ps-input" disabled>
+                                    </div>
+                                    <p class="ps-hint">Non modifiable pour des raisons de sécurité.</p>
+                                </div>
+                                <div>
+                                    <label class="ps-label">Téléphone WhatsApp</label>
+                                    <div class="ps-input-wrap">
+                                        <i class="fab fa-whatsapp" style="color:#22c55e;font-size:13px;"></i>
+                                        <input type="tel" id="aTelephone" class="ps-input wa" placeholder="ex : 237690000000">
+                                    </div>
+                                    <p class="ps-hint">Numéro de contact professionnel.</p>
+                                </div>
+                            </div>
+                            <button type="button" onclick="aSaveProfile()" id="aSaveBtn" class="ps-save-btn">
+                                <i class="fas fa-floppy-disk"></i> Enregistrer les modifications
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Changer mot de passe — tout sur une seule ligne -->
+                    <div class="ps-card">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+                            <div class="ps-card-icon" style="background:#faf5ff;"><i class="fas fa-key" style="color:#7c3aed;font-size:13px;"></i></div>
+                            <h3 style="font-size:13px;font-weight:700;color:#111827;margin:0;flex:1;">Changer le mot de passe</h3>
+                            <div id="aPwdFeedback" style="max-width:280px;">
+                                <i id="aPwdFeedbackIcon" class="fas fa-check-circle"></i>
+                                <span id="aPwdFeedbackMsg"></span>
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+                            <div style="flex:1;min-width:130px;">
+                                <label class="ps-label">Mot de passe actuel</label>
+                                <div class="ps-input-wrap">
+                                    <i class="fas fa-lock" style="color:#cbd5e1;font-size:12px;"></i>
+                                    <input type="password" id="aPwdCurrent" class="ps-input" placeholder="••••••••">
+                                    <button type="button" class="ps-eye" onclick="aToggleEye('aPwdCurrent',this)"><i class="fas fa-eye"></i></button>
+                                </div>
+                            </div>
+                            <div style="flex:1;min-width:130px;">
+                                <label class="ps-label">Nouveau mot de passe</label>
+                                <div class="ps-input-wrap">
+                                    <i class="fas fa-lock-open" style="color:#cbd5e1;font-size:12px;"></i>
+                                    <input type="password" id="aPwdNew" class="ps-input" placeholder="Min. 6 caractères">
+                                    <button type="button" class="ps-eye" onclick="aToggleEye('aPwdNew',this)"><i class="fas fa-eye"></i></button>
+                                </div>
+                            </div>
+                            <div style="flex:1;min-width:130px;">
+                                <label class="ps-label">Confirmer</label>
+                                <div class="ps-input-wrap">
+                                    <i class="fas fa-lock-open" style="color:#cbd5e1;font-size:12px;"></i>
+                                    <input type="password" id="aPwdConfirm" class="ps-input" placeholder="••••••••">
+                                    <button type="button" class="ps-eye" onclick="aToggleEye('aPwdConfirm',this)"><i class="fas fa-eye"></i></button>
+                                </div>
+                            </div>
+                            <button type="button" onclick="aChangePassword()" id="aPwdBtn"
+                                style="padding:10px 18px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:13px;font-weight:700;border:none;border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:7px;font-family:inherit;white-space:nowrap;transition:opacity .2s;flex-shrink:0;box-shadow:0 4px 14px rgba(124,58,237,.25);"
+                                onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">
+                                <i class="fas fa-shield-check"></i> Modifier
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
         </div>
     </main>
+
+    <!-- MODAL ADMIN : PUBLIER UNE ANNONCE -->
+    <div id="adminBienModal" class="fixed inset-0 z-[100] modal-hidden items-center justify-center p-4"
+        style="background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);">
+        <div class="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden" style="max-height:90vh;display:flex;flex-direction:column;">
+            <div style="background:linear-gradient(135deg,#2563eb,#1d4ed8);padding:28px 32px;position:relative;" class="text-white">
+                <button onclick="closeAdminBienModal()" class="absolute top-4 right-4"
+                    style="border:none;background:rgba(255,255,255,0.15);color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;">
+                    <i class="fas fa-times"></i>
+                </button>
+                <h2 id="adminBienModalTitle" style="font-size:24px;font-weight:800;">Publier une annonce</h2>
+                <p style="font-size:13px;opacity:0.8;margin-top:4px;">
+                    <i class="fas fa-check-circle" style="margin-right:6px;"></i>Publication directe — validation automatique
+                </p>
+            </div>
+            <div style="padding:32px;overflow-y:auto;">
+                <form id="adminBienForm">
+                    <div class="form-row">
+                        <div class="form-group"><label>Titre *</label><input type="text" id="abTitre" placeholder="Ex : Villa Horizon — Kribi" required></div>
+                        <div class="form-group"><label>Standing</label>
+                            <select id="abStanding">
+                                <option value="">Standard</option>
+                                <option value="Business">Business</option>
+                                <option value="Penthouse">Penthouse</option>
+                                <option value="Elite">Elite</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Type *</label>
+                            <select id="abType" required><option value="">Choisir…</option></select>
+                        </div>
+                        <div class="form-group"><label>Operation *</label>
+                            <select id="abStatut" required>
+                                <option value="">Choisir…</option>
+                                <option value="vente">A vendre</option>
+                                <option value="location">A louer</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Prix *</label><input type="text" id="abPrix" placeholder="Ex : 120M FCFA" required></div>
+                        <div class="form-group"><label>Localisation *</label><input type="text" id="abLocalisation" placeholder="Ex : Bonapriso, Douala" required></div>
+                    </div>
+                    <!-- CARTE GPS -->
+                    <div class="form-group">
+                        <label>Position sur la carte <span style="font-weight:400;color:#9ca3af;font-size:12px;">(optionnel — cliquer pour placer)</span></label>
+                        <input type="hidden" id="abLatitude">
+                        <input type="hidden" id="abLongitude">
+                        <div id="abPickMap" style="height:220px;border-radius:14px;overflow:hidden;border:2px solid #e5e7eb;position:relative;">
+                            <div id="abPickMapPlaceholder"
+                                style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f9fafb;z-index:10;gap:8px;cursor:pointer;"
+                                onclick="abInitPickMap()">
+                                <i class="fas fa-map-location-dot" style="font-size:28px;color:#9ca3af;"></i>
+                                <p style="font-size:13px;color:#6b7280;font-weight:600;">Cliquer pour ouvrir la carte</p>
+                                <p style="font-size:11px;color:#9ca3af;">Douala, Yaounde, Kribi…</p>
+                            </div>
+                            <div id="abPickMapContainer" style="height:100%;display:none;"></div>
+                        </div>
+                        <div id="abPickMapCoords" style="font-size:12px;color:#64748b;margin-top:6px;display:none;">
+                            <i class="fas fa-location-dot" style="color:#2563eb;margin-right:4px;"></i>
+                            <span id="abPickMapCoordsText"></span>
+                            <button type="button" onclick="abClearPickMap()"
+                                style="margin-left:10px;color:#ef4444;background:none;border:none;cursor:pointer;font-size:11px;font-weight:700;">
+                                <i class="fas fa-times"></i> Effacer
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-row" style="grid-template-columns:1fr 1fr 1fr;">
+                        <div class="form-group"><label>Chambres</label><input type="number" id="abChambres" min="0" value="0"></div>
+                        <div class="form-group"><label>Salles de bain</label><input type="number" id="abSdb" min="0" value="0"></div>
+                        <div class="form-group"><label>Surface (m2)</label><input type="number" id="abSurface" min="0" value="0"></div>
+                    </div>
+                    <div class="form-group"><label>Description</label><textarea id="abDescription" placeholder="Description du bien…"></textarea></div>
+                    <!-- IMAGE PRINCIPALE -->
+                    <div class="form-group">
+                        <label>Image principale (couverture)</label>
+                        <input type="hidden" id="abImageUrl">
+                        <div id="abMainZone"
+                            onclick="document.getElementById('abMainFile').click()"
+                            ondragover="event.preventDefault();this.style.borderColor='#2563eb';this.style.background='#eff6ff';"
+                            ondragleave="this.style.borderColor='#d1d5db';this.style.background='#fafafa';"
+                            ondrop="event.preventDefault();this.style.borderColor='#d1d5db';this.style.background='#fafafa';abUploadMain(event.dataTransfer.files[0]);"
+                            style="border:2px dashed #d1d5db;border-radius:14px;padding:24px;text-align:center;cursor:pointer;background:#fafafa;position:relative;transition:border-color 0.2s,background 0.2s;">
+                            <div id="abMainPlaceholder">
+                                <i class="fas fa-cloud-upload-alt" style="font-size:32px;color:#9ca3af;display:block;margin-bottom:8px;"></i>
+                                <p style="font-size:13px;color:#4b5563;font-weight:600;">Cliquer ou glisser-deposer une image</p>
+                                <p style="font-size:11px;color:#9ca3af;margin-top:4px;">JPG, PNG, WEBP — max 10 Mo</p>
+                            </div>
+                            <div id="abMainPreview" style="display:none;position:relative;">
+                                <img id="abMainThumb" style="max-height:200px;width:100%;border-radius:10px;object-fit:cover;" loading="lazy">
+                                <button type="button" onclick="event.stopPropagation();abClearMain()"
+                                    style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:50%;width:28px;height:28px;font-size:13px;cursor:pointer;">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                <div style="position:absolute;bottom:8px;left:8px;background:rgba(37,99,235,0.85);color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">
+                                    <i class="fas fa-star" style="margin-right:4px;font-size:9px;"></i>Couverture
+                                </div>
+                            </div>
+                            <div id="abMainLoader" style="display:none;padding:12px 8px;">
+                                <p id="abMainLoaderText" style="font-size:13px;color:#2563eb;font-weight:600;margin-bottom:10px;">Compression…</p>
+                                <div style="width:100%;height:7px;background:#dbeafe;border-radius:4px;overflow:hidden;">
+                                    <div id="abMainProgressBar" style="width:0%;height:100%;background:#2563eb;border-radius:4px;transition:width 0.15s ease;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="file" id="abMainFile" accept="image/*" style="display:none;" onchange="abUploadMain(this.files[0])">
+                    </div>
+                    <!-- GALERIE -->
+                    <div class="form-group">
+                        <label>Galerie de photos <span style="font-weight:400;color:#9ca3af;font-size:12px;">(jusqu'a 8 photos)</span></label>
+                        <input type="hidden" id="abGalerieUrls">
+                        <div id="abGaleriePreviews" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;"></div>
+                        <div id="abGalerieZone"
+                            onclick="document.getElementById('abGalerieFiles').click()"
+                            ondragover="event.preventDefault();this.style.borderColor='#2563eb';this.style.background='#eff6ff';"
+                            ondragleave="this.style.borderColor='#d1d5db';this.style.background='#fafafa';"
+                            ondrop="event.preventDefault();this.style.borderColor='#d1d5db';this.style.background='#fafafa';abUploadGalerie(event.dataTransfer.files);"
+                            style="border:2px dashed #d1d5db;border-radius:14px;padding:20px;text-align:center;cursor:pointer;background:#fafafa;transition:border-color 0.2s,background 0.2s;">
+                            <div id="abGaleriePlaceholder">
+                                <i class="fas fa-images" style="font-size:24px;color:#9ca3af;display:block;margin-bottom:6px;"></i>
+                                <p style="font-size:13px;color:#4b5563;font-weight:600;">Cliquer ou glisser-deposer des photos</p>
+                                <p style="font-size:11px;color:#9ca3af;margin-top:2px;">Plusieurs fichiers acceptes</p>
+                            </div>
+                            <div id="abGalerieLoader" style="display:none;flex-direction:column;align-items:center;gap:8px;padding:8px 16px;">
+                                <span id="abGalerieLoaderText" style="font-size:13px;color:#2563eb;font-weight:600;">Upload…</span>
+                                <div style="width:100%;height:6px;background:#dbeafe;border-radius:4px;overflow:hidden;">
+                                    <div id="abGalerieProgressBar" style="width:0%;height:100%;background:#2563eb;border-radius:4px;transition:width 0.2s ease;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="file" id="abGalerieFiles" accept="image/*" multiple style="display:none;" onchange="abUploadGalerie(this.files)">
+                    </div>
+                    <div class="form-group"><label>Equipements (separes par |)</label><textarea id="abEquipements" placeholder="Piscine|Jardin|Climatisation"></textarea></div>
+                    <button type="submit" id="abSubmitBtn" class="hover-lift"
+                        style="width:100%;background:#2563eb;color:#fff;font-weight:700;padding:16px;border-radius:16px;border:none;cursor:pointer;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:10px;">
+                        <i class="fas fa-paper-plane"></i> Publier l'annonce
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <!-- MODAL MOTIF REFUS DEMANDE -->
     <div id="motifRefusModal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px;">
@@ -411,6 +867,11 @@
         let demandes = [];
         let currentFilter = 'En attente';
         let regionBiens = [];
+        let allProprietaires = [];
+        let demandeSearch = '';
+        let propSearch = '';
+        let bienSearch = '';
+        let nosBiensSearch = '';
 
         async function apiFetch(url, options = {}) {
             const token = localStorage.getItem('jwtToken');
@@ -454,11 +915,17 @@
 
         function renderDemandes() {
             const grid = document.getElementById('demandesGrid');
+            const list = demandeSearch
+                ? demandes.filter(d =>
+                    (d.prenom || '').toLowerCase().includes(demandeSearch) ||
+                    (d.nom || '').toLowerCase().includes(demandeSearch) ||
+                    (d.email || '').toLowerCase().includes(demandeSearch))
+                : demandes;
 
-            if (!demandes.length) {
+            if (!list.length) {
                 grid.innerHTML = `<div style="text-align:center; padding:60px 0; background:#fff; border-radius:24px; border:2px dashed #e5e7eb;">
                     <i class="fas fa-inbox" style="font-size:36px; color:#d1d5db; display:block; margin-bottom:12px;"></i>
-                    <p style="color:#9ca3af; font-weight:600;">Aucune demande pour ce filtre.</p>
+                    <p style="color:#9ca3af; font-weight:600;">${demandeSearch ? 'Aucune demande ne correspond à votre recherche.' : 'Aucune demande pour ce filtre.'}</p>
                 </div>`;
                 return;
             }
@@ -469,7 +936,7 @@
                 'Refusée':    { bg: '#fee2e2', text: '#991b1b' },
             };
 
-            grid.innerHTML = demandes.map(d => {
+            grid.innerHTML = list.map(d => {
                 const c       = statutColors[d.statut] || statutColors['En attente'];
                 const date    = new Date(d.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
                 const docIcon = d.documentType === 'Passeport' ? 'fa-passport' : 'fa-id-card';
@@ -561,30 +1028,58 @@
                 return;
             }
 
-            const proprietaires = res.data;
+            allProprietaires = res.data;
+            renderProprietairesFiltered();
+        }
 
-            if (!proprietaires.length) {
+        function renderProprietairesFiltered() {
+            const grid = document.getElementById('proprietairesGrid');
+            const list = propSearch
+                ? allProprietaires.filter(p =>
+                    (p.prenom || '').toLowerCase().includes(propSearch) ||
+                    (p.nom || '').toLowerCase().includes(propSearch) ||
+                    (p.email || '').toLowerCase().includes(propSearch))
+                : allProprietaires;
+
+            if (!list.length) {
                 grid.innerHTML = `
                     <div class="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
                         <i class="fas fa-user-tie text-5xl text-gray-300 mb-3"></i>
-                        <p class="text-gray-400 font-semibold">Aucun propriétaire pour l'instant.</p>
+                        <p class="text-gray-400 font-semibold">${propSearch ? 'Aucun propriétaire ne correspond à votre recherche.' : 'Aucun propriétaire pour l\'instant.'}</p>
                     </div>`;
                 return;
             }
 
             grid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5';
-            grid.innerHTML = proprietaires.map(p => {
+            grid.innerHTML = list.map(p => {
                 const date = p.dateValidation
                     ? new Date(p.dateValidation).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
                     : null;
                 const initiales = ((p.prenom || '?')[0] + (p.nom || '?')[0]).toUpperCase();
                 const lienBiens = `/src/pages/admin_biens_proprietaire.html?id=${p.id}&nom=${encodeURIComponent((p.prenom || '') + ' ' + (p.nom || ''))}`;
+                const bloque = p.estBloque === true;
+                const headerGrad = bloque
+                    ? 'background:linear-gradient(135deg,#6b7280,#374151);'
+                    : 'background:linear-gradient(135deg,#2563eb,#1d4ed8);';
+                const blocBadge = bloque
+                    ? `<span style="margin-top:6px;display:inline-block;background:#ef4444;color:#fff;font-size:10px;font-weight:800;padding:2px 10px;border-radius:999px;"><i class="fas fa-ban" style="margin-right:3px;"></i>Suspendu</span>`
+                    : '';
+                const blocBtn = bloque
+                    ? `<button onclick="toggleBlocProprietaire(${p.id})" data-bloque="true"
+                          style="width:100%;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:7px;padding:10px;background:#fff;color:#059669;border:2px solid #059669;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;">
+                          <i class="fas fa-circle-check"></i>Réactiver le compte
+                       </button>`
+                    : `<button onclick="toggleBlocProprietaire(${p.id})" data-bloque="false"
+                          style="width:100%;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:7px;padding:10px;background:#fff;color:#ef4444;border:2px solid #ef4444;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;">
+                          <i class="fas fa-ban"></i>Bloquer le compte
+                       </button>`;
                 return `
-                <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden flex flex-col hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
-                    <div class="bg-gradient-to-br from-blue-600 to-blue-800 px-5 pt-6 pb-5 text-center">
-                        <div class="w-16 h-16 rounded-full bg-white/20 border-2 border-white/40 flex items-center justify-center mx-auto mb-3 text-xl font-extrabold text-white">${initiales}</div>
-                        <h4 class="font-extrabold text-white text-base leading-tight">${escapeHtml(p.prenom || '')} ${escapeHtml(p.nom || '')}</h4>
-                        <span class="mt-1.5 inline-block bg-white/20 text-white text-xs font-semibold px-3 py-0.5 rounded-full">Propriétaire</span>
+                <div id="prop-card-${p.id}" data-bloque="${bloque}" class="bg-white rounded-2xl border ${bloque ? 'border-red-200' : 'border-gray-200'} overflow-hidden flex flex-col hover:-translate-y-1 hover:shadow-lg transition-all duration-300" style="${bloque ? 'opacity:0.85;' : ''}">
+                    <div style="${headerGrad}padding:24px 20px 20px;text-align:center;">
+                        <div style="width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,0.2);border:2px solid rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:20px;font-weight:900;color:#fff;">${initiales}</div>
+                        <h4 style="font-weight:900;color:#fff;font-size:14px;line-height:1.3;margin:0;">${escapeHtml(p.prenom || '')} ${escapeHtml(p.nom || '')}</h4>
+                        <span style="margin-top:6px;display:inline-block;background:rgba(255,255,255,0.2);color:#fff;font-size:11px;font-weight:600;padding:2px 12px;border-radius:999px;">Propriétaire</span>
+                        ${blocBadge}
                     </div>
                     <div class="p-4 flex-1 flex flex-col gap-3">
                         <div class="flex items-center gap-2.5">
@@ -615,12 +1110,38 @@
                     </div>
                     <div class="px-4 pb-4">
                         <a href="${lienBiens}"
-                           class="block w-full text-center bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-bold py-2.5 rounded-xl hover:from-blue-700 hover:to-blue-800 transition no-underline">
-                            <i class="fas fa-eye mr-1.5"></i>Voir les biens publiés
+                           class="block w-full text-center text-white text-sm font-bold py-2.5 rounded-xl transition no-underline"
+                           style="background:linear-gradient(135deg,#2563eb,#1d4ed8);">
+                            <i class="fas fa-eye" style="margin-right:6px;"></i>Voir les biens publiés
                         </a>
+                        ${blocBtn}
                     </div>
                 </div>`;
             }).join('');
+        }
+
+        async function toggleBlocProprietaire(id) {
+            const card = document.getElementById(`prop-card-${id}`);
+            const estBloque = card?.dataset.bloque === 'true';
+            openConfirmModal({
+                title: estBloque ? 'Réactiver ce compte ?' : 'Bloquer ce compte ?',
+                message: estBloque
+                    ? 'Le propriétaire pourra à nouveau se connecter et gérer ses biens.'
+                    : 'Le propriétaire ne pourra plus se connecter tant que son compte est suspendu.',
+                icon: estBloque ? 'fa-circle-check' : 'fa-ban',
+                confirmLabel: estBloque ? 'Réactiver' : 'Bloquer',
+                onConfirm: async () => {
+                    const res = await apiFetch(`${API}/auth/users/${id}/toggle-bloc`, { method: 'PUT' });
+                    if (res.success) {
+                        showToast(res.estBloque ? 'info' : 'success',
+                            res.estBloque ? 'Compte suspendu' : 'Compte réactivé',
+                            res.message || '');
+                        renderProprietaires();
+                    } else {
+                        showToast('error', 'Erreur', res.message || 'Une erreur est survenue.');
+                    }
+                }
+            });
         }
 
         // ═══════════════════════════════════════════════════════════════════
@@ -640,7 +1161,13 @@
             }
 
             regionBiens = res.data;
+            renderBiensCards();
+        }
 
+        function renderBiensFiltered() { renderBiensCards(); }
+
+        function renderBiensCards() {
+            const grid = document.getElementById('biensGrid');
             // Onglets de filtre
             const counts = {
                 'En attente': regionBiens.filter(b => b.statutPublication === 'En attente').length,
@@ -664,7 +1191,12 @@
                     </button>
                 </div>`;
 
-            const filtered = regionBiens.filter(b => b.statutPublication === biensModerationFilter);
+            let filtered = regionBiens.filter(b => b.statutPublication === biensModerationFilter);
+            if (bienSearch) {
+                filtered = filtered.filter(b =>
+                    (b.titre || '').toLowerCase().includes(bienSearch) ||
+                    (b.localisation || '').toLowerCase().includes(bienSearch));
+            }
 
             if (!filtered.length) {
                 grid.innerHTML = filterBar + `
@@ -693,7 +1225,7 @@
 
                 const dimmed = sp !== 'Validée' || isOff;
                 const imageBlock = b.imageUrl
-                    ? `<img src="${escapeHtml(b.imageUrl)}" alt="${escapeHtml(b.titre)}"
+                    ? `<img src="${escapeHtml(b.imageUrl)}" alt="${escapeHtml(b.titre)}" loading="lazy"
                            style="width:100%;height:100%;object-fit:cover;transition:transform 0.7s ease;${dimmed ? 'filter:grayscale(50%);opacity:0.75;' : ''}">`
                     : `<div style="width:100%;height:100%;background:linear-gradient(135deg,#eff6ff,#dbeafe);display:flex;align-items:center;justify-content:center;">
                            <i class="fas fa-house" style="font-size:48px;color:#93c5fd;"></i>
@@ -702,7 +1234,7 @@
                 const galerieHtml = (b.galerie && b.galerie.length)
                     ? `<div style="display:flex;gap:6px;flex-wrap:wrap;padding:12px 16px 4px;">
                         ${b.galerie.map((url, i) => `
-                            <img src="${escapeHtml(url)}" alt="photo ${i+1}"
+                            <img src="${escapeHtml(url)}" alt="photo ${i+1}" loading="lazy"
                                  onclick="ouvrirPhoto('${escapeHtml(url)}')"
                                  style="width:56px;height:56px;object-fit:cover;border-radius:8px;cursor:pointer;">`
                         ).join('')}
@@ -780,7 +1312,15 @@
                         ${gpsHtml}
                         ${tfHtml}
                         ${motifHtml}
-                        <p style="font-size:16px;font-weight:800;color:#2563eb;margin-bottom:10px;">${escapeHtml(b.prix)}</p>
+                        <p style="font-size:16px;font-weight:800;color:#2563eb;margin-bottom:8px;">${escapeHtml(b.prix)}</p>
+                        <div style="display:flex;align-items:center;gap:12px;font-size:11px;color:#9ca3af;margin-bottom:10px;">
+                            <span><i class="fas fa-eye" style="margin-right:3px;"></i>${b.vues ?? 0}</span>
+                            <button onclick="toggleLikeAdmin(${b.id},'biens')" id="alk-btn-${b.id}"
+                                style="display:flex;align-items:center;gap:3px;background:none;border:none;cursor:pointer;font-size:11px;color:${b.estLikeParMoi?'#f43f5e':'#9ca3af'};font-weight:600;padding:0;" aria-label="Like">
+                                <i id="alk-icon-${b.id}" class="${b.estLikeParMoi?'fas':'far'} fa-heart"></i>
+                                <span id="alk-count-${b.id}">${b.likes ?? 0}</span>
+                            </button>
+                        </div>
                         <div style="display:flex;gap:8px;">
                             <button onclick="openDetailsAdmin(${b.id})"
                                 style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:9px 6px;background:#fff;color:#2563eb;border:2px solid #2563eb;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;">
@@ -803,7 +1343,26 @@
 
         function setBienFilter(filtre, btn) {
             biensModerationFilter = filtre;
-            renderBiens();
+            renderBiensCards();
+        }
+
+        async function toggleLikeAdmin(id, liste) {
+            const res = await apiFetch(`${API}/biens/${id}/like`, { method: 'POST' });
+            if (!res.success) return;
+
+            const prefix = liste === 'nosbiens' ? 'nlk' : 'alk';
+            const arr    = liste === 'nosbiens' ? nosBiens : regionBiens;
+
+            const b = arr.find(x => x.id === id);
+            if (b) { b.estLikeParMoi = res.liked; b.likes = res.total; }
+
+            const icon    = document.getElementById(`${prefix}-icon-${id}`);
+            const countEl = document.getElementById(`${prefix}-count-${id}`);
+            const btn     = document.getElementById(`${prefix}-btn-${id}`);
+
+            if (icon) icon.className = `${res.liked ? 'fas' : 'far'} fa-heart`;
+            if (countEl) countEl.textContent = res.total;
+            if (btn) btn.style.color = res.liked ? '#f43f5e' : '#9ca3af';
         }
 
         function ouvrirPhoto(url) {
@@ -1000,6 +1559,171 @@
             });
         }
 
+        // ═══════════════════════════════════════════════════════════════════
+        // NOS BIENS (biens publiés par l'équipe plateforme)
+        // ═══════════════════════════════════════════════════════════════════
+        const ADMIN_ROLES = ['AdminRegion', 'AdminPays', 'DirecteurProjet'];
+        let nosBiens = [];
+        let abEditId = null;
+
+        async function renderNosBiens() {
+            const grid = document.getElementById('nosBiensGrid');
+            grid.className = '';
+            grid.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;padding:60px 0;"><i class="fas fa-spinner fa-spin" style="color:#2563eb;font-size:28px;"></i></div>`;
+
+            const res = await apiFetch(`${API}/biens/region`);
+            if (!res.success) {
+                grid.innerHTML = `<p style="text-align:center;color:#ef4444;padding:40px 0;">Impossible de charger les biens.</p>`;
+                return;
+            }
+
+            nosBiens = (res.data || []).filter(b => ADMIN_ROLES.includes(b.proprietaireRole));
+            renderNosBiensCards();
+        }
+
+        function renderNosBiensFiltered() { renderNosBiensCards(); }
+
+        function renderNosBiensCards() {
+            const grid = document.getElementById('nosBiensGrid');
+            const list = nosBiensSearch
+                ? nosBiens.filter(b =>
+                    (b.titre || '').toLowerCase().includes(nosBiensSearch) ||
+                    (b.localisation || '').toLowerCase().includes(nosBiensSearch))
+                : nosBiens;
+
+            if (!nosBiens.length) {
+                grid.innerHTML = `
+                    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 0;background:#fff;border-radius:24px;border:2px dashed #e5e7eb;">
+                        <i class="fas fa-building" style="font-size:48px;color:#d1d5db;margin-bottom:12px;"></i>
+                        <p style="color:#9ca3af;font-weight:600;">Aucun bien publié par la plateforme.</p>
+                        <button onclick="openAdminBienModal()" style="margin-top:20px;background:#2563eb;color:#fff;border:none;border-radius:12px;padding:12px 28px;font-weight:700;cursor:pointer;">
+                            <i class="fas fa-plus" style="margin-right:6px;"></i>Créer le premier
+                        </button>
+                    </div>`;
+                return;
+            }
+
+            if (!list.length) {
+                grid.innerHTML = `
+                    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 0;background:#fff;border-radius:24px;border:2px dashed #e5e7eb;">
+                        <i class="fas fa-search" style="font-size:36px;color:#d1d5db;margin-bottom:12px;"></i>
+                        <p style="color:#9ca3af;font-weight:600;">Aucun bien ne correspond à votre recherche.</p>
+                    </div>`;
+                return;
+            }
+
+            const cardsHtml = list.map((b, idx) => {
+                const isOff = !b.estDisponible;
+                const imageBlock = b.imageUrl
+                    ? `<img src="${escapeHtml(b.imageUrl)}" alt="${escapeHtml(b.titre)}" loading="lazy"
+                           style="width:100%;height:100%;object-fit:cover;transition:transform 0.5s ease;${isOff ? 'filter:grayscale(60%);opacity:0.7;' : ''}">`
+                    : `<div style="width:100%;height:100%;background:linear-gradient(135deg,#eff6ff,#dbeafe);display:flex;align-items:center;justify-content:center;">
+                           <i class="fas fa-building" style="font-size:48px;color:#93c5fd;"></i>
+                       </div>`;
+                const statusBadge = isOff
+                    ? `<span style="position:absolute;top:12px;right:12px;background:rgba(17,24,39,0.8);color:#fff;font-size:10px;font-weight:800;padding:3px 10px;border-radius:999px;text-transform:uppercase;">Masqué</span>`
+                    : `<span style="position:absolute;top:12px;right:12px;background:#059669;color:#fff;font-size:10px;font-weight:800;padding:3px 10px;border-radius:999px;text-transform:uppercase;">En ligne</span>`;
+                const typeBadge = b.statut?.toLowerCase() === 'vente'
+                    ? `<span style="position:absolute;top:12px;left:12px;background:#f59e0b;color:#fff;font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px;">Vente</span>`
+                    : `<span style="position:absolute;top:12px;left:12px;background:#2563eb;color:#fff;font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px;">Location</span>`;
+
+                const toggleBtn = isOff
+                    ? `<button onclick="confirmerToggleNosBien(${b.id}, true)"
+                           style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:9px 6px;background:#059669;color:#fff;border:none;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;">
+                           <i class="fas fa-eye"></i> Mettre en ligne
+                       </button>`
+                    : `<button onclick="confirmerToggleNosBien(${b.id}, false)"
+                           style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:9px 6px;background:#dc2626;color:#fff;border:none;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;">
+                           <i class="fas fa-eye-slash"></i> Masquer
+                       </button>`;
+
+                return `
+                <div class="nosb-card" data-idx="${idx}"
+                     style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08);border:1px solid #f3f4f6;opacity:0;transform:translateY(20px);transition:opacity 0.5s ease,transform 0.5s ease;"
+                     onmouseover="this.style.transform='translateY(-6px)';this.style.boxShadow='0 16px 40px rgba(0,0,0,0.12)'"
+                     onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 20px rgba(0,0,0,0.08)'">
+                    <div style="position:relative;height:200px;overflow:hidden;cursor:pointer;" onclick="ouvrirPhoto('${escapeHtml(b.imageUrl || '')}')">
+                        ${imageBlock}${typeBadge}${statusBadge}
+                    </div>
+                    <div style="padding:16px;">
+                        <h3 style="font-size:15px;font-weight:800;color:#111827;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(b.titre)}</h3>
+                        <p style="font-size:12px;color:#6b7280;margin-bottom:8px;display:flex;align-items:center;gap:5px;">
+                            <i class="fas fa-map-marker-alt" style="color:#2563eb;font-size:11px;"></i>
+                            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(b.localisation)}</span>
+                        </p>
+                        <p style="font-size:16px;font-weight:800;color:#2563eb;margin-bottom:8px;">${escapeHtml(b.prix)}</p>
+                        <div style="display:flex;align-items:center;gap:12px;font-size:11px;color:#9ca3af;margin-bottom:10px;">
+                            <span><i class="fas fa-eye" style="margin-right:3px;"></i>${b.vues ?? 0}</span>
+                            <button onclick="toggleLikeAdmin(${b.id},'nosbiens')" id="nlk-btn-${b.id}"
+                                style="display:flex;align-items:center;gap:3px;background:none;border:none;cursor:pointer;font-size:11px;color:${b.estLikeParMoi?'#f43f5e':'#9ca3af'};font-weight:600;padding:0;" aria-label="Like">
+                                <i id="nlk-icon-${b.id}" class="${b.estLikeParMoi?'fas':'far'} fa-heart"></i>
+                                <span id="nlk-count-${b.id}">${b.likes ?? 0}</span>
+                            </button>
+                        </div>
+                        <div style="display:flex;gap:6px;margin-bottom:6px;">
+                            <button onclick="openDetailsNosBien(${b.id})"
+                                style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:9px 4px;background:#fff;color:#2563eb;border:2px solid #2563eb;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;">
+                                <i class="fas fa-info-circle"></i> Détails
+                            </button>
+                            <button onclick="openEditAdminBien(${b.id})"
+                                style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:9px 4px;background:#7c3aed;color:#fff;border:none;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;">
+                                <i class="fas fa-pencil"></i> Modifier
+                            </button>
+                        </div>
+                        <div>${toggleBtn}</div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            grid.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:24px;">${cardsHtml}</div>`;
+            setTimeout(() => {
+                document.querySelectorAll('.nosb-card').forEach((card, i) => {
+                    setTimeout(() => { card.style.opacity = '1'; card.style.transform = 'translateY(0)'; }, i * 60);
+                });
+            }, 50);
+        }
+
+        function openDetailsNosBien(id) {
+            const b = nosBiens.find(x => x.id === id);
+            if (!b) return;
+            // Injecter dans regionBiens temporairement pour que openDetailsAdmin le trouve
+            if (!regionBiens.find(x => x.id === id)) regionBiens.push(b);
+            openDetailsAdmin(id);
+        }
+
+        function confirmerToggleNosBien(id, activer) {
+            openConfirmModal({
+                title: activer ? 'Mettre en ligne ?' : 'Masquer ce bien ?',
+                message: activer
+                    ? 'Le bien redeviendra visible sur la plateforme.'
+                    : 'Le bien ne sera plus visible. Vous pourrez le remettre en ligne à tout moment.',
+                icon: activer ? 'fa-eye' : 'fa-eye-slash',
+                confirmLabel: activer ? 'Mettre en ligne' : 'Masquer',
+                onConfirm: async () => {
+                    let res;
+                    if (!activer) {
+                        res = await apiFetch(`${API}/biens/${id}`, { method: 'DELETE' });
+                    } else {
+                        const b = nosBiens.find(x => x.id === id);
+                        if (!b) return;
+                        res = await apiFetch(`${API}/biens/${id}`, {
+                            method: 'PUT',
+                            body: JSON.stringify({
+                                titre: b.titre, type: b.type, statut: b.statut, prix: b.prix,
+                                chambres: b.chambres, sallesDeBain: b.sallesDeBain, surface: b.surface,
+                                localisation: b.localisation, description: b.description,
+                                imageUrl: b.imageUrl, galerieUrls: b.galerie?.join('|') || '',
+                                equipements: b.equipements?.join('|') || '', standing: b.standing,
+                                estDisponible: true
+                            })
+                        });
+                    }
+                    if (res.success) renderNosBiens();
+                    else showToast('error', 'Erreur', res.message || '');
+                }
+            });
+        }
+
         function filterDemandes(statut, btn) {
             currentFilter = statut;
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -1058,7 +1782,7 @@
                 icon: 'fa-sign-out-alt',
                 confirmLabel: 'Déconnexion',
                 onConfirm: () => {
-                    ['isLoggedIn', 'userPrenom', 'userNom', 'userEmail', 'userId', 'userRole', 'userPhoto', 'jwtToken'].forEach(k => localStorage.removeItem(k));
+                    ['isLoggedIn', 'userPrenom', 'userNom', 'userEmail', 'userId', 'userRole', 'userPhoto', 'userEstBloque', 'jwtToken'].forEach(k => localStorage.removeItem(k));
                     showToast('success', 'À bientôt !', 'Vous avez été déconnecté avec succès.', 1800);
                     setTimeout(() => { window.location.href = './login.html'; }, 1200);
                 }
@@ -1121,6 +1845,107 @@
         // ═══════════════════════════════════════════════════════════════════
         // NAVIGATION
         // ═══════════════════════════════════════════════════════════════════
+        // ═══════════════════════════════════════════════════════════════════
+        // DASHBOARD ADMIN
+        // ═══════════════════════════════════════════════════════════════════
+        async function renderAdminDashboard() {
+            const prenom = localStorage.getItem('userPrenom') || 'Admin';
+            const greetEl = document.getElementById('dashGreeting');
+            if (greetEl) greetEl.textContent = `Bienvenue, ${prenom} ! Voici un aperçu de votre région.`;
+
+            const kpiGrid    = document.getElementById('adminKpiGrid');
+            const demandesEl = document.getElementById('dashDemandesRecentes');
+            const biensEl    = document.getElementById('dashBiensRecents');
+            const propsEl    = document.getElementById('dashPropsRecents');
+
+            const spinner = `<div style="display:flex;align-items:center;justify-content:center;padding:32px 0;"><i class="fas fa-spinner fa-spin" style="color:#2563eb;font-size:22px;"></i></div>`;
+            if (kpiGrid)    kpiGrid.innerHTML    = spinner;
+            if (demandesEl) demandesEl.innerHTML = spinner;
+            if (biensEl)    biensEl.innerHTML    = spinner;
+            if (propsEl)    propsEl.innerHTML    = spinner;
+
+            const [resBiens, resProps, resDemandes] = await Promise.all([
+                apiFetch(`${API}/biens/region`),
+                apiFetch(`${API}/demandesproprietaire/proprietaires`),
+                apiFetch(`${API}/demandesproprietaire?statut=En+attente`),
+            ]);
+
+            const biens    = resBiens.success    ? (resBiens.data    || []) : [];
+            const props    = resProps.success    ? (resProps.data    || []) : [];
+            const demandes = resDemandes.success ? (resDemandes.data || []) : [];
+
+            const biensActifs = biens.filter(b => b.estDisponible).length;
+            const propsActifs = props.filter(p => !p.estBloque).length;
+
+            // ── KPI ──────────────────────────────────────────────────────
+            if (kpiGrid) kpiGrid.innerHTML = [
+                { icon:'fa-building',   color:'#2563eb', bg:'#eff6ff', label:'Biens publiés',       value:biens.length,    sub:`${biensActifs} en ligne` },
+                { icon:'fa-user-tie',   color:'#7c3aed', bg:'#f5f3ff', label:'Propriétaires',       value:props.length,    sub:`${propsActifs} actifs` },
+                { icon:'fa-user-clock', color:'#f59e0b', bg:'#fffbeb', label:'Demandes en attente', value:demandes.length, sub:'à traiter' },
+                { icon:'fa-eye',        color:'#059669', bg:'#ecfdf5', label:'Biens visibles',      value:biensActifs,     sub:'sur la plateforme' },
+            ].map(k => `
+                <div style="flex:1 1 220px;max-width:280px;background:#fff;border-radius:20px;border:1px solid #f3f4f6;padding:20px 22px;display:flex;align-items:center;gap:16px;box-shadow:0 2px 12px rgba(0,0,0,0.05);">
+                    <div style="width:52px;height:52px;border-radius:16px;background:${k.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="fas ${k.icon}" style="font-size:22px;color:${k.color};"></i>
+                    </div>
+                    <div>
+                        <p style="font-size:30px;font-weight:900;color:#111827;line-height:1;margin:0;">${k.value}</p>
+                        <p style="font-size:13px;font-weight:700;color:#374151;margin:3px 0 1px;">${k.label}</p>
+                        <p style="font-size:11px;color:#9ca3af;margin:0;">${k.sub}</p>
+                    </div>
+                </div>`).join('');
+
+            // ── Demandes en attente (liste) ───────────────────────────────
+            if (demandesEl) demandesEl.innerHTML = demandes.length
+                ? demandes.slice(0, 5).map(d => `
+                    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f9fafb;">
+                        <div style="width:36px;height:36px;border-radius:50%;background:#e0e7ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800;color:#4f46e5;font-size:12px;">
+                            ${((d.prenom||'?')[0]+(d.nom||'?')[0]).toUpperCase()}
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                            <p style="font-size:13px;font-weight:700;color:#111827;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(d.prenom||'')} ${escapeHtml(d.nom||'')}</p>
+                            <p style="font-size:11px;color:#9ca3af;margin:2px 0 0;">${new Date(d.createdAt).toLocaleDateString('fr-FR')}</p>
+                        </div>
+                        <span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:3px 10px;border-radius:999px;flex-shrink:0;">En attente</span>
+                    </div>`).join('')
+                : `<p style="text-align:center;color:#9ca3af;padding:24px 0;font-size:13px;">Aucune demande en attente.</p>`;
+
+            // ── Biens récents (liste) ─────────────────────────────────────
+            if (biensEl) biensEl.innerHTML = biens.length
+                ? biens.slice(0, 5).map(b => `
+                    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f9fafb;">
+                        <div style="width:44px;height:44px;border-radius:10px;overflow:hidden;flex-shrink:0;">
+                            ${b.imageUrl
+                                ? `<img src="${escapeHtml(b.imageUrl)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
+                                : `<div style="width:100%;height:100%;background:#eff6ff;display:flex;align-items:center;justify-content:center;"><i class="fas fa-building" style="color:#93c5fd;font-size:18px;"></i></div>`
+                            }
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                            <p style="font-size:13px;font-weight:700;color:#111827;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(b.titre)}</p>
+                            <p style="font-size:11px;color:#9ca3af;margin:2px 0 0;">${escapeHtml(b.localisation)}</p>
+                        </div>
+                        <span style="font-size:12px;font-weight:800;color:#2563eb;flex-shrink:0;">${escapeHtml(b.prix)}</span>
+                    </div>`).join('')
+                : `<p style="text-align:center;color:#9ca3af;padding:24px 0;font-size:13px;">Aucun bien publié.</p>`;
+
+            // ── Propriétaires (grille) ────────────────────────────────────
+            if (propsEl) propsEl.innerHTML = props.length
+                ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;">` +
+                  props.slice(0, 6).map(p => {
+                    const ini = ((p.prenom||'?')[0]+(p.nom||'?')[0]).toUpperCase();
+                    const blq = p.estBloque;
+                    return `
+                    <div style="display:flex;align-items:center;gap:12px;background:${blq?'#fff7ed':'#f8fafc'};border:1px solid ${blq?'#fed7aa':'#f3f4f6'};border-radius:14px;padding:12px 14px;">
+                        <div style="width:40px;height:40px;border-radius:50%;background:${blq?'#fee2e2':'#eff6ff'};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800;color:${blq?'#dc2626':'#2563eb'};font-size:13px;">${ini}</div>
+                        <div style="flex:1;min-width:0;">
+                            <p style="font-size:13px;font-weight:700;color:#111827;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.prenom||'')} ${escapeHtml(p.nom||'')}</p>
+                            <p style="font-size:11px;color:#9ca3af;margin:2px 0 0;">${p.nbBiensPublies} bien${p.nbBiensPublies!==1?'s':''} publié${p.nbBiensPublies!==1?'s':''}</p>
+                        </div>
+                        ${blq?`<span style="font-size:9px;font-weight:800;color:#dc2626;background:#fee2e2;padding:2px 8px;border-radius:999px;flex-shrink:0;">Suspendu</span>`:''}
+                    </div>`}).join('') + `</div>`
+                : `<p style="text-align:center;color:#9ca3af;padding:24px 0;font-size:13px;">Aucun propriétaire pour l'instant.</p>`;
+        }
+
         function switchSection(id, btn) {
             document.querySelectorAll('.section-fade').forEach(s => s.classList.remove('active'));
             const section = document.getElementById(`section-${id}`);
@@ -1128,10 +1953,14 @@
             document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
             if (btn) btn.classList.add('active');
             closeSidebar();
+            if (id === 'dashboard')     renderAdminDashboard();
             if (id === 'notifications') renderNotifications();
             if (id === 'proprietaires') renderProprietaires();
             if (id === 'biens')         renderBiens();
-window.scrollTo(0, 0);
+            if (id === 'nos-biens')     renderNosBiens();
+            if (id === 'publier')       openAdminBienModal();
+            if (id === 'parametres')    aLoadProfile();
+            window.scrollTo(0, 0);
         }
 
         // ═══════════════════════════════════════════════════════════════════
@@ -1218,6 +2047,7 @@ window.scrollTo(0, 0);
 
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
+                closeAdminBienModal();
                 closeConfirmModal();
                 closeDetailsAdmin();
                 const lb = document.getElementById('adminLightbox');
@@ -1246,15 +2076,505 @@ window.scrollTo(0, 0);
         // ═══════════════════════════════════════════════════════════════════
         // INIT
         // ═══════════════════════════════════════════════════════════════════
+        // ═══════════════════════════════════════════════════════════════════
+        // PUBLICATION D'ANNONCE (ADMIN)
+        // ═══════════════════════════════════════════════════════════════════
+        function abCompressImage(file, maxWidth = 1920, quality = 0.82) {
+            return new Promise(resolve => {
+                const img = new Image();
+                const burl = URL.createObjectURL(file);
+                img.onload = () => {
+                    URL.revokeObjectURL(burl);
+                    const scale  = Math.min(1, maxWidth / img.width);
+                    const canvas = document.createElement('canvas');
+                    canvas.width  = Math.round(img.width  * scale);
+                    canvas.height = Math.round(img.height * scale);
+                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                    canvas.toBlob(b => resolve(b || file), 'image/jpeg', quality);
+                };
+                img.onerror = () => { URL.revokeObjectURL(burl); resolve(file); };
+                img.src = burl;
+            });
+        }
+
+        async function abUploadImage(file, onProgress) {
+            const blob = await abCompressImage(file);
+            return new Promise((resolve, reject) => {
+                const fd = new FormData();
+                fd.append('file', blob, 'image.jpg');
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', `${API}/upload/image`);
+                const token = localStorage.getItem('jwtToken');
+                if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                xhr.upload.onprogress = e => {
+                    if (e.lengthComputable && onProgress) onProgress(Math.round(e.loaded / e.total * 100));
+                };
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try { resolve(JSON.parse(xhr.responseText).url); }
+                        catch { reject(new Error('Réponse invalide')); }
+                    } else { reject(new Error('Upload échoué')); }
+                };
+                xhr.onerror = () => reject(new Error('Erreur réseau'));
+                xhr.send(fd);
+            });
+        }
+
+        const BIEN_TYPES = [
+            { value: 'villa',       label: 'Villa'       },
+            { value: 'appartement', label: 'Appartement' },
+            { value: 'studio',      label: 'Studio'      },
+            { value: 'terrain',     label: 'Terrain'     },
+            { value: 'bureau',      label: 'Bureau'      },
+            { value: 'commerce',    label: 'Commerce'    },
+        ];
+        function populateTypeSelect(selectId, selected = '') {
+            const sel = document.getElementById(selectId);
+            if (!sel) return;
+            sel.innerHTML = '<option value="">Choisir…</option>' +
+                BIEN_TYPES.map(t =>
+                    `<option value="${t.value}"${t.value === selected ? ' selected' : ''}>${t.label}</option>`
+                ).join('');
+        }
+
+        let abGalerieUrls = [];
+
+        // ─── MAP PICKER (MapLibre GL + MapTiler) ──────────────────────────────
+        // Clé gratuite sur maptiler.com → remplacer MAPTILER_KEY ci-dessous
+        const MAPTILER_KEY = 'bCigMZttWKkPqccJrF34';
+        const MAP_STYLE    = `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`;
+        const CM_CENTER    = [11.502, 3.848]; // Cameroun [lng, lat]
+
+        let _abPickMap = null, _abPickMarker = null;
+
+        function abInitPickMap() {
+            const ph  = document.getElementById('abPickMapPlaceholder');
+            const cnt = document.getElementById('abPickMapContainer');
+            if (!ph || !cnt) return;
+            ph.style.display  = 'none';
+            cnt.style.display = 'block';
+            if (_abPickMap) { _abPickMap.resize(); return; }
+
+            _abPickMap = new maplibregl.Map({
+                container: 'abPickMapContainer',
+                style: MAP_STYLE,
+                center: CM_CENTER,
+                zoom: 5,
+                attributionControl: false
+            });
+            _abPickMap.addControl(new maplibregl.AttributionControl({ compact: true }));
+
+            _abPickMap.on('click', (e) => {
+                const { lat, lng } = e.lngLat;
+                if (_abPickMarker) _abPickMarker.remove();
+                _abPickMarker = new maplibregl.Marker({ color: '#2563eb', draggable: true })
+                    .setLngLat([lng, lat])
+                    .addTo(_abPickMap);
+                _abPickMarker.on('dragend', () => {
+                    const p = _abPickMarker.getLngLat();
+                    document.getElementById('abLatitude').value  = p.lat.toFixed(6);
+                    document.getElementById('abLongitude').value = p.lng.toFixed(6);
+                    _showAbCoords(p.lat, p.lng);
+                });
+                document.getElementById('abLatitude').value  = lat.toFixed(6);
+                document.getElementById('abLongitude').value = lng.toFixed(6);
+                _showAbCoords(lat, lng);
+            });
+        }
+
+        function _showAbCoords(lat, lng) {
+            const bar = document.getElementById('abPickMapCoords');
+            const txt = document.getElementById('abPickMapCoordsText');
+            if (bar) bar.style.display = 'block';
+            if (txt) txt.textContent   = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        }
+
+        function abClearPickMap() {
+            document.getElementById('abLatitude').value  = '';
+            document.getElementById('abLongitude').value = '';
+            const bar = document.getElementById('abPickMapCoords');
+            if (bar) bar.style.display = 'none';
+            if (_abPickMarker) { _abPickMarker.remove(); _abPickMarker = null; }
+        }
+
+        function abResetPickMap() {
+            abClearPickMap();
+            const ph  = document.getElementById('abPickMapPlaceholder');
+            const cnt = document.getElementById('abPickMapContainer');
+            if (ph)  ph.style.display  = 'flex';
+            if (cnt) cnt.style.display = 'none';
+            if (_abPickMap) { _abPickMap.remove(); _abPickMap = null; }
+        }
+
+        // ─── OPEN / CLOSE MODAL ───────────────────────────────────────────────
+        function openAdminBienModal() {
+            abEditId = null;
+            document.getElementById('adminBienModalTitle').textContent = 'Publier une annonce';
+            document.getElementById('abSubmitBtn').innerHTML = '<i class="fas fa-paper-plane" style="margin-right:8px;"></i>Publier l\'annonce';
+            document.getElementById('adminBienForm').reset();
+            abClearMain();
+            abGalerieUrls = [];
+            document.getElementById('abGalerieUrls').value = '';
+            document.getElementById('abGaleriePreviews').innerHTML = '';
+            document.getElementById('abGaleriePlaceholder').style.display = 'block';
+            abResetPickMap();
+            const modal = document.getElementById('adminBienModal');
+            modal.classList.remove('modal-hidden');
+            modal.classList.add('modal-visible');
+        }
+
+        function openEditAdminBien(id) {
+            const b = nosBiens.find(x => x.id === id);
+            if (!b) return;
+            // Ouvrir le modal (reset)
+            openAdminBienModal();
+            // Passer en mode édition
+            abEditId = id;
+            document.getElementById('adminBienModalTitle').textContent = 'Modifier une annonce';
+            document.getElementById('abSubmitBtn').innerHTML = '<i class="fas fa-save" style="margin-right:8px;"></i>Enregistrer les modifications';
+            // Pré-remplir les champs
+            document.getElementById('abTitre').value        = b.titre        || '';
+            document.getElementById('abType').value         = b.type         || '';
+            document.getElementById('abStatut').value       = b.statut       || '';
+            document.getElementById('abPrix').value         = b.prix         || '';
+            document.getElementById('abStanding').value     = b.standing     || '';
+            document.getElementById('abChambres').value     = b.chambres     || 0;
+            document.getElementById('abSdb').value          = b.sallesDeBain || 0;
+            document.getElementById('abSurface').value      = b.surface      || 0;
+            document.getElementById('abLocalisation').value = b.localisation || '';
+            document.getElementById('abDescription').value  = b.description  || '';
+            document.getElementById('abEquipements').value  = (b.equipements || []).join('|');
+            // Image de couverture
+            if (b.imageUrl) {
+                document.getElementById('abImageUrl').value = b.imageUrl;
+                document.getElementById('abMainThumb').src  = b.imageUrl;
+                document.getElementById('abMainPreview').style.display    = 'block';
+                document.getElementById('abMainPlaceholder').style.display = 'none';
+            }
+            // Galerie
+            abGalerieUrls = b.galerie ? [...b.galerie] : [];
+            document.getElementById('abGalerieUrls').value = abGalerieUrls.join('|');
+            abRenderGalerie();
+            if (abGalerieUrls.length > 0) document.getElementById('abGaleriePlaceholder').style.display = 'none';
+            // GPS
+            if (b.latitude  != null) document.getElementById('abLatitude').value  = b.latitude;
+            if (b.longitude != null) document.getElementById('abLongitude').value = b.longitude;
+        }
+
+        function closeAdminBienModal() {
+            const modal = document.getElementById('adminBienModal');
+            modal.classList.add('modal-hidden');
+            modal.classList.remove('modal-visible');
+            abResetPickMap();
+            abEditId = null;
+        }
+
+        async function abUploadMain(file) {
+            if (!file) return;
+            const allowed = ['image/jpeg','image/png','image/webp'];
+            if (!allowed.includes(file.type)) { showToast('error','Format invalide','JPG, PNG ou WEBP.'); return; }
+            if (file.size > 10 * 1024 * 1024) { showToast('error','Fichier trop lourd','Max 10 Mo.'); return; }
+
+            const loader = document.getElementById('abMainLoader');
+            const loaderText = document.getElementById('abMainLoaderText');
+            const bar = document.getElementById('abMainProgressBar');
+            const placeholder = document.getElementById('abMainPlaceholder');
+            const preview = document.getElementById('abMainPreview');
+
+            loader.style.display = 'block'; placeholder.style.display = 'none'; preview.style.display = 'none';
+            if (loaderText) loaderText.textContent = 'Compression…';
+            if (bar) bar.style.width = '0%';
+
+            try {
+                const url = await abUploadImage(file, pct => {
+                    if (loaderText) loaderText.textContent = `Upload… ${pct}%`;
+                    if (bar) bar.style.width = pct + '%';
+                });
+                document.getElementById('abImageUrl').value = url;
+                document.getElementById('abMainThumb').src = url;
+                preview.style.display = 'block';
+                showToast('success','Photo uploadée','Image de couverture définie.');
+            } catch (e) {
+                placeholder.style.display = 'block';
+                showToast('error','Erreur upload','Vérifiez votre connexion.');
+            } finally { loader.style.display = 'none'; }
+        }
+
+        function abClearMain() {
+            document.getElementById('abImageUrl').value = '';
+            document.getElementById('abMainPreview').style.display = 'none';
+            document.getElementById('abMainPlaceholder').style.display = 'block';
+            document.getElementById('abMainFile').value = '';
+        }
+
+        async function abUploadGalerie(files) {
+            if (!files || !files.length) return;
+            const MAX = 8;
+            const remaining = MAX - abGalerieUrls.length;
+            if (remaining <= 0) { showToast('warning','Galerie complète','Maximum 8 photos.'); return; }
+            const toUpload = Array.from(files).filter(f => f.size <= 10 * 1024 * 1024).slice(0, remaining);
+            if (!toUpload.length) return;
+
+            const loader = document.getElementById('abGalerieLoader');
+            const loaderTxt = document.getElementById('abGalerieLoaderText');
+            const placeholder = document.getElementById('abGaleriePlaceholder');
+            loader.style.display = 'flex'; placeholder.style.display = 'none';
+            if (loaderTxt) loaderTxt.textContent = `Upload 0 / ${toUpload.length}…`;
+            let done = 0;
+
+            const results = await Promise.allSettled(toUpload.map(async f => {
+                const url = await abUploadImage(f);
+                done++;
+                if (loaderTxt) loaderTxt.textContent = `Upload ${done} / ${toUpload.length}…`;
+                return url;
+            }));
+
+            for (const r of results) {
+                if (r.status === 'fulfilled') abGalerieUrls.push(r.value);
+                else showToast('error','Erreur','Une photo n\'a pas pu être uploadée.');
+            }
+
+            document.getElementById('abGalerieUrls').value = abGalerieUrls.join('|');
+            abRenderGalerie();
+            loader.style.display = 'none';
+            if (abGalerieUrls.length < MAX) placeholder.style.display = 'block';
+            showToast('success','Photos ajoutées',`${abGalerieUrls.length} photo(s) dans la galerie.`);
+        }
+
+        function abRenderGalerie() {
+            const container = document.getElementById('abGaleriePreviews');
+            container.innerHTML = abGalerieUrls.map((url, i) => `
+                <div style="position:relative;width:80px;height:80px;border-radius:10px;overflow:hidden;flex-shrink:0;">
+                    <img src="${url}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">
+                    <button type="button" onclick="abRemoveGalerie(${i})"
+                        style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:10px;cursor:pointer;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>`).join('');
+        }
+
+        function abRemoveGalerie(idx) {
+            abGalerieUrls.splice(idx, 1);
+            document.getElementById('abGalerieUrls').value = abGalerieUrls.join('|');
+            abRenderGalerie();
+            if (abGalerieUrls.length < 8) document.getElementById('abGaleriePlaceholder').style.display = 'block';
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('adminBienForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const imageUrl = document.getElementById('abImageUrl').value;
+                if (!imageUrl) { showToast('error','Image manquante','Veuillez uploader une image de couverture.'); return; }
+                if (!document.getElementById('abTitre').value.trim()) { showToast('error','Titre manquant','Renseignez le titre.'); return; }
+
+                const isEdit = abEditId != null;
+                const btn = document.getElementById('abSubmitBtn');
+                const original = btn.innerHTML;
+                btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${isEdit ? 'Enregistrement…' : 'Publication…'}`;
+                btn.disabled = true;
+
+                const payload = {
+                    Titre:        document.getElementById('abTitre').value.trim(),
+                    Type:         document.getElementById('abType').value,
+                    Statut:       document.getElementById('abStatut').value,
+                    Prix:         document.getElementById('abPrix').value.trim(),
+                    Standing:     document.getElementById('abStanding').value,
+                    Chambres:     parseInt(document.getElementById('abChambres').value) || 0,
+                    SallesDeBain: parseInt(document.getElementById('abSdb').value) || 0,
+                    Surface:      parseInt(document.getElementById('abSurface').value) || 0,
+                    Localisation: document.getElementById('abLocalisation').value.trim(),
+                    Description:  document.getElementById('abDescription').value.trim(),
+                    Equipements:  document.getElementById('abEquipements').value.trim(),
+                    ImageUrl:     imageUrl,
+                    GalerieUrls:  document.getElementById('abGalerieUrls').value,
+                    Latitude:     document.getElementById('abLatitude').value  ? parseFloat(document.getElementById('abLatitude').value)  : null,
+                    Longitude:    document.getElementById('abLongitude').value ? parseFloat(document.getElementById('abLongitude').value) : null,
+                };
+
+                const url    = isEdit ? `${API}/biens/${abEditId}` : `${API}/biens`;
+                const method = isEdit ? 'PUT' : 'POST';
+                const result = await apiFetch(url, { method, body: JSON.stringify(payload) });
+
+                btn.innerHTML = original;
+                btn.disabled = false;
+
+                if (result.success) {
+                    showToast('success', isEdit ? 'Bien modifié !' : 'Annonce publiée !',
+                        result.message || (isEdit ? 'Les modifications ont été enregistrées.' : 'Votre bien est maintenant visible sur la plateforme.'));
+                    closeAdminBienModal();
+                    renderNosBiens();
+                } else {
+                    console.error('[Admin bien error]', result);
+                    const errMsg = result.message || result.title || 'Une erreur est survenue.';
+                    showToast('error','Erreur', errMsg);
+                }
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            populateTypeSelect('abType');
             const prenom = localStorage.getItem('userPrenom') || 'Admin';
             const role = localStorage.getItem('userRole') || '';
             document.getElementById('welcomeName').textContent = `Bienvenue, ${prenom}`;
             document.getElementById('regionBadge').textContent = role === 'AdminRegion' ? 'Admin Région' : role;
-            loadDemandes(currentFilter);
+            renderAdminDashboard();
+            document.getElementById('ps')?.remove();
             refreshNotifBadge();
             setInterval(refreshNotifBadge, 30000);
+            if ('serviceWorker' in navigator) navigator.serviceWorker.register('../sw.js').catch(() => {});
         });
+
+        // ═══════════════════════════════════════════════════════════════════
+        // PARAMÈTRES ADMIN
+        // ═══════════════════════════════════════════════════════════════════
+        function aFb(ok, msg, elId = 'aFeedback', iconId = 'aFeedbackIcon', msgId = 'aFeedbackMsg') {
+            const fb = document.getElementById(elId);
+            const ic = document.getElementById(iconId);
+            const sp = document.getElementById(msgId);
+            if (!fb) return;
+            fb.className = ok ? 'ok' : 'err';
+            ic.className = ok ? 'fas fa-check-circle' : 'fas fa-circle-xmark';
+            sp.textContent = msg;
+            setTimeout(() => { fb.className = ''; }, 5000);
+        }
+
+        function aToggleEye(inputId, btn) {
+            const inp = document.getElementById(inputId);
+            if (!inp) return;
+            const isHidden = inp.type === 'password';
+            inp.type = isHidden ? 'text' : 'password';
+            btn.querySelector('i').className = isHidden ? 'fas fa-eye-slash' : 'fas fa-eye';
+        }
+
+        async function aLoadProfile() {
+            const token = localStorage.getItem('jwtToken');
+            if (!token) return;
+            try {
+                const res  = await fetch(`${API}/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
+                const json = await res.json();
+                if (!json.success) return;
+                const d = json.data;
+                const prenom    = d.prenom    || localStorage.getItem('userPrenom')    || '';
+                const nom       = d.nom       || localStorage.getItem('userNom')       || '';
+                const telephone = d.telephone || localStorage.getItem('userTelephone') || '';
+                document.getElementById('aPrenom').value    = prenom;
+                document.getElementById('aNom').value       = nom;
+                document.getElementById('aEmail').value     = d.email || '';
+                document.getElementById('aTelephone').value = telephone;
+                document.getElementById('aProfileName').textContent = `${prenom} ${nom}`.trim();
+                aUpdatePhoneDisplay(telephone);
+                const photoSrc = d.photoUrl ||
+                    `https://ui-avatars.com/api/?name=${encodeURIComponent(prenom + ' ' + nom)}&background=2563eb&color=fff`;
+                document.getElementById('aProfilePreview').src = photoSrc;
+                if (d.photoUrl) localStorage.setItem('userPhoto', d.photoUrl);
+            } catch (_) {}
+        }
+
+        function aUpdatePhoneDisplay(tel) {
+            const el  = document.getElementById('aProfilePhone');
+            const txt = document.getElementById('aProfilePhoneText');
+            if (!el || !txt) return;
+            if (tel) {
+                txt.textContent  = tel;
+                el.style.display = 'block';
+            } else {
+                el.style.display = 'none';
+            }
+        }
+
+        async function aSaveProfile() {
+            const token     = localStorage.getItem('jwtToken');
+            const btn       = document.getElementById('aSaveBtn');
+            const prenom    = document.getElementById('aPrenom').value.trim();
+            const nom       = document.getElementById('aNom').value.trim();
+            const telephone = document.getElementById('aTelephone').value.trim();
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...';
+            try {
+                const res  = await fetch(`${API}/auth/profile`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ Nom: nom, Prenom: prenom, Telephone: telephone }),
+                });
+                const json = await res.json();
+                if (!json.success) { aFb(false, json.message || 'Erreur lors de la mise à jour.'); return; }
+                localStorage.setItem('userPrenom', prenom);
+                localStorage.setItem('userNom', nom);
+                localStorage.setItem('userTelephone', telephone);
+                document.getElementById('aProfileName').textContent = `${prenom} ${nom}`.trim();
+                aUpdatePhoneDisplay(telephone);
+                aFb(true, 'Profil mis à jour avec succès !');
+            } catch (_) {
+                aFb(false, 'Erreur réseau. Vérifiez votre connexion.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-floppy-disk"></i> Enregistrer les modifications';
+            }
+        }
+
+        async function aUploadPhoto(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 10 * 1024 * 1024) { aFb(false, 'Image trop lourde (max 10 Mo).'); return; }
+            const spinner  = document.getElementById('aPhotoSpinner');
+            const token    = localStorage.getItem('jwtToken');
+            const formData = new FormData();
+            formData.append('file', file);
+            if (spinner) spinner.style.display = 'flex';
+            try {
+                const upRes  = await fetch(`${API}/upload/image`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData });
+                const upJson = await upRes.json();
+                if (!upJson.success) { aFb(false, upJson.message || "Échec de l'upload."); return; }
+                await fetch(`${API}/auth/profile`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ PhotoUrl: upJson.url }),
+                });
+                document.getElementById('aProfilePreview').src = upJson.url;
+                localStorage.setItem('userPhoto', upJson.url);
+                aFb(true, 'Photo de profil mise à jour !');
+            } catch (_) {
+                aFb(false, "Erreur lors de l'upload de la photo.");
+            } finally {
+                if (spinner) spinner.style.display = 'none';
+                event.target.value = '';
+            }
+        }
+
+        async function aChangePassword() {
+            const token   = localStorage.getItem('jwtToken');
+            const current = document.getElementById('aPwdCurrent').value;
+            const newPwd  = document.getElementById('aPwdNew').value;
+            const confirm = document.getElementById('aPwdConfirm').value;
+            const btn     = document.getElementById('aPwdBtn');
+
+            if (!current || !newPwd || !confirm) { aFb(false, 'Veuillez remplir tous les champs.', 'aPwdFeedback', 'aPwdFeedbackIcon', 'aPwdFeedbackMsg'); return; }
+            if (newPwd !== confirm)               { aFb(false, 'Les mots de passe ne correspondent pas.', 'aPwdFeedback', 'aPwdFeedbackIcon', 'aPwdFeedbackMsg'); return; }
+            if (newPwd.length < 6)                { aFb(false, 'Le mot de passe doit contenir au moins 6 caractères.', 'aPwdFeedback', 'aPwdFeedbackIcon', 'aPwdFeedbackMsg'); return; }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Modification...';
+            try {
+                const res  = await fetch(`${API}/auth/changepassword`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ CurrentPassword: current, NewPassword: newPwd }),
+                });
+                const json = await res.json();
+                aFb(json.success, json.message || (json.success ? 'Mot de passe modifié !' : 'Erreur.'), 'aPwdFeedback', 'aPwdFeedbackIcon', 'aPwdFeedbackMsg');
+                if (json.success) {
+                    document.getElementById('aPwdCurrent').value = '';
+                    document.getElementById('aPwdNew').value     = '';
+                    document.getElementById('aPwdConfirm').value = '';
+                }
+            } catch (_) {
+                aFb(false, 'Erreur réseau.', 'aPwdFeedback', 'aPwdFeedbackIcon', 'aPwdFeedbackMsg');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-shield-check"></i> Modifier le mot de passe';
+            }
+        }
     </script>
     <script type="module" src="/src/js/main.js"></script>
 </body>

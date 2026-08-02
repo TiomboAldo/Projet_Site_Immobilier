@@ -109,10 +109,18 @@ export function normalizeBien(b) {
         description: b.description,
         features: b.equipements || [],
         standing: b.standing,
-        proprietaireId: b.proprietaireId ?? null,
+        proprietaireId:        b.proprietaireId ?? null,
+        telephoneProprietaire: b.telephoneProprietaire ?? null,
         lat: b.latitude  ?? null,
         lng: b.longitude ?? null,
+        vues: b.vues ?? 0,
+        likes: b.likes ?? 0,
+        estLikeParMoi: b.estLikeParMoi ?? false,
     };
+}
+
+export function likerBien(id) {
+    return apiFetch(`${API_BASE}/biens/${id}/like`, { method: 'POST' });
 }
 
 export function sendMessage(destinataireId, bienId, contenu) {

@@ -119,6 +119,31 @@ namespace SaidAfricaBackend.Migrations
                     b.ToTable("Biens");
                 });
 
+            modelBuilder.Entity("SaidAfricaBackend.BienLike", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<int>("BienId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("BienId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("BienLikes");
+                });
+
             modelBuilder.Entity("SaidAfricaBackend.Commentaire", b =>
                 {
                     b.Property<int>("Id")
@@ -416,6 +441,9 @@ namespace SaidAfricaBackend.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<bool>("EstBloque")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("EstValide")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("tinyint(1)")
@@ -445,6 +473,9 @@ namespace SaidAfricaBackend.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("PhotoUrl")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("Prenom")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -453,6 +484,10 @@ namespace SaidAfricaBackend.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Telephone")
                         .IsRequired()
                         .HasColumnType("longtext");
 
@@ -476,6 +511,25 @@ namespace SaidAfricaBackend.Migrations
                     b.Navigation("Proprietaire");
 
                     b.Navigation("ValideParAdmin");
+                });
+
+            modelBuilder.Entity("SaidAfricaBackend.BienLike", b =>
+                {
+                    b.HasOne("SaidAfricaBackend.Bien", "Bien")
+                        .WithMany("BienLikes")
+                        .HasForeignKey("BienId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SaidAfricaBackend.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Bien");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SaidAfricaBackend.Commentaire", b =>
@@ -630,6 +684,8 @@ namespace SaidAfricaBackend.Migrations
 
             modelBuilder.Entity("SaidAfricaBackend.Bien", b =>
                 {
+                    b.Navigation("BienLikes");
+
                     b.Navigation("Favoris");
 
                     b.Navigation("Reservations");

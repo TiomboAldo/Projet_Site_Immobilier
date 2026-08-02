@@ -60,10 +60,26 @@ namespace SaidAfricaBackend.Controllers
                     b.Localisation.Contains(q) ||
                     b.Description.Contains(q));
 
-            var biens = await query
-                .OrderByDescending(b => b.DateAjout)
-                .Select(b => new BienDto(b))
-                .ToListAsync();
+            var biensList = await query.OrderByDescending(b => b.DateAjout).ToListAsync();
+            var bienIds   = biensList.Select(b => b.Id).ToList();
+
+            var likesDict = await _context.BienLikes
+                .Where(l => bienIds.Contains(l.BienId))
+                .GroupBy(l => l.BienId)
+                .Select(g => new { BienId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.BienId, x => x.Count);
+
+            int? callerId = User.Identity?.IsAuthenticated == true ? CurrentUserId() : null;
+            var likedByMe = callerId.HasValue
+                ? (await _context.BienLikes
+                    .Where(l => bienIds.Contains(l.BienId) && l.UserId == callerId.Value)
+                    .Select(l => l.BienId)
+                    .ToListAsync()).ToHashSet()
+                : new HashSet<int>();
+
+            var biens = biensList.Select(b => new BienDto(b,
+                likesDict.GetValueOrDefault(b.Id, 0),
+                likedByMe.Contains(b.Id))).ToList();
 
             return Ok(new { success = true, data = biens });
         }
@@ -72,14 +88,33 @@ namespace SaidAfricaBackend.Controllers
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var bien = await _context.Biens.FindAsync(id);
+            var bien = await _context.Biens
+                .Include(b => b.Proprietaire)
+                .FirstOrDefaultAsync(b => b.Id == id);
             if (bien == null)
                 return NotFound(new { success = false, message = "Bien introuvable." });
 
-            bien.Vues += 1;
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                int uid = CurrentUserId();
+                bool alreadyViewed = await _context.BienVues.AnyAsync(v => v.BienId == id && v.UserId == uid);
+                if (!alreadyViewed)
+                {
+                    _context.BienVues.Add(new BienVue { BienId = id, UserId = uid });
+                    bien.Vues += 1;
+                }
+            }
+            else
+            {
+                bien.Vues += 1;
+            }
             await _context.SaveChangesAsync();
 
-            return Ok(new { success = true, data = new BienDto(bien) });
+            int likes = await _context.BienLikes.CountAsync(l => l.BienId == id);
+            bool estLikeParMoi = User.Identity?.IsAuthenticated == true
+                && await _context.BienLikes.AnyAsync(l => l.BienId == id && l.UserId == CurrentUserId());
+
+            return Ok(new { success = true, data = new BienDto(bien, likes, estLikeParMoi) });
         }
 
         // ─── GET /api/biens/region  (admin : tous les biens de la région) ─────
@@ -95,12 +130,15 @@ namespace SaidAfricaBackend.Controllers
                 query = query.Where(b => b.Proprietaire != null && b.Proprietaire.Region == admin!.Region);
             }
 
-            var biens = await query
-                .OrderByDescending(b => b.DateAjout)
-                .Select(b => new BienRegionDto(b))
-                .ToListAsync();
+            var biensList = await query.OrderByDescending(b => b.DateAjout).ToListAsync();
+            var bienIds   = biensList.Select(b => b.Id).ToList();
+            var likesDict = await _context.BienLikes
+                .Where(l => bienIds.Contains(l.BienId))
+                .GroupBy(l => l.BienId)
+                .Select(g => new { BienId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.BienId, x => x.Count);
 
-            return Ok(new { success = true, data = biens });
+            return Ok(new { success = true, data = biensList.Select(b => new BienRegionDto(b, likesDict.GetValueOrDefault(b.Id, 0))).ToList() });
         }
 
         // ─── GET /api/biens/mine ──────────────────────────────────────────────
@@ -110,13 +148,19 @@ namespace SaidAfricaBackend.Controllers
         {
             var userId = CurrentUserId();
 
-            var biens = await _context.Biens
+            var biensList = await _context.Biens
                 .Where(b => b.ProprietaireId == userId)
                 .OrderByDescending(b => b.DateAjout)
-                .Select(b => new BienDto(b))
                 .ToListAsync();
 
-            return Ok(new { success = true, data = biens });
+            var bienIds = biensList.Select(b => b.Id).ToList();
+            var likesDict = await _context.BienLikes
+                .Where(l => bienIds.Contains(l.BienId))
+                .GroupBy(l => l.BienId)
+                .Select(g => new { BienId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.BienId, x => x.Count);
+
+            return Ok(new { success = true, data = biensList.Select(b => new BienDto(b, likesDict.GetValueOrDefault(b.Id, 0))).ToList() });
         }
 
         // ─── GET /api/biens/document/{filename}  (titre foncier — admin) ──────
@@ -167,22 +211,57 @@ namespace SaidAfricaBackend.Controllers
             bien.Latitude     = req.Latitude;
             bien.Longitude    = req.Longitude;
 
-            bool etaitDesactive = !bien.EstDisponible;
-            bien.EstDisponible  = req.EstDisponible;
-
-            if (IsAdmin() && bien.ProprietaireId != null && etaitDesactive && req.EstDisponible)
+            string message;
+            if (IsAdmin())
             {
-                NotificationHelper.Creer(_context,
-                    bien.ProprietaireId.Value,
-                    "moderation",
-                    "Votre annonce a été réactivée",
-                    $"Votre bien « {bien.Titre} » a été réactivé par l'administration régionale.",
-                    "mes-biens");
+                bool etaitDesactive = !bien.EstDisponible;
+                bien.EstDisponible = req.EstDisponible;
+
+                if (bien.ProprietaireId != null && etaitDesactive && req.EstDisponible)
+                    NotificationHelper.Creer(_context,
+                        bien.ProprietaireId.Value,
+                        "moderation",
+                        "Votre annonce a été réactivée",
+                        $"Votre bien « {bien.Titre} » a été réactivé par l'administration régionale.",
+                        "mes-biens");
+
+                message = "Bien mis à jour avec succès.";
+            }
+            else
+            {
+                // Modification par le propriétaire → retour en file de modération
+                bien.StatutPublication = "En attente";
+                bien.EstDisponible     = false;
+                bien.ValideParAdminId  = null;
+                bien.ValideLe          = null;
+                bien.MotifsRejet       = null;
+
+                // Notifier l'admin régional responsable de la région du propriétaire
+                if (bien.ProprietaireId.HasValue)
+                {
+                    var prop = await _context.Users.FindAsync(bien.ProprietaireId.Value);
+                    if (prop != null)
+                    {
+                        var admins = await _context.Users
+                            .Where(u => (u.Role == "AdminRegion" || u.Role == "AdminPays" || u.Role == "DirecteurProjet")
+                                        && u.Region == prop.Region)
+                            .ToListAsync();
+
+                        foreach (var admin in admins)
+                            NotificationHelper.Creer(_context, admin.Id,
+                                "moderation",
+                                "Bien modifié — revalidation requise",
+                                $"{prop.Prenom} {prop.Nom} a modifié « {bien.Titre} ». Veuillez revalider avant remise en ligne.",
+                                "biens");
+                    }
+                }
+
+                message = "Modifications sauvegardées. Votre annonce est en attente de revalidation par l'admin régional.";
             }
 
             await _context.SaveChangesAsync();
 
-            return Ok(new { success = true, message = "Bien mis à jour avec succès.", data = new BienDto(bien) });
+            return Ok(new { success = true, message, data = new BienDto(bien) });
         }
 
         // ─── PUT /api/biens/{id}/valider  (AdminRegion valide) ───────────────
@@ -382,6 +461,9 @@ namespace SaidAfricaBackend.Controllers
                 return BadRequest(new { success = false, message = "Le titre foncier est obligatoire pour les biens en vente." });
             }
 
+            // Les admins publient directement sans passer par la modération
+            bool isAdmin = CurrentRole() is "AdminRegion" or "AdminPays" or "DirecteurProjet";
+
             var bien = new Bien
             {
                 Titre             = req.Titre,
@@ -400,14 +482,16 @@ namespace SaidAfricaBackend.Controllers
                 Latitude          = req.Latitude,
                 Longitude         = req.Longitude,
                 ProprietaireId    = proprietaireId,
-                EstDisponible     = false,
-                StatutPublication = "En attente",
+                EstDisponible     = isAdmin,
+                StatutPublication = isAdmin ? "Validée" : "En attente",
+                ValideParAdminId  = isAdmin ? proprietaireId : null,
+                ValideLe          = isAdmin ? DateTime.UtcNow : null,
                 TitreFoncierPath  = req.TitreFoncierPath,
             };
 
             _context.Biens.Add(bien);
 
-            if (proprio?.Region != null)
+            if (!isAdmin && proprio?.Region != null)
             {
                 var admins = await _context.Users
                     .Where(u => u.Role == "AdminRegion" && u.Region == proprio.Region)
@@ -429,9 +513,42 @@ namespace SaidAfricaBackend.Controllers
             return Ok(new
             {
                 success = true,
-                message = "Votre annonce est soumise. Elle sera visible après validation par l'admin régional.",
+                message = isAdmin
+                    ? $"Annonce publiée et disponible sur la plateforme."
+                    : "Votre annonce est soumise. Elle sera visible après validation par l'admin régional.",
                 data = new BienDto(bien)
             });
+        }
+
+        // ─── POST /api/biens/{id}/like  (toggle like — authentifié) ──────────
+        [HttpPost("{id:int}/like")]
+        [Authorize]
+        public async Task<IActionResult> ToggleLike(int id)
+        {
+            var bien = await _context.Biens.FindAsync(id);
+            if (bien == null)
+                return NotFound(new { success = false, message = "Bien introuvable." });
+
+            var userId   = CurrentUserId();
+            var existing = await _context.BienLikes
+                .FirstOrDefaultAsync(l => l.BienId == id && l.UserId == userId);
+
+            bool liked;
+            if (existing != null)
+            {
+                _context.BienLikes.Remove(existing);
+                liked = false;
+            }
+            else
+            {
+                _context.BienLikes.Add(new BienLike { BienId = id, UserId = userId });
+                liked = true;
+            }
+
+            await _context.SaveChangesAsync();
+            int total = await _context.BienLikes.CountAsync(l => l.BienId == id);
+
+            return Ok(new { success = true, liked, total });
         }
     }
 
@@ -456,35 +573,41 @@ namespace SaidAfricaBackend.Controllers
         public string?  TitreFoncierPath  { get; set; }
         public DateTime DateAjout         { get; set; }
         public int      Vues              { get; set; }
-        public int?     ProprietaireId    { get; set; }
-        public double?  Latitude          { get; set; }
-        public double?  Longitude         { get; set; }
-        public List<string> Galerie       { get; set; }
-        public List<string> Equipements   { get; set; }
+        public int      Likes             { get; set; }
+        public bool     EstLikeParMoi     { get; set; }
+        public int?     ProprietaireId         { get; set; }
+        public string?  TelephoneProprietaire  { get; set; }
+        public double?  Latitude               { get; set; }
+        public double?  Longitude              { get; set; }
+        public List<string> Galerie            { get; set; }
+        public List<string> Equipements        { get; set; }
 
-        public BienDto(Bien b)
+        public BienDto(Bien b, int likes = 0, bool estLikeParMoi = false)
         {
-            Id                = b.Id;
-            Titre             = b.Titre;
-            Type              = b.Type;
-            Statut            = b.Statut;
-            Prix              = b.Prix;
-            Chambres          = b.Chambres;
-            SallesDeBain      = b.SallesDeBain;
-            Surface           = b.Surface;
-            Localisation      = b.Localisation;
-            Description       = b.Description;
-            ImageUrl          = b.ImageUrl;
-            Standing          = b.Standing;
-            EstDisponible     = b.EstDisponible;
-            StatutPublication = b.StatutPublication;
-            MotifsRejet       = b.MotifsRejet;
-            TitreFoncierPath  = b.TitreFoncierPath;
-            DateAjout         = b.DateAjout;
-            Vues              = b.Vues;
-            ProprietaireId    = b.ProprietaireId;
-            Latitude          = b.Latitude;
-            Longitude         = b.Longitude;
+            Id                    = b.Id;
+            Titre                 = b.Titre;
+            Type                  = b.Type;
+            Statut                = b.Statut;
+            Prix                  = b.Prix;
+            Chambres              = b.Chambres;
+            SallesDeBain          = b.SallesDeBain;
+            Surface               = b.Surface;
+            Localisation          = b.Localisation;
+            Description           = b.Description;
+            ImageUrl              = b.ImageUrl;
+            Standing              = b.Standing;
+            EstDisponible         = b.EstDisponible;
+            StatutPublication     = b.StatutPublication;
+            MotifsRejet           = b.MotifsRejet;
+            TitreFoncierPath      = b.TitreFoncierPath;
+            DateAjout             = b.DateAjout;
+            Vues                  = b.Vues;
+            Likes                 = likes;
+            EstLikeParMoi         = estLikeParMoi;
+            ProprietaireId        = b.ProprietaireId;
+            TelephoneProprietaire = b.Proprietaire?.Telephone;
+            Latitude              = b.Latitude;
+            Longitude             = b.Longitude;
             Galerie           = string.IsNullOrEmpty(b.GalerieUrls)
                                     ? new List<string>()
                                     : b.GalerieUrls.Split('|').ToList();
@@ -498,11 +621,13 @@ namespace SaidAfricaBackend.Controllers
     {
         public string? PrenomProprietaire { get; set; }
         public string? NomProprietaire    { get; set; }
+        public string? ProprietaireRole   { get; set; }
 
-        public BienRegionDto(Bien b) : base(b)
+        public BienRegionDto(Bien b, int likes = 0) : base(b, likes)
         {
             PrenomProprietaire = b.Proprietaire?.Prenom;
             NomProprietaire    = b.Proprietaire?.Nom;
+            ProprietaireRole   = b.Proprietaire?.Role;
         }
     }
 

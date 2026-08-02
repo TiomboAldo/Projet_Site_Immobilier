@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using SaidAfricaBackend;
 using SaidAfricaBackend.Services;
@@ -79,6 +81,17 @@ var app = builder.Build();
 // --- CONFIGURATION DU PIPELINE (L'ordre est vital) ---
 app.UseRouting();
 app.UseCors("AllowFrontend");
+
+// Servir les images uploadées depuis Uploads/ sans authentification
+var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "Uploads");
+Directory.CreateDirectory(uploadsPath);
+var provider = new FileExtensionContentTypeProvider();
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider    = new PhysicalFileProvider(uploadsPath),
+    RequestPath     = "/uploads",
+    ContentTypeProvider = provider,
+});
 
 app.UseAuthentication();
 app.UseAuthorization();

@@ -1,6 +1,6 @@
 // Import du fichier CSS principal (généré par Tailwind)
 import '../style/input.css';
-import { getBiens, getFavorisByUser, addFavori, removeFavori, normalizeBien } from './api.js';
+import { getBiens, getFavorisByUser, addFavori, removeFavori, normalizeBien, likerBien } from './api.js';
 
 /* -------------------------------------------
  * GESTION DU MENU MOBILE (Sidebar et Overlay)
@@ -238,6 +238,38 @@ function updateFavoriteIcon(id) {
     }
 }
 
+window.toggleLike = async function (id) {
+    const userId = getUserId();
+    if (!userId) {
+        localStorage.setItem('redirectAfterLogin', 'accueil_user.html');
+        if (reservationModal) {
+            reservationModal.classList.remove('hidden');
+            void reservationModal.offsetWidth;
+            reservationModal.classList.add('opacity-100');
+            const modalContent = document.getElementById('modalContent');
+            if (modalContent) modalContent.classList.remove('scale-95');
+        }
+        return;
+    }
+
+    const res = await likerBien(id);
+    if (!res.success) return;
+
+    const prop = properties.find(p => p.id === id);
+    if (prop) { prop.estLikeParMoi = res.liked; prop.likes = res.total; }
+
+    const icon    = document.getElementById(`like-icon-${id}`);
+    const countEl = document.getElementById(`like-count-${id}`);
+    const btn     = icon?.parentElement;
+
+    if (icon) icon.className = `${res.liked ? 'fas' : 'far'} fa-heart mr-0.5`;
+    if (countEl) countEl.textContent = res.total;
+    if (btn) {
+        if (res.liked) btn.classList.add('text-red-400');
+        else btn.classList.remove('text-red-400');
+    }
+};
+
 window.toggleFavorite = async function (id) {
     const userId = getUserId();
     if (!userId) {
@@ -364,7 +396,8 @@ function renderPage(page = 1, list = currentList) {
     pageItems.forEach((p) => {
         const typeLabel = (p.type || '').toLowerCase();
         const statutLabel = (p.status || '').toLowerCase();
-        const favoriteIconClass = favIds.includes(p.id) ? 'fas fa-heart text-red-500' : 'far fa-heart text-gray-400';
+
+        const thumbUrl = escapeHtml(p.img || '').replace(/\/upload\/[^/]*\//, '/upload/f_auto,q_auto,w_400/');
 
         const card = document.createElement('div');
         card.className = 'property-card opacity-0 translate-y-10 transition-all duration-700 ease-out bg-white rounded-2xl shadow-xl overflow-hidden transform hover:-translate-y-2 hover:shadow-2xl';
@@ -372,11 +405,15 @@ function renderPage(page = 1, list = currentList) {
         card.innerHTML = `
             <div class="overflow-hidden relative">
                 <a href="javascript:void(0)" onclick="viewDetails(${p.id})" class="block overflow-hidden">
-                    <img src="${escapeHtml(p.img)}" 
-                         alt="${escapeHtml(p.title)}" 
-                         onerror="this.src='src/assets/images/placeholder.jpg'" 
-                         class="w-full h-56 object-cover transition duration-700 ease-out hover:scale-110 cursor-pointer" 
-                         loading="lazy" />
+                    <div class="w-full h-56 bg-gray-200 relative overflow-hidden" style="background:linear-gradient(90deg,#e5e7eb 25%,#f3f4f6 50%,#e5e7eb 75%);background-size:200% 100%;animation:card-shimmer 1.4s infinite;">
+                        <img src="${thumbUrl}"
+                             alt="${escapeHtml(p.title)}"
+                             onerror="this.src='src/assets/images/placeholder.jpg';this.style.opacity='1';this.parentElement.style.animation='none';"
+                             onload="this.style.opacity='1';this.parentElement.style.animation='none';this.parentElement.style.background='none';"
+                             class="w-full h-56 object-cover transition duration-700 ease-out hover:scale-110 cursor-pointer absolute inset-0"
+                             style="opacity:0;transition:opacity 0.35s ease;"
+                             loading="lazy" />
+                    </div>
                 </a>
                 
                 <span class="absolute top-4 left-4 ${statutLabel === 'location' ? 'bg-green-600' : 'bg-blue-600'} text-white text-sm font-semibold px-4 py-1 rounded-full shadow-md pointer-events-none">
@@ -388,10 +425,6 @@ function renderPage(page = 1, list = currentList) {
             <div class="p-6">
                 <div class="flex items-start justify-between">
                     <h3 class="text-xl font-bold text-gray-800 mb-2">${escapeHtml(p.title)}</h3>
-                    
-                    <button onclick="toggleFavorite(${p.id})" class="p-1 -mt-1 -mr-1 rounded-full hover:bg-red-50 transition" aria-label="Ajouter aux favoris">
-                        <i id="favorite-icon-${p.id}" class="${favoriteIconClass} text-xl transition-all duration-300"></i>
-                    </button>
                 </div>
                 
                 <p class="text-gray-500 text-sm mb-4 flex items-center space-x-4">
@@ -401,6 +434,13 @@ function renderPage(page = 1, list = currentList) {
                 </p>
                 <div class="flex items-center justify-between mb-4 border-t border-gray-100 pt-3">
                     <span class="text-2xl font-extrabold ${statutLabel === 'location' ? 'text-green-600' : 'text-blue-600'}">${escapeHtml(p.price)}</span>
+                    <div class="flex items-center gap-3 text-xs text-gray-400">
+                        <span><i class="fas fa-eye mr-0.5"></i> ${p.vues ?? 0}</span>
+                        <button onclick="toggleLike(${p.id})" class="flex items-center gap-0.5 hover:text-red-400 transition-colors ${p.estLikeParMoi ? 'text-red-400' : ''}" aria-label="Like">
+                            <i id="like-icon-${p.id}" class="${p.estLikeParMoi ? 'fas' : 'far'} fa-heart mr-0.5"></i>
+                            <span id="like-count-${p.id}">${p.likes ?? 0}</span>
+                        </button>
+                    </div>
                 </div>
                 <div class="flex items-center justify-between space-x-3">
                     <button onclick="viewDetails(${p.id})" class="flex-1 text-center px-4 py-2 border border-blue-600 text-blue-600 text-sm font-semibold rounded-lg hover:bg-blue-50 transition flex items-center justify-center">
@@ -664,6 +704,26 @@ function createScrollTopButton() {
 /* -------------------------------------------
  * INITIALISATION
  * ------------------------------------------- */
+function updateNavForLogin() {
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    if (!isLoggedIn) return;
+
+    const role = localStorage.getItem('userRole') || 'Client';
+    let spaceUrl;
+    if (['AdminRegion', 'AdminPays', 'DirecteurProjet'].includes(role)) {
+        spaceUrl = 'src/pages/espace_admin_region.html';
+    } else if (role === 'Proprietaire' || role === 'UserIndep') {
+        spaceUrl = 'src/pages/espace_proprietaire.html';
+    } else {
+        spaceUrl = 'src/pages/accueil_user.html';
+    }
+
+    document.querySelectorAll('a[href="src/pages/login.html"]').forEach(a => {
+        a.href = spaceUrl;
+        a.innerHTML = '<i class="fas fa-user-circle mr-2"></i>Mon espace';
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const originalViewAllBtnContainer = document.querySelector('#biens > div.text-center');
     if (originalViewAllBtnContainer) {
@@ -671,6 +731,7 @@ document.addEventListener('DOMContentLoaded', () => {
         viewAllBtn.classList.add('hidden', 'mt-4');
     }
 
+    updateNavForLogin();
     setupModalListeners();
     loadProperties();
     attachFilterListeners();

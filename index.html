@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SaidAfrica - Accueil Immobilier Haut de Gamme</title>
+    <title>Levetimmo - Accueil Immobilier Haut de Gamme</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" href="/src/assets/images/logo.jpeg">
     <link rel="stylesheet" href="./src/assets/icones/fontawesome/css/all.min.css">
@@ -13,10 +13,45 @@
         body {
             font-family: 'georgia', sans-serif;
         }
+        #page-loader {
+            position: fixed;
+            inset: 0;
+            background: #ffffff;
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            transition: opacity 0.4s ease;
+        }
+        #page-loader.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+        #page-loader img {
+            width: 80px;
+            height: auto;
+            object-fit: contain;
+        }
+        .pl-ring {
+            width: 52px;
+            height: 52px;
+            border: 5px solid #dbeafe;
+            border-top-color: #2563eb;
+            border-radius: 50%;
+            animation: pl-spin 0.75s linear infinite;
+        }
+        @keyframes pl-spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 
 <body class="bg-gray-50 text-gray-800 antialiased pt-16">
+
+    <div id="page-loader">
+        <img src="src/assets/images/logo.jpeg" alt="SaidAfrica">
+        <div class="pl-ring"></div>
+    </div>
 
     <header id="main-header" class="bg-white shadow-lg fixed w-full top-0 left-0 z-50 transition-all duration-500 py-4">
         <div class="container mx-auto flex justify-between items-center px-6 lg:px-12 transition-all duration-500">
@@ -252,7 +287,10 @@
                     <option value="">Type de bien</option>
                     <option value="villa">Villa</option>
                     <option value="appartement">Appartement</option>
+                    <option value="studio">Studio</option>
                     <option value="terrain">Terrain</option>
+                    <option value="bureau">Bureau</option>
+                    <option value="commerce">Commerce</option>
                 </select>
 
                 <select id="statusSelect"
@@ -390,7 +428,7 @@
                     </div>
                 </div>
                 <div class="md:w-1/2 relative" data-aos="fade-left">
-                    <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
+                    <img src="src/assets/images/bureau_luxe.jpg"
                         alt="Bureau luxe" class="rounded-3xl shadow-2xl">
                     <div class="absolute -bottom-6 -left-6 bg-blue-600 p-8 rounded-3xl hidden md:block shadow-xl">
                         <p class="text-white font-bold text-2xl tracking-tighter">Luxury Real Estate</p>
@@ -585,7 +623,7 @@
                 <p class="text-sm text-gray-400 mb-6">Restez informé de nos nouvelles opportunités de luxe.</p>
 
                 <form class="relative w-full max-w-md">
-                    <input type="email" placeholder="Votre adresse email professionnel"
+                    <input type="email" placeholder="Votre adresse email"
                         class="w-full bg-white px-6 py-4 pr-[140px] rounded-full focus:outline-none text-gray-800 text-sm shadow-inner"
                         required>
                     <button type="submit"
@@ -692,6 +730,13 @@
             duration: 1000,
             once: true,
             offset: 100
+        });
+
+        window.addEventListener('load', function () {
+            const loader = document.getElementById('page-loader');
+            if (!loader) return;
+            loader.classList.add('fade-out');
+            setTimeout(() => loader.remove(), 450);
         });
     </script>
 </body>
