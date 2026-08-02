@@ -321,6 +321,7 @@ namespace SaidAfricaBackend.Controllers
         public string    Nom            { get; set; } = string.Empty;
         public string    Email          { get; set; } = string.Empty;
         public string?   Region         { get; set; }
+        public string?   PhotoUrl       { get; set; }
         public int       NbBiensPublies { get; set; }
         public DateTime? DateValidation { get; set; }
         public bool      EstBloque      { get; set; }
@@ -332,6 +333,7 @@ namespace SaidAfricaBackend.Controllers
             Nom            = u.Nom;
             Email          = u.Email;
             Region         = u.Region;
+            PhotoUrl       = u.PhotoUrl;
             NbBiensPublies = nbBiens;
             DateValidation = dateValidation;
             EstBloque      = u.EstBloque;
