@@ -25,6 +25,20 @@ namespace SaidAfricaBackend.Controllers
         private string? CurrentRole()   => User.FindFirst(ClaimTypes.Role)?.Value;
         private bool    IsAdmin()       => CurrentRole() is "AdminRegion" or "AdminPays" or "DirecteurProjet";
 
+        // ─── GET /api/demandesproprietaire/regions-with-admin ────────────────
+        [HttpGet("regions-with-admin")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetRegionsWithAdmin()
+        {
+            var regions = await _context.Users
+                .Where(u => u.Role == "AdminRegion" && u.Region != null)
+                .Select(u => u.Region!)
+                .Distinct()
+                .OrderBy(r => r)
+                .ToListAsync();
+            return Ok(new { success = true, data = regions });
+        }
+
         // ─── POST /api/demandesproprietaire ───────────────────────────────────
         [HttpPost]
         [Authorize(Roles = "Client")]
@@ -49,6 +63,12 @@ namespace SaidAfricaBackend.Controllers
                 return BadRequest(new { success = false, message = "Pièce d'identité : format accepté JPG, PNG ou PDF." });
             if (req.DocumentType is not ("CNI" or "Passeport"))
                 return BadRequest(new { success = false, message = "Type de document invalide." });
+
+            // Vérifier qu'un admin régional existe pour cette région
+            bool adminExiste = await _context.Users
+                .AnyAsync(u => u.Role == "AdminRegion" && u.Region == req.Region);
+            if (!adminExiste)
+                return BadRequest(new { success = false, message = $"La région '{req.Region}' ne dispose pas encore d'administrateur régional. Veuillez choisir une autre région ou contacter le support." });
 
             // Validation selfie
             if (req.Selfie == null || req.Selfie.Length == 0)

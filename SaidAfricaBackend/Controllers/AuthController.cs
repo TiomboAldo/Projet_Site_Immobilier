@@ -172,6 +172,56 @@ namespace SaidAfricaBackend.Controllers
             return Ok(new { success = true, message = "Mot de passe modifié avec succès." });
         }
 
+        // --- MOT DE PASSE OUBLIÉ ---
+        [HttpPost("forgotpassword")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest req)
+        {
+            if (string.IsNullOrWhiteSpace(req.Email))
+                return BadRequest(new { success = false, message = "Email requis." });
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email.ToLower() == req.Email.Trim().ToLower());
+
+            if (user == null)
+                return Ok(new { success = true, devToken = (string?)null });
+
+            user.ResetToken       = Guid.NewGuid().ToString("N");
+            user.ResetTokenExpiry = DateTime.UtcNow.AddHours(1);
+            await _context.SaveChangesAsync();
+
+            bool smtpConfigured = !string.IsNullOrEmpty(_config["Smtp:Username"]);
+            _ = _email.SendPasswordResetAsync(user.Email, user.Prenom, user.ResetToken);
+
+            // Si SMTP actif → email envoyé, on ne renvoie pas le token (l'utilisateur consulte sa boîte)
+            // Sinon → token retourné directement pour permettre la réinitialisation sans email
+            return Ok(new { success = true, devToken = smtpConfigured ? null : user.ResetToken });
+        }
+
+        [HttpPost("resetpassword")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest req)
+        {
+            if (string.IsNullOrWhiteSpace(req.Token) || string.IsNullOrWhiteSpace(req.NewPassword))
+                return BadRequest(new { success = false, message = "Données manquantes." });
+
+            if (req.NewPassword.Length < 6)
+                return BadRequest(new { success = false, message = "Le mot de passe doit contenir au moins 6 caractères." });
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.ResetToken == req.Token && u.ResetTokenExpiry > DateTime.UtcNow);
+
+            if (user == null)
+                return BadRequest(new { success = false, message = "Lien invalide ou expiré. Veuillez refaire une demande." });
+
+            user.Password         = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
+            user.ResetToken       = null;
+            user.ResetTokenExpiry = null;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, message = "Mot de passe réinitialisé avec succès. Vous pouvez maintenant vous connecter." });
+        }
+
         // --- BLOQUER / DÉBLOQUER UN COMPTE ---
         [HttpPut("users/{id}/toggle-bloc")]
         [Authorize(Roles = "AdminRegion,AdminPays,DirecteurProjet")]
@@ -267,5 +317,16 @@ namespace SaidAfricaBackend.Controllers
         public string? Prenom    { get; set; }
         public string? Telephone { get; set; }
         public string? PhotoUrl  { get; set; }
+    }
+
+    public class ForgotPasswordRequest
+    {
+        public string Email { get; set; } = string.Empty;
+    }
+
+    public class ResetPasswordRequest
+    {
+        public string Token       { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
     }
 }

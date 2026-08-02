@@ -2659,7 +2659,26 @@
 
                     <div class="form-group">
                         <label>Région où vous proposez vos biens <span style="color:#ef4444;">*</span></label>
-                        <input type="text" id="demandeRegion" placeholder="Ex: Littoral, Centre, Ouest..." required>
+                        <select id="demandeRegion" required
+                                style="width:100%;padding:12px 14px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:14px;outline:none;background:#fff;color:#111827;appearance:none;-webkit-appearance:none;cursor:pointer;"
+                                onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e5e7eb'"
+                                onchange="validateDemandeRegion()">
+                            <option value="">-- Sélectionnez votre région --</option>
+                            <option value="Adamaoua">Adamaoua</option>
+                            <option value="Centre">Centre</option>
+                            <option value="Est">Est</option>
+                            <option value="Extrême-Nord">Extrême-Nord</option>
+                            <option value="Littoral">Littoral</option>
+                            <option value="Nord">Nord</option>
+                            <option value="Nord-Ouest">Nord-Ouest</option>
+                            <option value="Ouest">Ouest</option>
+                            <option value="Sud">Sud</option>
+                            <option value="Sud-Ouest">Sud-Ouest</option>
+                        </select>
+                        <p id="demandeRegionErr" style="display:none;margin:6px 0 0;font-size:12px;color:#ef4444;font-weight:600;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;">
+                            <i class="fas fa-exclamation-triangle" style="margin-right:5px;"></i>
+                            <span id="demandeRegionErrMsg"></span>
+                        </p>
                     </div>
                     <div class="form-group">
                         <label>Message (optionnel)</label>
@@ -2698,11 +2717,45 @@
             _demandeSelfie = null;
         }
 
-        function goToDemandeStep3() {
+        let _regionsAvecAdmin = null;
+
+        async function _loadRegionsAvecAdmin() {
+            if (_regionsAvecAdmin !== null) return;
+            try {
+                const res = await fetch(`${API}/demandesproprietaire/regions-with-admin`);
+                const json = await res.json();
+                _regionsAvecAdmin = json.success ? json.data : [];
+            } catch (_) {
+                _regionsAvecAdmin = [];
+            }
+        }
+
+        function validateDemandeRegion() {
+            const sel    = document.getElementById('demandeRegion');
+            const errDiv = document.getElementById('demandeRegionErr');
+            const errMsg = document.getElementById('demandeRegionErrMsg');
+            const btn    = document.getElementById('demSubmitBtn');
+            const region = sel?.value;
+            if (!region) { errDiv.style.display = 'none'; btn.disabled = false; return; }
+            if (_regionsAvecAdmin !== null && !_regionsAvecAdmin.includes(region)) {
+                errMsg.textContent = `La région "${region}" ne dispose pas encore d'administrateur régional. Veuillez choisir une autre région ou contacter le support.`;
+                errDiv.style.display = 'block';
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+            } else {
+                errDiv.style.display = 'none';
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            }
+        }
+
+        async function goToDemandeStep3() {
             _stopCamera();
             document.getElementById('demandeStep2').style.display = 'none';
             document.getElementById('demandeStep3').style.display = 'block';
             _setStepIndicator(3);
+            await _loadRegionsAvecAdmin();
+            validateDemandeRegion();
             const icon = document.getElementById('demSummaryIcon');
             const type = document.getElementById('demSummaryType');
             if (icon) icon.className = `fas ${_demandeDocType === 'Passeport' ? 'fa-passport' : 'fa-id-card'}`;
@@ -2998,7 +3051,11 @@
             if (!_demandeDocFile)  { showToast('error','Erreur','Importez votre pièce d\'identité.'); return; }
             if (!_demandeSelfie)   { showToast('error','Erreur','Prenez votre selfie de vérification.'); return; }
             const region = document.getElementById('demandeRegion')?.value.trim();
-            if (!region) { showToast('error','Erreur','Veuillez indiquer votre région.'); return; }
+            if (!region) { showToast('error','Erreur','Veuillez sélectionner votre région.'); return; }
+            if (_regionsAvecAdmin !== null && !_regionsAvecAdmin.includes(region)) {
+                showToast('error', 'Région sans admin', `La région "${region}" ne dispose pas encore d'administrateur régional.`);
+                return;
+            }
 
             const btn = document.getElementById('demSubmitBtn');
             btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Envoi en cours…';

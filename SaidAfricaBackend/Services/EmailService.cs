@@ -14,6 +14,7 @@ namespace SaidAfricaBackend.Services
         Task SendDemandeProprietaireValideeAsync(string clientEmail, string clientPrenom);
         Task SendDemandeProprietaireRefuseeAsync(string clientEmail, string clientPrenom, string? motif);
         Task SendBienvenueAsync(string email, string prenom);
+        Task SendPasswordResetAsync(string email, string prenom, string resetToken);
     }
 
     public class EmailService : IEmailService
@@ -146,6 +147,18 @@ namespace SaidAfricaBackend.Services
                    <p>Commencez dès maintenant à explorer les biens disponibles !</p>
                    <a href='http://localhost:5173/src/pages/accueil_user.html' style='display:inline-block;background:#2563eb;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px;'>Explorer les biens</a>
                    <p style='margin-top:24px;font-size:13px;color:#6b7280;'>Si vous n'avez pas créé ce compte, ignorez cet email.</p>");
+
+        public Task SendPasswordResetAsync(string email, string prenom, string resetToken)
+        {
+            var link = $"http://localhost:5173/src/pages/login.html?token={resetToken}";
+            return SendAsync(email, prenom,
+                "🔐 Réinitialisation de votre mot de passe — Said Africa",
+                $@"<h2>Bonjour {prenom},</h2>
+                   <p>Vous avez demandé à réinitialiser votre mot de passe sur <strong>Said Africa</strong>.</p>
+                   <p>Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe. Ce lien est valable <strong>1 heure</strong>.</p>
+                   <a href='{link}' style='display:inline-block;background:#2563eb;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;margin:20px 0;font-size:15px;'>Réinitialiser mon mot de passe</a>
+                   <p style='font-size:13px;color:#6b7280;margin-top:16px;'>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email — votre mot de passe ne sera pas modifié.</p>");
+        }
 
         // ─── Template HTML commun ─────────────────────────────────────────────
         private static string WrapTemplate(string subject, string content) => $@"

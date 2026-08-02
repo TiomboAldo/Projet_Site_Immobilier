@@ -168,6 +168,10 @@ namespace SaidAfricaBackend
         /// <summary>Région administrative de rattachement (utile pour AdminRegion et le scoping futur des Biens).</summary>
         public string? Region { get; set; }
 
+        // ── Réinitialisation de mot de passe ────────────────────────────────
+        public string?   ResetToken       { get; set; }
+        public DateTime? ResetTokenExpiry { get; set; }
+
         // ── KYC (vérification d'identité) ───────────────────────────────────
         /// <summary>NonSoumis | EnAttente | Approuve | Rejete</summary>
         public string   KycStatut       { get; set; } = "NonSoumis";
