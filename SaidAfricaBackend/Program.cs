@@ -41,7 +41,7 @@ else
 }
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
+    options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 36))));
 
 // 2. CORS — développement local + production (levetimmo.com)
 builder.Services.AddCors(options => {
@@ -122,8 +122,16 @@ app.MapControllers();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    db.Database.Migrate();
-    DataSeeder.Seed(db);
+    try
+    {
+        db.Database.Migrate();
+        DataSeeder.Seed(db);
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Erreur lors de la migration MySQL au démarrage.");
+    }
 }
 
 // ─── Écouter sur le port Railway (PORT) ou 8080 par défaut ───────────────────
