@@ -21,8 +21,9 @@ namespace SaidAfricaBackend.Services
         private string SubscriptionKey => _config["MoMo:SubscriptionKey"] ?? "";
         private string ApiUser         => _config["MoMo:ApiUser"]         ?? "";
         private string ApiKey          => _config["MoMo:ApiKey"]          ?? "";
-        private string Currency        => _config["MoMo:Currency"]        ?? "XAF";
         private bool   IsSandbox       => string.Equals(_config["MoMo:IsSandbox"], "true", StringComparison.OrdinalIgnoreCase);
+        // Le sandbox MTN n'accepte que EUR; XAF est pour la production
+        private string Currency        => IsSandbox ? "EUR" : (_config["MoMo:Currency"] ?? "XAF");
         private string BaseUrl         => IsSandbox
             ? "https://sandbox.momodeveloper.mtn.com"
             : "https://proxy.momoapi.mtn.com";
@@ -79,18 +80,30 @@ namespace SaidAfricaBackend.Services
             client.DefaultRequestHeaders.Add("X-Target-Environment",
                 IsSandbox ? "sandbox" : "mtnCameroon");
 
-            var callbackUrl = _config["MoMo:CallbackUrl"] ?? "";
+            // Normaliser le numéro : chiffres uniquement, sans + ni espaces (format MSISDN)
+            var msisdn = new string(phoneNumber.Where(char.IsDigit).ToArray());
 
-            var body = new
+            // callbackUrl uniquement en production avec une vraie URL publique
+            var callbackUrl = _config["MoMo:CallbackUrl"] ?? "";
+            var hasCallback = !IsSandbox
+                && callbackUrl.StartsWith("https://")
+                && !callbackUrl.Contains("votre-domaine");
+
+            // Utiliser Dictionary pour inclure callbackUrl de façon conditionnelle
+            var body = new Dictionary<string, object>
             {
-                amount        = ((int)Math.Ceiling(amount)).ToString(),
-                currency      = Currency,
-                externalId    = externalId,
-                payer         = new { partyIdType = "MSISDN", partyId = phoneNumber },
-                payerMessage  = description,
-                payeeNote     = description,
-                callbackUrl   = callbackUrl,
+                ["amount"]       = ((int)Math.Ceiling(amount)).ToString(),
+                ["currency"]     = Currency,
+                ["externalId"]   = externalId,
+                ["payer"]        = new Dictionary<string, string>
+                {
+                    ["partyIdType"] = "MSISDN",
+                    ["partyId"]     = msisdn,
+                },
+                ["payerMessage"] = description,
+                ["payeeNote"]    = description,
             };
+            if (hasCallback) body["callbackUrl"] = callbackUrl;
 
             var content = new StringContent(
                 JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
@@ -104,7 +117,7 @@ namespace SaidAfricaBackend.Services
 
             var err = await res.Content.ReadAsStringAsync();
             _logger.LogError("MoMo initiation failed: {Status} {Body}", res.StatusCode, err);
-            return (false, referenceId, $"Erreur MTN MoMo ({(int)res.StatusCode})");
+            return (false, referenceId, $"Erreur MTN MoMo ({(int)res.StatusCode}): {err}");
         }
 
         // ─── Vérifier le statut d'un paiement ────────────────────────────────
