@@ -18,6 +18,7 @@ namespace SaidAfricaBackend
         public DbSet<Disponibilite>       Disponibilites      { get; set; }
         public DbSet<BienLike>            BienLikes           { get; set; }
         public DbSet<BienVue>             BienVues            { get; set; }
+        public DbSet<Payment>             Payments            { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -142,6 +143,28 @@ namespace SaidAfricaBackend
                 .WithMany()
                 .HasForeignKey(v => v.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Payment>()
+                .HasOne(p => p.User)
+                .WithMany()
+                .HasForeignKey(p => p.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Payment>()
+                .HasOne(p => p.Bien)
+                .WithMany()
+                .HasForeignKey(p => p.BienId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Payment>()
+                .HasOne(p => p.Reservation)
+                .WithMany()
+                .HasForeignKey(p => p.ReservationId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Payment>()
+                .Property(p => p.Montant)
+                .HasPrecision(12, 2);
         }
     }
 
@@ -431,5 +454,36 @@ namespace SaidAfricaBackend
         // Navigation
         public Bien? Bien { get; set; }
         public User? User { get; set; }
+    }
+
+    // ─── PAIEMENT MTN MOBILE MONEY ────────────────────────────────────────────
+    public class Payment
+    {
+        public int       Id            { get; set; }
+
+        /// <summary>UUID transmis à MTN MoMo comme identifiant unique de transaction.</summary>
+        public string    ReferenceId   { get; set; } = Guid.NewGuid().ToString();
+
+        /// <summary>Reservation | Abonnement | Commission</summary>
+        public string    TypePaiement  { get; set; } = string.Empty;
+
+        public decimal   Montant       { get; set; }
+        public string    Devise        { get; set; } = "XAF";
+
+        /// <summary>EnAttente | Reussi | Echoue | Expire</summary>
+        public string    Statut        { get; set; } = "EnAttente";
+
+        public string    NumeroPayeur  { get; set; } = string.Empty;
+        public int       UserId        { get; set; }
+        public int?      BienId        { get; set; }
+        public int?      ReservationId { get; set; }
+        public string?   MotifEchec    { get; set; }
+        public DateTime  CreatedAt     { get; set; } = DateTime.UtcNow;
+        public DateTime? UpdatedAt     { get; set; }
+
+        // Navigation
+        public User?        User        { get; set; }
+        public Bien?        Bien        { get; set; }
+        public Reservation? Reservation { get; set; }
     }
 }

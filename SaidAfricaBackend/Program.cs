@@ -73,6 +73,8 @@ builder.Services.AddAuthorization();
 
 // 5. Service email (MailKit — identifiants dans User Secrets)
 builder.Services.AddSingleton<IEmailService, EmailService>();
+builder.Services.AddHttpClient();
+builder.Services.AddSingleton<IMoMoService, MoMoService>();
 
 builder.Services.AddControllers();
 
