@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace SaidAfricaBackend.Services
 {
@@ -83,30 +84,36 @@ namespace SaidAfricaBackend.Services
             // Normaliser le numéro : chiffres uniquement, sans + ni espaces (format MSISDN)
             var msisdn = new string(phoneNumber.Where(char.IsDigit).ToArray());
 
+            // Description sans caractères spéciaux (certaines API rejettent les tirets em)
+            var safeDesc = description.Replace("—", "-").Replace("–", "-");
+
             // callbackUrl uniquement en production avec une vraie URL publique
             var callbackUrl = _config["MoMo:CallbackUrl"] ?? "";
             var hasCallback = !IsSandbox
                 && callbackUrl.StartsWith("https://")
                 && !callbackUrl.Contains("votre-domaine");
 
-            // Utiliser Dictionary pour inclure callbackUrl de façon conditionnelle
-            var body = new Dictionary<string, object>
+            // JsonObject garantit un JSON camelCase propre sans ambiguïté de sérialisation
+            var bodyNode = new JsonObject
             {
                 ["amount"]       = ((int)Math.Ceiling(amount)).ToString(),
                 ["currency"]     = Currency,
                 ["externalId"]   = externalId,
-                ["payer"]        = new Dictionary<string, string>
+                ["payer"]        = new JsonObject
                 {
                     ["partyIdType"] = "MSISDN",
                     ["partyId"]     = msisdn,
                 },
-                ["payerMessage"] = description,
-                ["payeeNote"]    = description,
+                ["payerMessage"] = safeDesc,
+                ["payeeNote"]    = safeDesc,
             };
-            if (hasCallback) body["callbackUrl"] = callbackUrl;
+            if (hasCallback) bodyNode["callbackUrl"] = callbackUrl;
 
-            var content = new StringContent(
-                JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
+            var jsonStr = bodyNode.ToJsonString();
+            _logger.LogInformation("MoMo request → MSISDN:{MSISDN} Amount:{Amt} Currency:{Cur} Body:{Body}",
+                msisdn, (int)Math.Ceiling(amount), Currency, jsonStr);
+
+            var content = new StringContent(jsonStr, Encoding.UTF8, "application/json");
 
             var res = await client.PostAsync($"{BaseUrl}/collection/v1_0/requesttopay", content);
             if (res.IsSuccessStatusCode) // 202 Accepted
@@ -117,7 +124,7 @@ namespace SaidAfricaBackend.Services
 
             var err = await res.Content.ReadAsStringAsync();
             _logger.LogError("MoMo initiation failed: {Status} {Body}", res.StatusCode, err);
-            return (false, referenceId, $"Erreur MTN MoMo ({(int)res.StatusCode}): {err}");
+            return (false, referenceId, $"Erreur MTN MoMo ({(int)res.StatusCode}): {err} | Sent: {jsonStr}");
         }
 
         // ─── Vérifier le statut d'un paiement ────────────────────────────────
