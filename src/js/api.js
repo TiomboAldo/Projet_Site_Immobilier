@@ -1,5 +1,5 @@
 // Module API partagé — utilisé par main.js, details.html, etc.
-const API_BASE = 'http://localhost:5257/api';
+const API_BASE = '/api';
 
 async function apiFetch(url, options = {}) {
     const token = localStorage.getItem('jwtToken');

@@ -495,7 +495,7 @@
             modal.classList.remove('active');
         }
         // ═══ MOT DE PASSE OUBLIÉ ════════════════════════════════════════════════
-        const API_AUTH = 'http://localhost:5257/api/auth';
+        const API_AUTH = '/api/auth';
         let _resetToken = null;
 
         function openForgotModal() {
@@ -613,7 +613,7 @@
             };
 
             try {
-                const response = await fetch('http://localhost:5257/api/auth/login', {
+                const response = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
@@ -695,7 +695,7 @@
             const data = Object.fromEntries(formData.entries());
 
             try {
-                const response = await fetch('http://localhost:5257/api/auth/signup', {
+                const response = await fetch('/api/auth/signup', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)

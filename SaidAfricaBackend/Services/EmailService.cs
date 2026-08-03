@@ -78,7 +78,7 @@ namespace SaidAfricaBackend.Services
                        <p style='margin:8px 0 0;'><strong>Prix :</strong> {prix}</p>
                    </div>
                    <p>Connectez-vous à votre espace client pour communiquer avec le propriétaire ou ajuster les détails.</p>
-                   <a href='http://localhost:5173/src/pages/accueil_user.html' style='display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px;'>Voir mon espace</a>");
+                   <a href='https://levetimmo.com/src/pages/accueil_user.html' style='display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px;'>Voir mon espace</a>");
 
         public Task SendReservationRefuseeAsync(string clientEmail, string clientPrenom, string bienTitre, string? messageProprietaire)
             => SendAsync(clientEmail, clientPrenom,
@@ -87,7 +87,7 @@ namespace SaidAfricaBackend.Services
                    <p>Votre demande de visite pour le bien <strong>{bienTitre}</strong> n'a malheureusement pas pu être acceptée.</p>
                    {(string.IsNullOrEmpty(messageProprietaire) ? "" : $"<div style='background:#fef2f2;border-left:4px solid #ef4444;padding:16px;border-radius:8px;margin:20px 0;'><p style='margin:0;'><em>Message du propriétaire : {messageProprietaire}</em></p></div>")}
                    <p>D'autres biens similaires sont disponibles sur notre plateforme.</p>
-                   <a href='http://localhost:5173/src/pages/accueil_user.html' style='display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px;'>Explorer les biens</a>");
+                   <a href='https://levetimmo.com/src/pages/accueil_user.html' style='display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px;'>Explorer les biens</a>");
 
         public Task SendNouvelleReservationAsync(string proprietaireEmail, string proprietairePrenom, string bienTitre, string clientPrenom, string clientNom, string dateVisite)
             => SendAsync(proprietaireEmail, proprietairePrenom,
@@ -100,7 +100,7 @@ namespace SaidAfricaBackend.Services
                        <p style='margin:8px 0 0;'><strong>Bien :</strong> {bienTitre}</p>
                    </div>
                    <p>Rendez-vous dans votre espace propriétaire pour accepter ou refuser cette demande.</p>
-                   <a href='http://localhost:5173/src/pages/espace_proprietaire.html' style='display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px;'>Gérer mes réservations</a>");
+                   <a href='https://levetimmo.com/src/pages/espace_proprietaire.html' style='display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px;'>Gérer mes réservations</a>");
 
         public Task SendNouveauMessageAsync(string destinataireEmail, string destinatairePrenom, string expediteurPrenom, string bienTitre, string apercu)
             => SendAsync(destinataireEmail, destinatairePrenom,
@@ -111,7 +111,7 @@ namespace SaidAfricaBackend.Services
                        « {apercu}{(apercu.Length >= 120 ? "…" : "")} »
                    </div>
                    <p>Répondez directement depuis votre espace.</p>
-                   <a href='http://localhost:5173/src/pages/accueil_user.html' style='display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px;'>Voir la messagerie</a>");
+                   <a href='https://levetimmo.com/src/pages/accueil_user.html' style='display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px;'>Voir la messagerie</a>");
 
         public Task SendDemandeProprietaireValideeAsync(string clientEmail, string clientPrenom)
             => SendAsync(clientEmail, clientPrenom,
@@ -119,7 +119,7 @@ namespace SaidAfricaBackend.Services
                 $@"<h2>Félicitations {clientPrenom} !</h2>
                    <p>Votre demande pour devenir propriétaire sur <strong>Said Africa</strong> a été <strong style='color:#16a34a;'>approuvée</strong>.</p>
                    <p>Vous pouvez maintenant publier vos annonces, gérer vos réservations et communiquer avec vos clients.</p>
-                   <a href='http://localhost:5173/src/pages/espace_proprietaire.html' style='display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px;'>Accéder à mon espace propriétaire</a>");
+                   <a href='https://levetimmo.com/src/pages/espace_proprietaire.html' style='display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px;'>Accéder à mon espace propriétaire</a>");
 
         public Task SendDemandeProprietaireRefuseeAsync(string clientEmail, string clientPrenom, string? motif)
             => SendAsync(clientEmail, clientPrenom,
@@ -128,7 +128,7 @@ namespace SaidAfricaBackend.Services
                    <p>Votre demande pour devenir propriétaire sur Said Africa n'a pas pu être acceptée pour le moment.</p>
                    {(string.IsNullOrEmpty(motif) ? "" : $"<div style='background:#fef2f2;border-left:4px solid #ef4444;padding:16px;border-radius:8px;margin:20px 0;'><p style='margin:0;'><strong>Motif :</strong> {motif}</p></div>")}
                    <p>Vous pouvez soumettre une nouvelle demande depuis votre espace client.</p>
-                   <a href='http://localhost:5173/src/pages/accueil_user.html' style='display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px;'>Mon espace client</a>");
+                   <a href='https://levetimmo.com/src/pages/accueil_user.html' style='display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px;'>Mon espace client</a>");
 
         public Task SendBienvenueAsync(string email, string prenom)
             => SendAsync(email, prenom,
@@ -145,12 +145,12 @@ namespace SaidAfricaBackend.Services
                        </ul>
                    </div>
                    <p>Commencez dès maintenant à explorer les biens disponibles !</p>
-                   <a href='http://localhost:5173/src/pages/accueil_user.html' style='display:inline-block;background:#2563eb;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px;'>Explorer les biens</a>
+                   <a href='https://levetimmo.com/src/pages/accueil_user.html' style='display:inline-block;background:#2563eb;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px;'>Explorer les biens</a>
                    <p style='margin-top:24px;font-size:13px;color:#6b7280;'>Si vous n'avez pas créé ce compte, ignorez cet email.</p>");
 
         public Task SendPasswordResetAsync(string email, string prenom, string resetToken)
         {
-            var link = $"http://localhost:5173/src/pages/login.html?token={resetToken}";
+            var link = $"https://levetimmo.com/src/pages/login.html?token={resetToken}";
             return SendAsync(email, prenom,
                 "🔐 Réinitialisation de votre mot de passe — Said Africa",
                 $@"<h2>Bonjour {prenom},</h2>

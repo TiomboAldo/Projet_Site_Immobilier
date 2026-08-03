@@ -1,0 +1,11 @@
+node_modules/
+dist/
+SaidAfricaBackend/bin/
+SaidAfricaBackend/obj/
+.vs/
+.git/
+*.user
+.env
+Les diagrammes/
+README.md
+src.zip
