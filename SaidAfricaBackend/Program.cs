@@ -62,7 +62,9 @@ builder.Services.AddCors(options => {
 
 // 3. Authentification JWT
 var jwtSection = builder.Configuration.GetSection("Jwt");
-var jwtKey = jwtSection["Key"]!;
+var jwtKey = jwtSection["Key"]
+    ?? throw new InvalidOperationException(
+        "JWT Key manquant. Définissez la variable d'environnement Jwt__Key dans Railway.");
 
 builder.Services.AddAuthentication(options =>
 {
