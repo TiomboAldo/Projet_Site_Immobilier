@@ -42,7 +42,7 @@ namespace SaidAfricaBackend.Controllers
             [FromQuery] string? q)
         {
             var query = _context.Biens
-                .Where(b => b.EstDisponible && b.StatutPublication == "Validée")
+                .Where(b => b.EstDisponible && b.StatutPublication == "Valide")
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(type))
@@ -279,10 +279,10 @@ namespace SaidAfricaBackend.Controllers
             if (!await IsAdminForBienAsync(bien))
                 return Forbid();
 
-            if (bien.StatutPublication == "Validée")
+            if (bien.StatutPublication == "Valide")
                 return BadRequest(new { success = false, message = "Ce bien est déjà validé." });
 
-            bien.StatutPublication = "Validée";
+            bien.StatutPublication = "Valide";
             bien.EstDisponible     = true;
             bien.MotifsRejet       = null;
             bien.ValideParAdminId  = CurrentUserId();
@@ -483,7 +483,7 @@ namespace SaidAfricaBackend.Controllers
                 Longitude         = req.Longitude,
                 ProprietaireId    = proprietaireId,
                 EstDisponible     = isAdmin,
-                StatutPublication = isAdmin ? "Validée" : "En attente",
+                StatutPublication = isAdmin ? "Valide" : "En attente",
                 ValideParAdminId  = isAdmin ? proprietaireId : null,
                 ValideLe          = isAdmin ? DateTime.UtcNow : null,
                 TitreFoncierPath  = req.TitreFoncierPath,

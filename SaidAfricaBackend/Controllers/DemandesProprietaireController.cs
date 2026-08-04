@@ -201,7 +201,7 @@ namespace SaidAfricaBackend.Controllers
             {
                 var nbBiens = await _context.Biens.CountAsync(b => b.ProprietaireId == p.Id);
                 var dateVal = await _context.DemandesProprietaire
-                    .Where(d => d.UserId == p.Id && d.Statut == "Validée")
+                    .Where(d => d.UserId == p.Id && d.Statut == "Valide")
                     .OrderByDescending(d => d.TraiteLe)
                     .Select(d => d.TraiteLe)
                     .FirstOrDefaultAsync();
@@ -232,7 +232,7 @@ namespace SaidAfricaBackend.Controllers
                 if (demande.Region != moi!.Region) return Forbid();
             }
 
-            demande.Statut           = "Validée";
+            demande.Statut           = "Valide";
             demande.TraiteParAdminId = CurrentUserId();
             demande.TraiteLe         = DateTime.UtcNow;
             demande.User!.Role       = "Proprietaire";
