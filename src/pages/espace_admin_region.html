@@ -155,8 +155,22 @@
             to   { transform: scale(1);    opacity: 1; }
         }
 
+        /* ─── Dashboard grids responsive ─── */
+        @media (max-width: 767px) {
+            .activity-grid { grid-template-columns: 1fr !important; }
+            #adminKpiGrid { flex-direction: column !important; }
+            #adminKpiGrid > div { max-width: 100% !important; flex: none !important; }
+        }
+
         /* ─── PARAMÈTRES ADMIN ─── */
         .ps-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+        @media (max-width: 767px) {
+            .activity-grid { grid-template-columns: 1fr !important; }
+            #adminKpiGrid { flex-direction: column; }
+            #adminKpiGrid > * { flex: 1 1 100% !important; max-width: 100% !important; min-width: 0 !important; }
+            .filter-btn-container { display: grid !important; grid-template-columns: 1fr 1fr; gap: 10px; flex-wrap: unset; }
+            .p-8 { padding: 16px !important; }
+        }
         @media(max-width:700px){ .ps-grid { grid-template-columns:1fr; } }
         .ps-card { background:#fff; border-radius:18px; padding:20px 22px; border:1px solid #f3f4f6; box-shadow:0 1px 3px rgba(0,0,0,.04); }
         .ps-card-icon { width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
@@ -274,7 +288,7 @@
                 <div id="adminKpiGrid" style="display:flex;flex-wrap:wrap;gap:18px;justify-content:center;margin-bottom:28px;"></div>
 
                 <!-- Activité récente -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:28px;">
+                <div class="activity-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:28px;">
                     <div style="background:#fff;border-radius:20px;border:1px solid #f3f4f6;padding:22px;">
                         <h3 style="font-size:15px;font-weight:800;color:#111827;margin-bottom:16px;">
                             <i class="fas fa-user-clock" style="color:#4f46e5;margin-right:8px;"></i>Demandes en attente
@@ -314,15 +328,15 @@
                            onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e5e7eb'">
                 </div>
 
-                <div style="display:flex; gap:10px; margin-bottom:24px; flex-wrap:wrap;">
+                <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:24px;">
                     <button class="filter-btn active" data-statut="En attente" onclick="filterDemandes('En attente', this)"
-                        style="background:#fff; border:1px solid #e5e7eb; color:#374151; font-weight:700; font-size:13px; padding:10px 18px; border-radius:12px; cursor:pointer;">En attente</button>
-                    <button class="filter-btn" data-statut="Validée" onclick="filterDemandes('Validée', this)"
-                        style="background:#fff; border:1px solid #e5e7eb; color:#374151; font-weight:700; font-size:13px; padding:10px 18px; border-radius:12px; cursor:pointer;">Validées</button>
+                        style="background:#fff; border:1px solid #e5e7eb; color:#374151; font-weight:700; font-size:13px; padding:10px 6px; border-radius:12px; cursor:pointer; text-align:center;">En attente</button>
+                    <button class="filter-btn" data-statut="Valide" onclick="filterDemandes('Valide', this)"
+                        style="background:#fff; border:1px solid #e5e7eb; color:#374151; font-weight:700; font-size:13px; padding:10px 6px; border-radius:12px; cursor:pointer; text-align:center;">Validées</button>
                     <button class="filter-btn" data-statut="Refusée" onclick="filterDemandes('Refusée', this)"
-                        style="background:#fff; border:1px solid #e5e7eb; color:#374151; font-weight:700; font-size:13px; padding:10px 18px; border-radius:12px; cursor:pointer;">Refusées</button>
+                        style="background:#fff; border:1px solid #e5e7eb; color:#374151; font-weight:700; font-size:13px; padding:10px 6px; border-radius:12px; cursor:pointer; text-align:center;">Refusées</button>
                     <button class="filter-btn" data-statut="" onclick="filterDemandes('', this)"
-                        style="background:#fff; border:1px solid #e5e7eb; color:#374151; font-weight:700; font-size:13px; padding:10px 18px; border-radius:12px; cursor:pointer;">Toutes</button>
+                        style="background:#fff; border:1px solid #e5e7eb; color:#374151; font-weight:700; font-size:13px; padding:10px 6px; border-radius:12px; cursor:pointer; text-align:center;">Toutes</button>
                 </div>
 
                 <div id="demandesGrid"></div>
@@ -932,7 +946,7 @@
 
             const statutColors = {
                 'En attente': { bg: '#fef3c7', text: '#92400e' },
-                'Validée':    { bg: '#d1fae5', text: '#065f46' },
+                'Valide':     { bg: '#d1fae5', text: '#065f46' },
                 'Refusée':    { bg: '#fee2e2', text: '#991b1b' },
             };
 
@@ -1182,17 +1196,17 @@
             };
 
             const filterBar = `
-                <div style="display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;">
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px;">
                     <button onclick="setBienFilter('En attente', this)"
-                        style="background:${biensModerationFilter==='En attente'?'#f59e0b':'#fff'};color:${biensModerationFilter==='En attente'?'#fff':'#374151'};border:1px solid #e5e7eb;font-weight:700;font-size:13px;padding:10px 18px;border-radius:12px;cursor:pointer;">
+                        style="background:${biensModerationFilter==='En attente'?'#f59e0b':'#fff'};color:${biensModerationFilter==='En attente'?'#fff':'#374151'};border:1px solid #e5e7eb;font-weight:700;font-size:13px;padding:10px 6px;border-radius:12px;cursor:pointer;text-align:center;">
                         <i class="fas fa-clock" style="margin-right:6px;"></i>En attente (${counts['En attente']})
                     </button>
                     <button onclick="setBienFilter('Validée', this)"
-                        style="background:${biensModerationFilter==='Validée'?'#059669':'#fff'};color:${biensModerationFilter==='Validée'?'#fff':'#374151'};border:1px solid #e5e7eb;font-weight:700;font-size:13px;padding:10px 18px;border-radius:12px;cursor:pointer;">
+                        style="background:${biensModerationFilter==='Validée'?'#059669':'#fff'};color:${biensModerationFilter==='Validée'?'#fff':'#374151'};border:1px solid #e5e7eb;font-weight:700;font-size:13px;padding:10px 6px;border-radius:12px;cursor:pointer;text-align:center;">
                         <i class="fas fa-circle-check" style="margin-right:6px;"></i>Validés (${counts['Validée']})
                     </button>
                     <button onclick="setBienFilter('Rejetée', this)"
-                        style="background:${biensModerationFilter==='Rejetée'?'#dc2626':'#fff'};color:${biensModerationFilter==='Rejetée'?'#fff':'#374151'};border:1px solid #e5e7eb;font-weight:700;font-size:13px;padding:10px 18px;border-radius:12px;cursor:pointer;">
+                        style="background:${biensModerationFilter==='Rejetée'?'#dc2626':'#fff'};color:${biensModerationFilter==='Rejetée'?'#fff':'#374151'};border:1px solid #e5e7eb;font-weight:700;font-size:13px;padding:10px 6px;border-radius:12px;cursor:pointer;text-align:center;">
                         <i class="fas fa-circle-xmark" style="margin-right:6px;"></i>Rejetés (${counts['Rejetée']})
                     </button>
                 </div>`;
@@ -1962,6 +1976,7 @@
             if (id === 'dashboard')     renderAdminDashboard();
             if (id === 'notifications') renderNotifications();
             if (id === 'proprietaires') renderProprietaires();
+            if (id === 'demandes')      loadDemandes(currentFilter || 'En attente');
             if (id === 'biens')         renderBiens();
             if (id === 'nos-biens')     renderNosBiens();
             if (id === 'publier')       openAdminBienModal();

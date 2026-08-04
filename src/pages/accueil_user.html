@@ -2143,6 +2143,28 @@
             }
         }
 
+        function openNotifPopup(titre, message, date) {
+            let popup = document.getElementById('notifPopup');
+            if (!popup) {
+                popup = document.createElement('div');
+                popup.id = 'notifPopup';
+                popup.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;padding:16px;';
+                popup.onclick = e => { if (e.target === popup) popup.style.display = 'none'; };
+                document.body.appendChild(popup);
+            }
+            popup.innerHTML = `
+                <div style="background:#fff;border-radius:24px;padding:28px;max-width:480px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,0.2);position:relative;">
+                    <button onclick="document.getElementById('notifPopup').style.display='none'"
+                        style="position:absolute;top:16px;right:16px;background:#f3f4f6;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:14px;color:#6b7280;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <h3 style="font-weight:800;color:#111827;font-size:17px;margin:0 32px 12px 0;">${titre}</h3>
+                    <p style="color:#6b7280;font-size:14px;line-height:1.6;margin:0 0 14px;">${message}</p>
+                    <p style="color:#d1d5db;font-size:12px;margin:0;">${date}</p>
+                </div>`;
+            popup.style.display = 'flex';
+        }
+
         async function renderNotifications() {
             const grid = document.getElementById('notificationsGrid');
             grid.innerHTML = `<div class="text-center py-10"><i class="fas fa-spinner fa-spin text-blue-600 text-2xl"></i></div>`;
@@ -2166,20 +2188,21 @@
             grid.innerHTML = notifications.map(n => {
                 const c = notifIcons[n.type] || { icon: 'fa-bell', bg: '#f3f4f6', color: '#6b7280' };
                 const d = new Date(n.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                const safeMsg  = n.message.replace(/'/g, "\\'");
+                const safeTitre = n.titre.replace(/'/g, "\\'");
                 return `
-                <div onclick="${n.cibleSection ? `switchSection('${n.cibleSection}', null)` : ''}" class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex gap-4 ${n.cibleSection ? 'cursor-pointer hover:shadow-md' : ''}" style="transition:box-shadow 0.2s;">
-                    <div style="width:42px; height:42px; border-radius:12px; background:${c.bg}; color:${c.color}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <div onclick="openNotifPopup('${safeTitre}', '${safeMsg}', '${d}')" class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md" style="transition:box-shadow 0.2s;display:flex;align-items:center;gap:14px;">
+                    <div style="width:42px;height:42px;border-radius:12px;background:${c.bg};color:${c.color};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                         <i class="fas ${c.icon}"></i>
                     </div>
-                    <div class="flex-1">
-                        <div class="flex items-center gap-2">
-                            ${!n.estLue ? '<span style="width:8px; height:8px; border-radius:50%; background:#2563eb; display:inline-block;"></span>' : ''}
-                            <h4 class="font-bold text-gray-800">${n.titre}</h4>
+                    <div style="flex:1;min-width:0;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            ${!n.estLue ? '<span style="width:8px;height:8px;border-radius:50%;background:#2563eb;display:inline-block;flex-shrink:0;"></span>' : ''}
+                            <h4 style="font-weight:700;color:#111827;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${n.titre}</h4>
                         </div>
-                        <p class="text-sm text-gray-500 mt-1">${n.message}</p>
-                        <p class="text-xs text-gray-300 mt-2">${d}</p>
+                        <p style="font-size:11px;color:#d1d5db;margin-top:3px;">${d}</p>
                     </div>
-                    <button onclick="event.stopPropagation(); dismissNotification(${n.id})" class="text-gray-300 hover:text-red-500 transition" style="background:none; border:none; cursor:pointer;">
+                    <button onclick="event.stopPropagation(); dismissNotification(${n.id})" style="background:none;border:none;cursor:pointer;color:#d1d5db;flex-shrink:0;padding:4px;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#d1d5db'">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>`;
@@ -2659,13 +2682,15 @@
             ];
 
             document.getElementById('dashboardStats').innerHTML = statsData.map(s => `
-                <div class="stat-card">
-                    <div class="stat-icon" style="background:${s.bg}; color:${s.color};">
+                <div class="stat-card" style="padding:16px 18px;display:flex;align-items:center;gap:14px;">
+                    <div class="stat-icon" style="background:${s.bg};color:${s.color};margin-bottom:0;flex-shrink:0;">
                         <i class="fas ${s.icon}"></i>
                     </div>
-                    <p style="font-size:28px; font-weight:800; color:#111827; line-height:1;">${s.value}</p>
-                    <p style="font-weight:700; color:#374151; font-size:14px; margin-top:6px;">${s.label}</p>
-                    <p style="font-size:11px; color:#9ca3af; margin-top:2px;">${s.sub}</p>
+                    <div>
+                        <p style="font-size:26px;font-weight:800;color:#111827;line-height:1;margin:0;">${s.value}</p>
+                        <p style="font-weight:700;color:#374151;font-size:13px;margin-top:4px;">${s.label}</p>
+                        <p style="font-size:11px;color:#9ca3af;margin-top:2px;">${s.sub}</p>
+                    </div>
                 </div>
             `).join('');
 

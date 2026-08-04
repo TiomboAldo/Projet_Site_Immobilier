@@ -163,7 +163,8 @@
             background: url('../assets/images/bureau_luxe.jpg') no-repeat center center fixed;
             background-size: cover;
             position: relative;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
 
         body::before {
@@ -204,7 +205,7 @@
 
         .wrapper {
             position: relative;
-            width: 400px;
+            width: min(400px, 95vw);
             height: 550px;
             z-index: 1;
         }
@@ -293,7 +294,7 @@
 
         .input-group {
             position: relative;
-            width: 320px;
+            width: min(320px, 82%);
             margin: 25px 0;
         }
 
@@ -663,7 +664,7 @@
                     showMessage("Échec", result.message || "Identifiants incorrects", "error");
                 }
             } catch (error) {
-                showMessage("Erreur", "Le serveur ne répond pas. Vérifiez votre API C#.", "error");
+                showMessage("Erreur", "Le serveur ne répond pas.", "error");
             }
         };
 
