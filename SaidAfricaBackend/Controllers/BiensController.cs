@@ -446,37 +446,6 @@ namespace SaidAfricaBackend.Controllers
             return Ok(new { success = true, message = "Annonce retirée." });
         }
 
-        // ─── POST /api/upload/image  (images bien — couverture + galerie) ──────
-        [HttpPost("/api/upload/image")]
-        [Authorize]
-        [RequestSizeLimit(11 * 1024 * 1024)]
-        public async Task<IActionResult> UploadBienImage(IFormFile? file)
-        {
-            if (file == null || file.Length == 0)
-                return BadRequest(new { success = false, message = "Aucun fichier envoyé." });
-            if (file.Length > 10 * 1024 * 1024)
-                return BadRequest(new { success = false, message = "L'image ne doit pas dépasser 10 Mo." });
-            var allowed = new[] { "image/jpeg", "image/jpg", "image/png", "image/webp" };
-            if (!allowed.Contains(file.ContentType.ToLowerInvariant()))
-                return BadRequest(new { success = false, message = "Format accepté : JPG, PNG ou WEBP." });
-
-            var dir = Path.Combine(_env.ContentRootPath, "Uploads", "images");
-            Directory.CreateDirectory(dir);
-            var ext      = Path.GetExtension(file.FileName);
-            if (string.IsNullOrEmpty(ext)) ext = ".jpg";
-            var filename = $"{Guid.NewGuid()}{ext}";
-            using var stream = System.IO.File.Create(Path.Combine(dir, filename));
-            await file.CopyToAsync(stream);
-
-            // Utilise X-Forwarded-Proto (Railway proxy HTTPS) pour forcer https://
-            var scheme = Request.Headers.TryGetValue("X-Forwarded-Proto", out var proto)
-                ? proto.ToString().Split(',')[0].Trim()
-                : Request.Scheme;
-            var url = $"{scheme}://{Request.Host}/uploads/images/{filename}";
-
-            return Ok(new { success = true, url });
-        }
-
         // ─── POST /api/biens/upload-titre-foncier ────────────────────────────
         [HttpPost("upload-titre-foncier")]
         [Authorize(Roles = "Proprietaire,UserIndep,AdminRegion,AdminPays,DirecteurProjet")]

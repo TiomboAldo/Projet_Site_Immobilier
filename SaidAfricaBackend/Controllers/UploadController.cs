@@ -29,7 +29,7 @@ namespace SaidAfricaBackend.Controllers
             if (!allowed.Contains(file.ContentType.ToLowerInvariant()))
                 return BadRequest(new { success = false, message = "Format accepté : JPG, PNG ou WEBP." });
 
-            var dir = Path.Combine(_env.ContentRootPath, "Uploads", "Images");
+            var dir = Path.Combine(_env.ContentRootPath, "Uploads", "images");
             Directory.CreateDirectory(dir);
 
             var ext  = Path.GetExtension(file.FileName).ToLowerInvariant();
@@ -39,8 +39,10 @@ namespace SaidAfricaBackend.Controllers
             using var stream = System.IO.File.Create(Path.Combine(dir, filename));
             await file.CopyToAsync(stream);
 
-            var baseUrl = $"{Request.Scheme}://{Request.Host}";
-            return Ok(new { success = true, url = $"{baseUrl}/uploads/images/{filename}" });
+            var scheme = Request.Headers.TryGetValue("X-Forwarded-Proto", out var proto)
+                ? proto.ToString().Split(',')[0].Trim()
+                : Request.Scheme;
+            return Ok(new { success = true, url = $"{scheme}://{Request.Host}/uploads/images/{filename}" });
         }
     }
 }
