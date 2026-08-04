@@ -468,7 +468,13 @@ namespace SaidAfricaBackend.Controllers
             using var stream = System.IO.File.Create(Path.Combine(dir, filename));
             await file.CopyToAsync(stream);
 
-            return Ok(new { success = true, url = $"/uploads/images/{filename}" });
+            // Utilise X-Forwarded-Proto (Railway proxy HTTPS) pour forcer https://
+            var scheme = Request.Headers.TryGetValue("X-Forwarded-Proto", out var proto)
+                ? proto.ToString().Split(',')[0].Trim()
+                : Request.Scheme;
+            var url = $"{scheme}://{Request.Host}/uploads/images/{filename}";
+
+            return Ok(new { success = true, url });
         }
 
         // ─── POST /api/biens/upload-titre-foncier ────────────────────────────
