@@ -84,6 +84,40 @@ namespace SaidAfricaBackend.Controllers
             return Ok(new { success = true, data = biens });
         }
 
+        // ─── GET /api/biens/debug ─────────────────────────────────────────────
+        [HttpGet("debug")]
+        [AllowAnonymous]
+        public async Task<IActionResult> DebugBiens()
+        {
+            var conn = _context.Database.GetDbConnection();
+            if (conn.State != System.Data.ConnectionState.Open)
+                await conn.OpenAsync();
+
+            int rawCount;
+            using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = "SELECT COUNT(*) FROM `biens` WHERE EstDisponible = 1 AND StatutPublication = 'Valide'";
+                rawCount = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+            }
+
+            var efTotal      = await _context.Biens.CountAsync();
+            var efValide     = await _context.Biens.CountAsync(b => b.StatutPublication == "Valide");
+            var efDisponible = await _context.Biens.CountAsync(b => b.EstDisponible);
+            var efBoth       = await _context.Biens.CountAsync(b => b.EstDisponible && b.StatutPublication == "Valide");
+
+            var samples = await _context.Biens
+                .Select(b => new { b.Id, b.StatutPublication, b.EstDisponible })
+                .Take(15)
+                .ToListAsync();
+
+            var connStr = _context.Database.GetConnectionString() ?? "";
+            var dbName  = connStr.Split(';')
+                .FirstOrDefault(p => p.TrimStart().StartsWith("database=", StringComparison.OrdinalIgnoreCase))
+                ?.Split('=').LastOrDefault() ?? "unknown";
+
+            return Ok(new { rawCount, efTotal, efValide, efDisponible, efBoth, samples, dbName });
+        }
+
         // ─── GET /api/biens/{id} ──────────────────────────────────────────────
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
