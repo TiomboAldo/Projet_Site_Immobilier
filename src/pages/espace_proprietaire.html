@@ -1186,7 +1186,8 @@
                     : `<span class="absolute top-3 left-3 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow">Location</span>`;
 
                 // Badge de modération (coin haut-droit de l'image)
-                const badgeMod = sp === 'Valide' && !isOff ? ''
+                const badgeMod = sp === 'Valide' && !isOff
+                        ? `<span class="absolute top-3 right-3 bg-emerald-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide"><i class="fas fa-circle-check" style="margin-right:3px;"></i>Validé</span>`
                     : sp === 'Valide' && isOff
                         ? `<span class="absolute top-3 right-3 bg-gray-900/80 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">Retirée</span>`
                     : sp === 'Rejetée'
