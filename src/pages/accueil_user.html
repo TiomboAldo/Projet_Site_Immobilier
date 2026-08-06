@@ -2185,20 +2185,21 @@
                 return;
             }
 
+            grid.style.overflowX = 'hidden';
             grid.innerHTML = notifications.map(n => {
                 const c = notifIcons[n.type] || { icon: 'fa-bell', bg: '#f3f4f6', color: '#6b7280' };
                 const d = new Date(n.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-                const safeMsg  = n.message.replace(/'/g, "\\'");
+                const safeMsg   = n.message.replace(/'/g, "\\'").replace(/\n/g, ' ');
                 const safeTitre = n.titre.replace(/'/g, "\\'");
                 return `
-                <div onclick="openNotifPopup('${safeTitre}', '${safeMsg}', '${d}')" class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 cursor-pointer hover:shadow-md" style="transition:box-shadow 0.2s;display:flex;align-items:center;gap:14px;">
+                <div onclick="openNotifPopup('${safeTitre}', '${safeMsg}', '${d}')" style="background:#fff;border-radius:16px;padding:16px 18px;border:1px solid #f3f4f6;display:flex;align-items:center;gap:14px;cursor:pointer;box-sizing:border-box;width:100%;transition:box-shadow 0.2s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow='none'">
                     <div style="width:42px;height:42px;border-radius:12px;background:${c.bg};color:${c.color};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                         <i class="fas ${c.icon}"></i>
                     </div>
                     <div style="flex:1;min-width:0;">
                         <div style="display:flex;align-items:center;gap:8px;">
                             ${!n.estLue ? '<span style="width:8px;height:8px;border-radius:50%;background:#2563eb;display:inline-block;flex-shrink:0;"></span>' : ''}
-                            <h4 style="font-weight:700;color:#111827;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${n.titre}</h4>
+                            <h4 style="font-weight:700;color:#111827;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(n.titre)}</h4>
                         </div>
                         <p style="font-size:11px;color:#d1d5db;margin-top:3px;">${d}</p>
                     </div>

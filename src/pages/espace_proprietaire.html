@@ -1698,8 +1698,31 @@ moderation:     { icon: 'fa-shield-halved', bg: '#fef3c7', color: '#92400e' },
             }
         }
 
+        function openNotifPopup(titre, message, date) {
+            let popup = document.getElementById('notifPopup');
+            if (!popup) {
+                popup = document.createElement('div');
+                popup.id = 'notifPopup';
+                popup.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;padding:16px;';
+                popup.onclick = e => { if (e.target === popup) popup.style.display = 'none'; };
+                document.body.appendChild(popup);
+            }
+            popup.innerHTML = `
+                <div style="background:#fff;border-radius:24px;padding:28px;max-width:480px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,0.2);position:relative;">
+                    <button onclick="document.getElementById('notifPopup').style.display='none'"
+                        style="position:absolute;top:16px;right:16px;background:#f3f4f6;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:14px;color:#6b7280;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <h3 style="font-weight:800;color:#111827;font-size:17px;margin:0 40px 12px 0;line-height:1.4;">${titre}</h3>
+                    <p style="color:#6b7280;font-size:14px;line-height:1.6;margin:0 0 14px;">${message}</p>
+                    <p style="color:#d1d5db;font-size:12px;margin:0;">${date}</p>
+                </div>`;
+            popup.style.display = 'flex';
+        }
+
         async function renderNotifications() {
             const grid = document.getElementById('notificationsGrid');
+            grid.style.overflowX = 'hidden';
             grid.innerHTML = `<div style="text-align:center; padding:40px 0;"><i class="fas fa-spinner fa-spin" style="color:#2563eb; font-size:24px;"></i></div>`;
 
             const res = await apiFetch(`${API}/notifications`);
@@ -1721,20 +1744,21 @@ moderation:     { icon: 'fa-shield-halved', bg: '#fef3c7', color: '#92400e' },
             grid.innerHTML = notifications.map(n => {
                 const c = notifIcons[n.type] || { icon: 'fa-bell', bg: '#f3f4f6', color: '#6b7280' };
                 const d = new Date(n.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                const safeMsg   = n.message.replace(/'/g, "\\'").replace(/\n/g, ' ');
+                const safeTitre = n.titre.replace(/'/g, "\\'");
                 return `
-                <div onclick="${n.cibleSection ? `switchSection('${n.cibleSection}', null)` : ''}" style="background:#fff; border-radius:16px; padding:20px; border:1px solid #f3f4f6; display:flex; gap:16px; ${n.cibleSection ? 'cursor:pointer;' : ''}">
-                    <div style="width:42px; height:42px; border-radius:12px; background:${c.bg}; color:${c.color}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <div onclick="openNotifPopup('${safeTitre}', '${safeMsg}', '${d}')" style="background:#fff;border-radius:16px;padding:16px 18px;border:1px solid #f3f4f6;display:flex;align-items:center;gap:14px;cursor:pointer;box-sizing:border-box;width:100%;transition:box-shadow 0.2s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow='none'">
+                    <div style="width:42px;height:42px;border-radius:12px;background:${c.bg};color:${c.color};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                         <i class="fas ${c.icon}"></i>
                     </div>
-                    <div style="flex:1;">
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            ${!n.estLue ? '<span style="width:8px; height:8px; border-radius:50%; background:#2563eb; display:inline-block;"></span>' : ''}
-                            <h4 style="font-weight:700; color:#111827;">${escapeHtml(n.titre)}</h4>
+                    <div style="flex:1;min-width:0;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            ${!n.estLue ? '<span style="width:8px;height:8px;border-radius:50%;background:#2563eb;display:inline-block;flex-shrink:0;"></span>' : ''}
+                            <h4 style="font-weight:700;color:#111827;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(n.titre)}</h4>
                         </div>
-                        <p style="font-size:14px; color:#6b7280; margin-top:4px;">${escapeHtml(n.message)}</p>
-                        <p style="font-size:12px; color:#d1d5db; margin-top:8px;">${d}</p>
+                        <p style="font-size:11px;color:#d1d5db;margin-top:3px;">${d}</p>
                     </div>
-                    <button onclick="event.stopPropagation(); dismissNotification(${n.id})" style="background:none; border:none; cursor:pointer; color:#d1d5db;">
+                    <button onclick="event.stopPropagation(); dismissNotification(${n.id})" style="background:none;border:none;cursor:pointer;color:#d1d5db;flex-shrink:0;padding:4px;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#d1d5db'">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>`;
