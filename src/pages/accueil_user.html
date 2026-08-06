@@ -1632,6 +1632,10 @@
         // ═══════════════════════════════════════════════════════════════════════
         const API = '/api';
 
+        function escapeHtml(str) {
+            return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
         // Récupère l'ID utilisateur stocké au login
         const getUserId = () => parseInt(localStorage.getItem('userId') || '0');
 
@@ -2177,7 +2181,7 @@
             try {
             const res = await apiFetch(`${API}/notifications`);
             if (!res.success) {
-                grid.innerHTML = `<p class="text-center text-red-400 py-10">Erreur notifications : ${res.message || 'réponse invalide'}</p>`;
+                grid.innerHTML = `<p class="text-center text-red-400 py-10">Impossible de charger vos notifications.</p>`;
                 return;
             }
 
@@ -2219,7 +2223,7 @@
             setTimeout(refreshNotifBadge, 500);
             } catch(e) {
                 console.error('renderNotifications error:', e);
-                grid.innerHTML = `<p class="text-center text-red-400 py-10">Erreur JS notifications : ${e.message}</p>`;
+                grid.innerHTML = `<p class="text-center text-red-400 py-10">Impossible de charger vos notifications.</p>`;
             }
         }
 
