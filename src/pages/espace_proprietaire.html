@@ -442,17 +442,17 @@
             <!-- STATS -->
             <section id="section-stats" class="section-fade">
                 <h1 style="font-size:28px; font-weight:800; color:#111827; margin-bottom:24px;">Statistiques</h1>
-                <div id="statsCards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:24px; margin-bottom:32px;"></div>
+                <div id="statsCards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:16px; margin-bottom:32px;"></div>
                 <!-- Répartition par statut de réservation -->
                 <div id="statsResaSection" style="display:none; margin-bottom:32px;">
                     <h2 style="font-size:18px; font-weight:800; color:#111827; margin-bottom:16px;">Réservations par statut</h2>
-                    <div id="statsResaBars" style="background:#fff; border-radius:20px; padding:24px; border:1px solid #f3f4f6;"></div>
+                    <div id="statsResaBars" style="background:#fff; border-radius:20px; padding:20px; border:1px solid #f3f4f6;"></div>
                 </div>
                 <!-- Tableau par bien -->
                 <div id="statsBiensSection" style="display:none;">
                     <h2 style="font-size:18px; font-weight:800; color:#111827; margin-bottom:16px;">Détail par annonce</h2>
-                    <div style="background:#fff; border-radius:20px; overflow:hidden; border:1px solid #f3f4f6;">
-                        <table id="statsBiensTable" style="width:100%; border-collapse:collapse; font-size:13px;"></table>
+                    <div style="background:#fff; border-radius:20px; overflow:hidden; border:1px solid #f3f4f6; overflow-x:auto; -webkit-overflow-scrolling:touch;">
+                        <table id="statsBiensTable" style="width:100%; min-width:480px; border-collapse:collapse; font-size:13px;"></table>
                     </div>
                 </div>
             </section>
@@ -2013,10 +2013,12 @@ moderation:     { icon: 'fa-shield-halved', bg: '#fef3c7', color: '#92400e' },
                 { icon: 'fa-percent',        bg: '#fef3c7', color: '#d97706', label: 'Taux de confirmation',value: taux + '%' },
             ];
             document.getElementById('statsCards').innerHTML = kpis.map(c => `
-                <div class="stat-card">
-                    <div class="stat-icon" style="background:${c.bg}; color:${c.color};"><i class="fas ${c.icon}"></i></div>
-                    <p style="font-size:28px; font-weight:800; color:#111827; line-height:1;">${c.value}</p>
-                    <p style="font-weight:700; color:#374151; font-size:14px; margin-top:6px;">${c.label}</p>
+                <div style="background:#fff;border-radius:20px;border:1px solid #f3f4f6;padding:18px 14px;display:flex;flex-direction:column;align-items:flex-start;overflow:hidden;box-sizing:border-box;box-shadow:0 2px 12px rgba(0,0,0,0.05);">
+                    <div style="width:44px;height:44px;border-radius:14px;background:${c.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-bottom:12px;">
+                        <i class="fas ${c.icon}" style="font-size:18px;color:${c.color};"></i>
+                    </div>
+                    <p style="font-size:22px;font-weight:900;color:#111827;line-height:1;margin:0;">${c.value}</p>
+                    <p style="font-size:12px;font-weight:700;color:#374151;margin:5px 0 0;line-height:1.3;word-break:break-word;">${c.label}</p>
                 </div>`).join('');
 
             // Répartition par statut
@@ -2031,7 +2033,7 @@ moderation:     { icon: 'fa-shield-halved', bg: '#fef3c7', color: '#92400e' },
                 resaSec.style.display = 'block';
                 document.getElementById('statsResaBars').innerHTML = statutsData.map(s => `
                     <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
-                        <span style="width:110px; font-size:12px; font-weight:700; color:#374151; flex-shrink:0;">${s.label}</span>
+                        <span style="min-width:70px;max-width:90px; font-size:12px; font-weight:700; color:#374151; flex-shrink:0;">${s.label}</span>
                         <div style="flex:1; background:#f3f4f6; border-radius:999px; height:10px; overflow:hidden;">
                             <div style="width:${totalResas ? Math.round(s.count/totalResas*100) : 0}%; background:${s.bar}; height:100%; border-radius:999px; transition:width 0.6s ease;"></div>
                         </div>
