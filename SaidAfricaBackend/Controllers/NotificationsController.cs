@@ -29,6 +29,15 @@ namespace SaidAfricaBackend.Controllers
                 .Where(n => n.UserId == userId)
                 .OrderByDescending(n => n.CreatedAt)
                 .Take(50)
+                .Select(n => new {
+                    n.Id,
+                    n.Type,
+                    n.Titre,
+                    n.Message,
+                    n.CibleSection,
+                    n.EstLue,
+                    n.CreatedAt
+                })
                 .ToListAsync();
 
             var nonLues = notifications.Count(n => !n.EstLue);
