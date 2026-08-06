@@ -219,10 +219,9 @@
         }
 
         @media (max-width: 480px) {
-            body { padding: 20px 0; align-items: flex-start; }
+            body { padding: 80px 0 24px; align-items: center; }
             .wrapper { height: 520px; }
-            .input-group { margin: 18px 0; }
-            .back-home { top: 12px; left: 12px; padding: 8px 14px; font-size: 13px; }
+            .back-home { top: 16px; left: 16px; padding: 8px 14px; font-size: 13px; }
         }
 
         .form-wrapper {
@@ -307,9 +306,13 @@
             margin-bottom: 10px;
         }
 
+        .form-wrapper form {
+            width: min(320px, 82%);
+        }
+
         .input-group {
             position: relative;
-            width: min(320px, 82%);
+            width: 100%;
             margin: 25px 0;
         }
 
