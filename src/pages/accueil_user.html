@@ -2170,14 +2170,14 @@
         async function renderNotifications() {
             const grid = document.getElementById('notificationsGrid');
             grid.innerHTML = `<div class="text-center py-10"><i class="fas fa-spinner fa-spin text-blue-600 text-2xl"></i></div>`;
-
+            try {
             const res = await apiFetch(`${API}/notifications`);
             if (!res.success) {
                 grid.innerHTML = `<p class="text-center text-red-400 py-10">Impossible de charger vos notifications.</p>`;
                 return;
             }
 
-            const notifications = res.data.notifications;
+            const notifications = res.data?.notifications || [];
 
             if (!notifications.length) {
                 grid.innerHTML = `<div class="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-100">
@@ -2191,8 +2191,8 @@
             grid.innerHTML = notifications.map(n => {
                 const c = notifIcons[n.type] || { icon: 'fa-bell', bg: '#f3f4f6', color: '#6b7280' };
                 const d = new Date(n.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-                const safeMsg   = n.message.replace(/'/g, "\\'").replace(/\n/g, ' ');
-                const safeTitre = n.titre.replace(/'/g, "\\'");
+                const safeMsg   = (n.message || '').replace(/'/g, "\\'").replace(/\n/g, ' ');
+                const safeTitre = (n.titre || '').replace(/'/g, "\\'");
                 return `
                 <div onclick="openNotifPopup('${safeTitre}', '${safeMsg}', '${d}')" style="background:#fff;border-radius:16px;padding:16px 18px;border:1px solid #f3f4f6;display:flex;align-items:center;gap:14px;cursor:pointer;box-sizing:border-box;width:100%;transition:box-shadow 0.2s;" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow='none'">
                     <div style="width:42px;height:42px;border-radius:12px;background:${c.bg};color:${c.color};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -2213,6 +2213,10 @@
 
             notifications.filter(n => !n.estLue).forEach(n => apiFetch(`${API}/notifications/${n.id}/lue`, { method: 'PUT' }));
             setTimeout(refreshNotifBadge, 500);
+            } catch(e) {
+                console.error('renderNotifications error:', e);
+                grid.innerHTML = `<p class="text-center text-red-400 py-10">Impossible de charger vos notifications.</p>`;
+            }
         }
 
         async function dismissNotification(id) {
@@ -3407,7 +3411,7 @@
         function demandeStatusBadgeHtml(demande) {
             const styles = {
                 'En attente': { bg: '#fef3c7', color: '#d97706', icon: 'fa-hourglass-half', text: 'Votre demande est en attente de validation par l\'administration régionale.' },
-                'Validée':    { bg: '#d1fae5', color: '#059669', icon: 'fa-circle-check',    text: 'Votre demande a été validée ! Vous êtes maintenant Propriétaire.' },
+                'Valide':     { bg: '#d1fae5', color: '#059669', icon: 'fa-circle-check',    text: 'Votre demande a été validée ! Vous êtes maintenant Propriétaire.' },
                 'Refusée':    { bg: '#fee2e2', color: '#dc2626', icon: 'fa-circle-xmark',    text: 'Votre demande a été refusée. Vous pouvez en soumettre une nouvelle.' },
             };
             const s = styles[demande.statut] || styles['En attente'];
