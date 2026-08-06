@@ -1684,10 +1684,14 @@
                     },
                     ...options
                 });
-                return await res.json();
+                const data = await res.json();
+                if (!res.ok && !data.success) {
+                    return { success: false, message: data.message || data.title || `HTTP ${res.status}` };
+                }
+                return data;
             } catch (err) {
                 console.error('API error:', url, err);
-                return { success: false, message: 'Erreur réseau' };
+                return { success: false, message: err.message || 'Erreur réseau' };
             }
         }
 
@@ -2173,7 +2177,7 @@
             try {
             const res = await apiFetch(`${API}/notifications`);
             if (!res.success) {
-                grid.innerHTML = `<p class="text-center text-red-400 py-10">Impossible de charger vos notifications.</p>`;
+                grid.innerHTML = `<p class="text-center text-red-400 py-10">Erreur notifications : ${res.message || 'réponse invalide'}</p>`;
                 return;
             }
 
@@ -2215,7 +2219,7 @@
             setTimeout(refreshNotifBadge, 500);
             } catch(e) {
                 console.error('renderNotifications error:', e);
-                grid.innerHTML = `<p class="text-center text-red-400 py-10">Impossible de charger vos notifications.</p>`;
+                grid.innerHTML = `<p class="text-center text-red-400 py-10">Erreur JS notifications : ${e.message}</p>`;
             }
         }
 
