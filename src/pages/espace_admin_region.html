@@ -1191,7 +1191,7 @@
             // Onglets de filtre
             const counts = {
                 'En attente': regionBiens.filter(b => b.statutPublication === 'En attente').length,
-                'Validée':    regionBiens.filter(b => b.statutPublication === 'Validée').length,
+                'Valide':     regionBiens.filter(b => b.statutPublication === 'Valide').length,
                 'Rejetée':    regionBiens.filter(b => b.statutPublication === 'Rejetée').length,
             };
 
@@ -1201,9 +1201,9 @@
                         style="background:${biensModerationFilter==='En attente'?'#f59e0b':'#fff'};color:${biensModerationFilter==='En attente'?'#fff':'#374151'};border:1px solid #e5e7eb;font-weight:700;font-size:13px;padding:10px 6px;border-radius:12px;cursor:pointer;text-align:center;">
                         <i class="fas fa-clock" style="margin-right:6px;"></i>En attente (${counts['En attente']})
                     </button>
-                    <button onclick="setBienFilter('Validée', this)"
-                        style="background:${biensModerationFilter==='Validée'?'#059669':'#fff'};color:${biensModerationFilter==='Validée'?'#fff':'#374151'};border:1px solid #e5e7eb;font-weight:700;font-size:13px;padding:10px 6px;border-radius:12px;cursor:pointer;text-align:center;">
-                        <i class="fas fa-circle-check" style="margin-right:6px;"></i>Validés (${counts['Validée']})
+                    <button onclick="setBienFilter('Valide', this)"
+                        style="background:${biensModerationFilter==='Valide'?'#059669':'#fff'};color:${biensModerationFilter==='Valide'?'#fff':'#374151'};border:1px solid #e5e7eb;font-weight:700;font-size:13px;padding:10px 6px;border-radius:12px;cursor:pointer;text-align:center;">
+                        <i class="fas fa-circle-check" style="margin-right:6px;"></i>Validés (${counts['Valide']})
                     </button>
                     <button onclick="setBienFilter('Rejetée', this)"
                         style="background:${biensModerationFilter==='Rejetée'?'#dc2626':'#fff'};color:${biensModerationFilter==='Rejetée'?'#fff':'#374151'};border:1px solid #e5e7eb;font-weight:700;font-size:13px;padding:10px 6px;border-radius:12px;cursor:pointer;text-align:center;">
@@ -1235,15 +1235,15 @@
                     ? `<span style="position:absolute;top:12px;left:12px;background:#f59e0b;color:#fff;font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px;">Vente</span>`
                     : `<span style="position:absolute;top:12px;left:12px;background:#2563eb;color:#fff;font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px;">Location</span>`;
 
-                const badgeSp = sp === 'Validée' && !isOff
+                const badgeSp = sp === 'Valide' && !isOff
                     ? `<span style="position:absolute;top:12px;right:12px;background:#059669;color:#fff;font-size:10px;font-weight:800;padding:3px 10px;border-radius:999px;text-transform:uppercase;">En ligne</span>`
-                    : sp === 'Validée' && isOff
+                    : sp === 'Valide' && isOff
                         ? `<span style="position:absolute;top:12px;right:12px;background:rgba(17,24,39,0.8);color:#fff;font-size:10px;font-weight:800;padding:3px 10px;border-radius:999px;text-transform:uppercase;">Retiré</span>`
                     : sp === 'Rejetée'
                         ? `<span style="position:absolute;top:12px;right:12px;background:#dc2626;color:#fff;font-size:10px;font-weight:800;padding:3px 10px;border-radius:999px;text-transform:uppercase;">Rejeté</span>`
                         : `<span style="position:absolute;top:12px;right:12px;background:#f59e0b;color:#fff;font-size:10px;font-weight:800;padding:3px 10px;border-radius:999px;text-transform:uppercase;">En attente</span>`;
 
-                const dimmed = sp !== 'Validée' || isOff;
+                const dimmed = sp !== 'Valide' || isOff;
                 const imageBlock = b.imageUrl
                     ? `<img src="${escapeHtml(b.imageUrl)}" alt="${escapeHtml(b.titre)}" loading="lazy"
                            style="width:100%;height:100%;object-fit:cover;transition:transform 0.7s ease;${dimmed ? 'filter:grayscale(50%);opacity:0.75;' : ''}">`
@@ -1296,7 +1296,7 @@
                             style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:9px 6px;background:#dc2626;color:#fff;border:none;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;">
                             <i class="fas fa-times"></i> Rejeter
                         </button>`;
-                } else if (sp === 'Validée') {
+                } else if (sp === 'Valide') {
                     actionBtns = isOff
                         ? `<button onclick="confirmerModeration(${b.id}, true)"
                                style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:9px 6px;background:#059669;color:#fff;border:none;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;">
@@ -1410,7 +1410,7 @@
 
             const dispo = document.getElementById('adDispo');
             const sp = b.statutPublication || 'En attente';
-            if (sp === 'Validée' && b.estDisponible) {
+            if (sp === 'Valide' && b.estDisponible) {
                 dispo.textContent = 'En ligne';
                 dispo.className = 'text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700';
             } else if (sp === 'Rejetée') {

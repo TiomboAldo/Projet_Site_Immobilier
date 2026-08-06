@@ -1186,14 +1186,14 @@
                     : `<span class="absolute top-3 left-3 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow">Location</span>`;
 
                 // Badge de modération (coin haut-droit de l'image)
-                const badgeMod = sp === 'Validée' && !isOff ? ''
-                    : sp === 'Validée' && isOff
+                const badgeMod = sp === 'Valide' && !isOff ? ''
+                    : sp === 'Valide' && isOff
                         ? `<span class="absolute top-3 right-3 bg-gray-900/80 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">Retirée</span>`
                     : sp === 'Rejetée'
                         ? `<span class="absolute top-3 right-3 bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">Rejeté</span>`
                         : `<span class="absolute top-3 right-3 bg-amber-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">En attente</span>`;
 
-                const dimmed = sp !== 'Validée' || isOff;
+                const dimmed = sp !== 'Valide' || isOff;
                 const imageBlock = b.imageUrl
                     ? `<img src="${escapeHtml(b.imageUrl)}" alt="${escapeHtml(b.titre)}"
                            class="w-full h-full object-cover transition duration-700 group-hover:scale-110${dimmed ? ' grayscale opacity-70' : ''}">`
@@ -1228,7 +1228,7 @@
 
                 // Bouton d'action selon statut de modération
                 let actionBtn = '';
-                if (sp === 'Validée') {
+                if (sp === 'Valide') {
                     actionBtn = isOff
                         ? `<button onclick="republierBien(${b.id})"
                                class="w-full py-2.5 text-xs font-bold rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition flex items-center justify-center gap-1.5 border-none cursor-pointer">
@@ -1923,8 +1923,8 @@ moderation:     { icon: 'fa-shield-halved', bg: '#fef3c7', color: '#92400e' },
             // ── Derniers biens ────────────────────────────────────────────
             if (biensEl) biensEl.innerHTML = mesBiens.length
                 ? mesBiens.slice(0, 5).map(b => {
-                    const statutColor = b.statutPublication === 'Validée' ? '#059669' : b.statutPublication === 'Rejetée' ? '#dc2626' : '#f59e0b';
-                    const statutLabel = b.statutPublication === 'Validée' ? 'Validé' : b.statutPublication === 'Rejetée' ? 'Rejeté' : 'En attente';
+                    const statutColor = b.statutPublication === 'Valide' ? '#059669' : b.statutPublication === 'Rejetée' ? '#dc2626' : '#f59e0b';
+                    const statutLabel = b.statutPublication === 'Valide' ? 'Validé' : b.statutPublication === 'Rejetée' ? 'Rejeté' : 'En attente';
                     return `
                     <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f9fafb;">
                         <div style="width:44px;height:44px;border-radius:10px;overflow:hidden;flex-shrink:0;">
