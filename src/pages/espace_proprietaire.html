@@ -125,6 +125,7 @@
         @media (max-width: 767px) {
             .activity-grid { grid-template-columns: 1fr !important; }
             .p-8 { padding: 16px !important; }
+            #statsBottomRow { grid-template-columns: 1fr !important; }
         }
 
         #toast-container {
@@ -440,19 +441,21 @@
             </section>
 
             <!-- STATS -->
-            <section id="section-stats" class="section-fade">
+            <section id="section-stats" class="section-fade" style="overflow-x:hidden;">
                 <h1 style="font-size:28px; font-weight:800; color:#111827; margin-bottom:24px;">Statistiques</h1>
-                <div id="statsCards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:16px; margin-bottom:32px;"></div>
-                <!-- Répartition par statut de réservation -->
-                <div id="statsResaSection" style="display:none; margin-bottom:32px;">
-                    <h2 style="font-size:18px; font-weight:800; color:#111827; margin-bottom:16px;">Réservations par statut</h2>
-                    <div id="statsResaBars" style="background:#fff; border-radius:20px; padding:20px; border:1px solid #f3f4f6;"></div>
-                </div>
-                <!-- Tableau par bien -->
-                <div id="statsBiensSection" style="display:none;">
-                    <h2 style="font-size:18px; font-weight:800; color:#111827; margin-bottom:16px;">Détail par annonce</h2>
-                    <div style="background:#fff; border-radius:20px; overflow:hidden; border:1px solid #f3f4f6; overflow-x:auto; -webkit-overflow-scrolling:touch;">
-                        <table id="statsBiensTable" style="width:100%; min-width:480px; border-collapse:collapse; font-size:13px;"></table>
+                <div id="statsCards" style="display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin-bottom:24px;"></div>
+                <div id="statsBottomRow" style="display:none; gap:16px; grid-template-columns:repeat(2,1fr);">
+                    <!-- Répartition par statut de réservation -->
+                    <div id="statsResaSection">
+                        <h2 style="font-size:16px; font-weight:800; color:#111827; margin-bottom:12px;">Réservations par statut</h2>
+                        <div id="statsResaBars" style="background:#fff; border-radius:16px; padding:16px; border:1px solid #f3f4f6;"></div>
+                    </div>
+                    <!-- Tableau par bien -->
+                    <div id="statsBiensSection">
+                        <h2 style="font-size:16px; font-weight:800; color:#111827; margin-bottom:12px;">Détail par annonce</h2>
+                        <div style="background:#fff; border-radius:16px; border:1px solid #f3f4f6; overflow-x:auto; -webkit-overflow-scrolling:touch;">
+                            <table id="statsBiensTable" style="width:100%; border-collapse:collapse; font-size:12px;"></table>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -2021,52 +2024,48 @@ moderation:     { icon: 'fa-shield-halved', bg: '#fef3c7', color: '#92400e' },
                     <p style="font-size:12px;font-weight:700;color:#374151;margin:5px 0 0;line-height:1.3;word-break:break-word;">${c.label}</p>
                 </div>`).join('');
 
+            // Afficher la ligne du bas si au moins une des deux sections a du contenu
+            if (totalResas > 0 || mesBiens.length > 0) {
+                document.getElementById('statsBottomRow').style.display = 'grid';
+            }
+
             // Répartition par statut
             const statutsData = [
-                { label: 'En attente', count: reservations.filter(r => r.statut === 'En attente').length, bg: '#fef3c7', bar: '#f59e0b' },
-                { label: 'Confirmée',  count: confirmees, bg: '#d1fae5', bar: '#10b981' },
-                { label: 'Refusée',    count: reservations.filter(r => r.statut === 'Refusée').length, bg: '#fee2e2', bar: '#ef4444' },
-                { label: 'Annulée',    count: reservations.filter(r => r.statut === 'Annulée').length, bg: '#f3f4f6', bar: '#9ca3af' },
+                { label: 'En attente', count: reservations.filter(r => r.statut === 'En attente').length, bar: '#f59e0b' },
+                { label: 'Confirmée',  count: confirmees, bar: '#10b981' },
+                { label: 'Refusée',    count: reservations.filter(r => r.statut === 'Refusée').length, bar: '#ef4444' },
+                { label: 'Annulée',    count: reservations.filter(r => r.statut === 'Annulée').length, bar: '#9ca3af' },
             ];
             if (totalResas > 0) {
-                const resaSec = document.getElementById('statsResaSection');
-                resaSec.style.display = 'block';
                 document.getElementById('statsResaBars').innerHTML = statutsData.map(s => `
-                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
-                        <span style="min-width:70px;max-width:90px; font-size:12px; font-weight:700; color:#374151; flex-shrink:0;">${s.label}</span>
-                        <div style="flex:1; background:#f3f4f6; border-radius:999px; height:10px; overflow:hidden;">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+                        <span style="min-width:65px;max-width:75px; font-size:11px; font-weight:700; color:#374151; flex-shrink:0;">${s.label}</span>
+                        <div style="flex:1; background:#f3f4f6; border-radius:999px; height:8px; overflow:hidden; min-width:0;">
                             <div style="width:${totalResas ? Math.round(s.count/totalResas*100) : 0}%; background:${s.bar}; height:100%; border-radius:999px; transition:width 0.6s ease;"></div>
                         </div>
-                        <span style="width:32px; text-align:right; font-size:12px; font-weight:800; color:#111827;">${s.count}</span>
+                        <span style="width:22px; text-align:right; font-size:11px; font-weight:800; color:#111827; flex-shrink:0;">${s.count}</span>
                     </div>`).join('');
             }
 
-            // Tableau par bien
+            // Tableau par bien (sans colonne Taux)
             if (mesBiens.length > 0) {
-                document.getElementById('statsBiensSection').style.display = 'block';
                 const rows = mesBiens.map(b => {
-                    const bResas    = reservations.filter(r => r.bienId === b.id);
-                    const bConf     = bResas.filter(r => r.statut === 'Confirmée').length;
-                    const bTraitees = bResas.filter(r => r.statut !== 'En attente').length;
-                    const bTaux     = bTraitees ? Math.round(bConf / bTraitees * 100) : 0;
+                    const bResas = reservations.filter(r => r.bienId === b.id);
+                    const bConf  = bResas.filter(r => r.statut === 'Confirmée').length;
                     return `<tr style="border-bottom:1px solid #f3f4f6;">
-                        <td style="padding:14px 20px; font-weight:700; color:#111827; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(b.titre)}</td>
-                        <td style="padding:14px 16px; text-align:center; color:#7c3aed; font-weight:800;">${b.vues || 0}</td>
-                        <td style="padding:14px 16px; text-align:center; color:#2563eb; font-weight:800;">${bResas.length}</td>
-                        <td style="padding:14px 16px; text-align:center; color:#059669; font-weight:800;">${bConf}</td>
-                        <td style="padding:14px 16px; text-align:center;">
-                            <span style="background:${bTaux>=50?'#d1fae5':'#fef3c7'}; color:${bTaux>=50?'#065f46':'#92400e'}; padding:4px 12px; border-radius:999px; font-size:11px; font-weight:800;">${bTaux}%</span>
-                        </td>
+                        <td style="padding:10px 12px; font-weight:700; color:#111827; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(b.titre)}</td>
+                        <td style="padding:10px 8px; text-align:center; color:#7c3aed; font-weight:800;">${b.vues || 0}</td>
+                        <td style="padding:10px 8px; text-align:center; color:#2563eb; font-weight:800;">${bResas.length}</td>
+                        <td style="padding:10px 8px; text-align:center; color:#059669; font-weight:800;">${bConf}</td>
                     </tr>`;
                 }).join('');
                 document.getElementById('statsBiensTable').innerHTML = `
                     <thead>
                         <tr style="background:#f8fafc; border-bottom:2px solid #f3f4f6;">
-                            <th style="padding:14px 20px; text-align:left; font-size:11px; font-weight:800; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em;">Annonce</th>
-                            <th style="padding:14px 16px; text-align:center; font-size:11px; font-weight:800; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em;">Vues</th>
-                            <th style="padding:14px 16px; text-align:center; font-size:11px; font-weight:800; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em;">Réservations</th>
-                            <th style="padding:14px 16px; text-align:center; font-size:11px; font-weight:800; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em;">Confirmées</th>
-                            <th style="padding:14px 16px; text-align:center; font-size:11px; font-weight:800; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em;">Taux</th>
+                            <th style="padding:10px 12px; text-align:left; font-size:10px; font-weight:800; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em;">Annonce</th>
+                            <th style="padding:10px 8px; text-align:center; font-size:10px; font-weight:800; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em;">Vues</th>
+                            <th style="padding:10px 8px; text-align:center; font-size:10px; font-weight:800; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em;">Resas</th>
+                            <th style="padding:10px 8px; text-align:center; font-size:10px; font-weight:800; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em;">Conf.</th>
                         </tr>
                     </thead>
                     <tbody>${rows}</tbody>`;
