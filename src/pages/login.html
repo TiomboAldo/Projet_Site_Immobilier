@@ -35,8 +35,11 @@
                     <label>E-mail</label>
                 </div>
                 <div class="input-group">
-                    <input type="password" name="Password" required>
+                    <input type="password" name="Password" id="pwdSignUp" required>
                     <label>Mot de passe</label>
+                    <button type="button" class="toggle-pwd" onclick="togglePwd('pwdSignUp', this)" tabindex="-1">
+                        <i class="fas fa-eye"></i>
+                    </button>
                 </div>
                 <button type="submit" class="btn">S'inscrire</button>
                 <div class="sign-link">
@@ -53,8 +56,11 @@
                     <label>E-mail</label>
                 </div>
                 <div class="input-group">
-                    <input type="password" name="Password" required>
+                    <input type="password" name="Password" id="pwdSignIn" required>
                     <label>Mot de passe</label>
+                    <button type="button" class="toggle-pwd" onclick="togglePwd('pwdSignIn', this)" tabindex="-1">
+                        <i class="fas fa-eye"></i>
+                    </button>
                 </div>
                 <div class="forgot-pass">
                     <a href="#" onclick="openForgotModal();return false;">Mot de passe oublié ?</a>
@@ -208,6 +214,15 @@
             width: min(400px, 95vw);
             height: 550px;
             z-index: 1;
+            overflow: hidden;
+            border-radius: 15px;
+        }
+
+        @media (max-width: 480px) {
+            body { padding: 20px 0; align-items: flex-start; }
+            .wrapper { height: 520px; }
+            .input-group { margin: 18px 0; }
+            .back-home { top: 12px; left: 12px; padding: 8px 14px; font-size: 13px; }
         }
 
         .form-wrapper {
@@ -315,9 +330,26 @@
             border: 1.5px solid rgba(255, 255, 255, 0.4);
             border-radius: 8px;
             color: #fff;
-            padding: 0 15px;
+            padding: 0 42px 0 15px;
             outline: none;
         }
+
+        .toggle-pwd {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.6);
+            cursor: pointer;
+            font-size: 15px;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            z-index: 2;
+        }
+        .toggle-pwd:hover { color: #fff; }
 
         .input-group input:focus~label,
         .input-group input:valid~label {
@@ -452,6 +484,18 @@
 
         signUpLink.onclick = () => { wrapper.classList.add('animate-signIn'); wrapper.classList.remove('animate-signUp'); };
         signInLink.onclick = () => { wrapper.classList.add('animate-signUp'); wrapper.classList.remove('animate-signIn'); };
+
+        function togglePwd(id, btn) {
+            const input = document.getElementById(id);
+            const icon  = btn.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        }
 
         // SYSTÈME DE MODAL SANS CLIC OBLIGATOIRE
         function showMessage(title, message, type = 'success', autoClose = false) {
