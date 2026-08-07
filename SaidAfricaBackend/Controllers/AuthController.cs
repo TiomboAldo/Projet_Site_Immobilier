@@ -382,6 +382,29 @@ namespace SaidAfricaBackend.Controllers
 
             return Ok(new { success = true, message = "Authentification à deux facteurs désactivée." });
         }
+
+        // --- TEST SMTP (diagnostic) ---
+        [HttpGet("test-smtp")]
+        [AllowAnonymous]
+        public async Task<IActionResult> TestSmtp()
+        {
+            var host = _config["Smtp:Host"]     ?? "";
+            var port = _config["Smtp:Port"]     ?? "";
+            var user = _config["Smtp:Username"] ?? "";
+            var pass = _config["Smtp:Password"] ?? "";
+            var config = new { host, port, user = string.IsNullOrEmpty(user) ? "(vide)" : user, passLength = pass.Length };
+
+            try
+            {
+                await _email.SendAsync(user, "Test", "Test SMTP Levetimmo",
+                    "<p>Si vous voyez cet email, le SMTP fonctionne correctement !</p>");
+                return Ok(new { success = true, message = "Email envoyé avec succès !", config });
+            }
+            catch (Exception ex)
+            {
+                return Ok(new { success = false, error = ex.Message, config });
+            }
+        }
     }
 
     // Modèles pour les requêtes
