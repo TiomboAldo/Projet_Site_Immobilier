@@ -3960,10 +3960,9 @@
         async function load2FAStatus() {
             try {
                 const res = await apiFetch(`${API}/auth/2fa-status`);
-                if (!res.success) return;
-                _2faEnabled = res.twoFactorEnabled;
-                render2FACard();
+                if (res.success) _2faEnabled = res.twoFactorEnabled === true;
             } catch(e) {}
+            render2FACard();
         }
 
         function render2FACard() {
@@ -3994,21 +3993,28 @@
                 document.getElementById('twoFaEnableStep').style.display  = 'none';
                 setTimeout(() => document.getElementById('twoFaDisablePwd').focus(), 100);
             } else {
-                // Demander l'OTP
-                const res = await apiFetch(`${API}/auth/request-enable-2fa`, { method: 'POST' });
-                if (!res.success) { showToast('error', 'Erreur', res.message || 'Impossible d\'envoyer le code.'); return; }
-                document.getElementById('twoFaEnableCode').value = '';
-                document.getElementById('twoFaEnableErr').style.display  = 'none';
-                const hint = document.getElementById('twoFaEnableDevHint');
-                if (res.devOtp) {
-                    hint.textContent = `Mode dev — code : ${res.devOtp}`;
-                    hint.style.display = 'block';
-                } else {
-                    hint.style.display = 'none';
+                const btn = document.getElementById('twoFaToggleBtn');
+                btn.disabled = true;
+                try {
+                    const res = await apiFetch(`${API}/auth/request-enable-2fa`, { method: 'POST' });
+                    if (!res.success) { showToast('error', 'Erreur', res.message || 'Impossible d\'envoyer le code.'); return; }
+                    document.getElementById('twoFaEnableCode').value = '';
+                    document.getElementById('twoFaEnableErr').style.display  = 'none';
+                    const hint = document.getElementById('twoFaEnableDevHint');
+                    if (res.devOtp) {
+                        hint.textContent = `Mode dev — code : ${res.devOtp}`;
+                        hint.style.display = 'block';
+                    } else {
+                        hint.style.display = 'none';
+                    }
+                    document.getElementById('twoFaEnableStep').style.display  = 'block';
+                    document.getElementById('twoFaDisableStep').style.display = 'none';
+                    setTimeout(() => document.getElementById('twoFaEnableCode').focus(), 100);
+                } catch(e) {
+                    showToast('error', 'Erreur', 'Impossible de contacter le serveur.');
+                } finally {
+                    btn.disabled = false;
                 }
-                document.getElementById('twoFaEnableStep').style.display  = 'block';
-                document.getElementById('twoFaDisableStep').style.display = 'none';
-                setTimeout(() => document.getElementById('twoFaEnableCode').focus(), 100);
             }
         }
 
