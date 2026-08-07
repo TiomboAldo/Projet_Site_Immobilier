@@ -770,13 +770,7 @@
             _2faTempToken = tempToken;
             document.getElementById('twoFaCode').value = '';
             document.getElementById('twoFaError').style.display = 'none';
-            const hint = document.getElementById('twoFaDevHint');
-            if (devOtp) {
-                hint.textContent = `Mode dev — code : ${devOtp}`;
-                hint.style.display = 'block';
-            } else {
-                hint.style.display = 'none';
-            }
+            document.getElementById('twoFaDevHint').style.display = 'none';
             document.getElementById('twoFaModal').style.display = 'flex';
             setTimeout(() => document.getElementById('twoFaCode').focus(), 100);
         }
