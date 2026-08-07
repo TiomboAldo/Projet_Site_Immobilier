@@ -49,8 +49,9 @@ namespace SaidAfricaBackend.Services
             message.Body = new TextPart("html") { Text = WrapTemplate(subject, htmlBody) };
 
             using var client = new SmtpClient();
-            client.Timeout = 8000; // 8s max — évite que le login freeze si SMTP lent
-            await client.ConnectAsync(host, port, SecureSocketOptions.StartTls);
+            client.Timeout = 15000;
+            var secureOption = port == 465 ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls;
+            await client.ConnectAsync(host, port, secureOption);
             await client.AuthenticateAsync(user, pass);
             await client.SendAsync(message);
             await client.DisconnectAsync(true);
