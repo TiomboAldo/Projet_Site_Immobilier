@@ -245,39 +245,148 @@ namespace SaidAfricaBackend.Controllers
         {
             try
             {
-                // 1. Chercher l'utilisateur par son email
                 var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
 
-                // 2. Vérifier si l'utilisateur existe ET si le mot de passe correspond
                 if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
-                {
                     return Unauthorized(new { success = false, message = "Email ou mot de passe incorrect." });
+
+                // 2FA activée → envoyer OTP avant de délivrer le JWT
+                if (user.TwoFactorEnabled)
+                {
+                    var otp       = new Random().Next(100000, 999999).ToString();
+                    var tempToken = Guid.NewGuid().ToString("N");
+
+                    user.TwoFactorOtp       = otp;
+                    user.TwoFactorOtpExpiry = DateTime.UtcNow.AddMinutes(10);
+                    user.TwoFactorTempToken = tempToken;
+                    await _context.SaveChangesAsync();
+
+                    bool smtpOk = !string.IsNullOrEmpty(_config["Smtp:Username"]);
+                    _ = _email.SendTwoFactorOtpAsync(user.Email, user.Prenom, otp);
+
+                    return Ok(new
+                    {
+                        success           = true,
+                        requiresTwoFactor = true,
+                        tempToken,
+                        devOtp = smtpOk ? null : otp   // visible seulement sans SMTP
+                    });
                 }
 
-                // 3. Succès ! (les propriétaires bloqués peuvent se connecter en espace client)
+                // 2FA désactivée → JWT immédiat
                 var token = GenerateJwt(user);
-
                 return Ok(new
                 {
                     success = true,
                     message = $"Ravi de vous revoir, {user.Prenom} !",
                     token,
-                    user = new
-                    {
-                        user.Id,
-                        user.Nom,
-                        user.Prenom,
-                        user.Email,
-                        user.Role,
-                        user.EstValide,
-                        user.EstBloque
-                    }
+                    user = new { user.Id, user.Nom, user.Prenom, user.Email, user.Role, user.EstValide, user.EstBloque }
                 });
             }
             catch (Exception ex)
             {
                 return BadRequest(new { success = false, message = "Erreur : " + ex.Message });
             }
+        }
+
+        // --- VÉRIFIER LE CODE OTP (étape 2 de la connexion) ---
+        [HttpPost("verify-2fa")]
+        [AllowAnonymous]
+        public async Task<IActionResult> VerifyTwoFactor([FromBody] VerifyTwoFactorRequest req)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u =>
+                u.TwoFactorTempToken == req.TempToken &&
+                u.TwoFactorOtpExpiry > DateTime.UtcNow);
+
+            if (user == null)
+                return BadRequest(new { success = false, message = "Session expirée. Veuillez vous reconnecter." });
+
+            if (user.TwoFactorOtp != req.Code)
+                return BadRequest(new { success = false, message = "Code incorrect." });
+
+            user.TwoFactorOtp       = null;
+            user.TwoFactorOtpExpiry = null;
+            user.TwoFactorTempToken = null;
+            await _context.SaveChangesAsync();
+
+            var token = GenerateJwt(user);
+            return Ok(new
+            {
+                success = true,
+                message = $"Ravi de vous revoir, {user.Prenom} !",
+                token,
+                user = new { user.Id, user.Nom, user.Prenom, user.Email, user.Role, user.EstValide, user.EstBloque }
+            });
+        }
+
+        // --- STATUT 2FA ---
+        [HttpGet("2fa-status")]
+        [Authorize]
+        public async Task<IActionResult> GetTwoFactorStatus()
+        {
+            var user = await _context.Users.FindAsync(CurrentUserId());
+            if (user == null) return NotFound();
+            return Ok(new { success = true, twoFactorEnabled = user.TwoFactorEnabled });
+        }
+
+        // --- ACTIVER LA 2FA : demande d'OTP ---
+        [HttpPost("request-enable-2fa")]
+        [Authorize]
+        public async Task<IActionResult> RequestEnableTwoFactor()
+        {
+            var user = await _context.Users.FindAsync(CurrentUserId());
+            if (user == null) return NotFound();
+
+            if (user.TwoFactorEnabled)
+                return BadRequest(new { success = false, message = "La 2FA est déjà activée." });
+
+            var otp = new Random().Next(100000, 999999).ToString();
+            user.TwoFactorOtp       = otp;
+            user.TwoFactorOtpExpiry = DateTime.UtcNow.AddMinutes(10);
+            await _context.SaveChangesAsync();
+
+            bool smtpOk = !string.IsNullOrEmpty(_config["Smtp:Username"]);
+            _ = _email.SendTwoFactorOtpAsync(user.Email, user.Prenom, otp);
+
+            return Ok(new { success = true, devOtp = smtpOk ? null : otp });
+        }
+
+        // --- ACTIVER LA 2FA : confirmer l'OTP ---
+        [HttpPost("confirm-enable-2fa")]
+        [Authorize]
+        public async Task<IActionResult> ConfirmEnableTwoFactor([FromBody] ConfirmTwoFactorRequest req)
+        {
+            var user = await _context.Users.FindAsync(CurrentUserId());
+            if (user == null) return NotFound();
+
+            if (user.TwoFactorOtp != req.Code || user.TwoFactorOtpExpiry < DateTime.UtcNow)
+                return BadRequest(new { success = false, message = "Code incorrect ou expiré." });
+
+            user.TwoFactorEnabled   = true;
+            user.TwoFactorOtp       = null;
+            user.TwoFactorOtpExpiry = null;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, message = "Authentification à deux facteurs activée avec succès." });
+        }
+
+        // --- DÉSACTIVER LA 2FA ---
+        [HttpPost("disable-2fa")]
+        [Authorize]
+        public async Task<IActionResult> DisableTwoFactor([FromBody] DisableTwoFactorRequest req)
+        {
+            var user = await _context.Users.FindAsync(CurrentUserId());
+            if (user == null) return NotFound();
+
+            if (!BCrypt.Net.BCrypt.Verify(req.Password, user.Password))
+                return BadRequest(new { success = false, message = "Mot de passe incorrect." });
+
+            user.TwoFactorEnabled   = false;
+            user.TwoFactorOtp       = null;
+            user.TwoFactorOtpExpiry = null;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, message = "Authentification à deux facteurs désactivée." });
         }
     }
 
@@ -328,5 +437,21 @@ namespace SaidAfricaBackend.Controllers
     {
         public string Token       { get; set; } = string.Empty;
         public string NewPassword { get; set; } = string.Empty;
+    }
+
+    public class VerifyTwoFactorRequest
+    {
+        public string TempToken { get; set; } = string.Empty;
+        public string Code      { get; set; } = string.Empty;
+    }
+
+    public class ConfirmTwoFactorRequest
+    {
+        public string Code { get; set; } = string.Empty;
+    }
+
+    public class DisableTwoFactorRequest
+    {
+        public string Password { get; set; } = string.Empty;
     }
 }

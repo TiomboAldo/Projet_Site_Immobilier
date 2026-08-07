@@ -195,6 +195,12 @@ namespace SaidAfricaBackend
         public string?   ResetToken       { get; set; }
         public DateTime? ResetTokenExpiry { get; set; }
 
+        // ── Authentification à deux facteurs (2FA email OTP) ─────────────────
+        public bool      TwoFactorEnabled   { get; set; } = false;
+        public string?   TwoFactorOtp       { get; set; }
+        public DateTime? TwoFactorOtpExpiry { get; set; }
+        public string?   TwoFactorTempToken { get; set; }
+
         // ── KYC (vérification d'identité) ───────────────────────────────────
         /// <summary>NonSoumis | EnAttente | Approuve | Rejete</summary>
         public string   KycStatut       { get; set; } = "NonSoumis";

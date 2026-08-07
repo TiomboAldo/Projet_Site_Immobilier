@@ -15,6 +15,7 @@ namespace SaidAfricaBackend.Services
         Task SendDemandeProprietaireRefuseeAsync(string clientEmail, string clientPrenom, string? motif);
         Task SendBienvenueAsync(string email, string prenom);
         Task SendPasswordResetAsync(string email, string prenom, string resetToken);
+        Task SendTwoFactorOtpAsync(string email, string prenom, string otp);
     }
 
     public class EmailService : IEmailService
@@ -147,6 +148,19 @@ namespace SaidAfricaBackend.Services
                    <p>Commencez dès maintenant à explorer les biens disponibles !</p>
                    <a href='https://levetimmo.com/src/pages/accueil_user.html' style='display:inline-block;background:#2563eb;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px;'>Explorer les biens</a>
                    <p style='margin-top:24px;font-size:13px;color:#6b7280;'>Si vous n'avez pas créé ce compte, ignorez cet email.</p>");
+
+        public Task SendTwoFactorOtpAsync(string email, string prenom, string otp)
+            => SendAsync(email, prenom,
+                "🔐 Votre code de vérification — Levetimmo",
+                $@"<h2>Bonjour {prenom},</h2>
+                   <p>Voici votre code de vérification pour finaliser votre connexion sur <strong>Levetimmo</strong>.</p>
+                   <div style='text-align:center;margin:28px 0;'>
+                       <div style='display:inline-block;background:#eff6ff;border:2px solid #2563eb;border-radius:16px;padding:20px 36px;'>
+                           <p style='margin:0;font-size:36px;font-weight:900;letter-spacing:10px;color:#1e40af;'>{otp}</p>
+                       </div>
+                   </div>
+                   <p style='color:#6b7280;font-size:13px;'>Ce code est valable <strong>10 minutes</strong>. Ne le partagez avec personne.</p>
+                   <p style='color:#6b7280;font-size:13px;'>Si vous n'êtes pas à l'origine de cette tentative de connexion, changez votre mot de passe immédiatement.</p>");
 
         public Task SendPasswordResetAsync(string email, string prenom, string resetToken)
         {
