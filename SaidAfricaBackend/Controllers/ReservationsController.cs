@@ -209,6 +209,41 @@ namespace SaidAfricaBackend.Controllers
             return Ok(new { success = true, data = new ReservationDto(r, r.Bien!.Titre) });
         }
 
+        // ─── GET /api/reservations/admin ─────────────────────────────────────
+        // Toutes les réservations (admin uniquement) avec statut paiement
+        [HttpGet("admin")]
+        [Authorize(Roles = "AdminRegion,AdminPays,DirecteurProjet")]
+        public async Task<IActionResult> GetAllAdmin()
+        {
+            var reservations = await _context.Reservations
+                .Include(r => r.Bien)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+
+            var reservationIds = reservations.Select(r => r.Id).ToList();
+            var payments = await _context.Payments
+                .Where(p => p.ReservationId.HasValue && reservationIds.Contains(p.ReservationId!.Value))
+                .GroupBy(p => p.ReservationId)
+                .Select(g => new { ReservationId = g.Key, Statut = g.OrderByDescending(p => p.UpdatedAt).First().Statut })
+                .ToListAsync();
+
+            var paymentMap = payments.ToDictionary(p => p.ReservationId!.Value, p => p.Statut);
+
+            var result = reservations.Select(r =>
+            {
+                var dto = new ReservationDto(r, r.Bien?.Titre ?? $"Bien #{r.BienId}");
+                return new
+                {
+                    dto.Id, dto.UserId, dto.BienId, dto.BienTitre,
+                    dto.Prenom, dto.Nom, dto.Email, dto.Telephone,
+                    dto.Lieu, dto.DateVisite, dto.Message, dto.Statut, dto.CreatedAt,
+                    StatutPaiement = paymentMap.TryGetValue(r.Id, out var sp) ? sp : "NonPayé",
+                };
+            });
+
+            return Ok(new { success = true, data = result });
+        }
+
         // ─── DELETE /api/reservations/{id} ────────────────────────────────────
         // Annuler une réservation
         [HttpDelete("{id}")]

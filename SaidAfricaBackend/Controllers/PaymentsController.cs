@@ -188,7 +188,7 @@ namespace SaidAfricaBackend.Controllers
             return Ok(new { success = true, data = payments });
         }
 
-        // ─── GET /api/payments/admin (admin only) ─────────────────────────────
+        // ─── GET /api/payments/admin (admin only) ───────────────────────────
         [HttpGet("admin")]
         [Authorize(Roles = "AdminRegion,AdminPays,DirecteurProjet")]
         public async Task<IActionResult> AdminPaiements()
