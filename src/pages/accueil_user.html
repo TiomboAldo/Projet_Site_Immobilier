@@ -1310,63 +1310,6 @@
                         </div>
                     </div>
 
-                    <!-- Authentification à deux facteurs -->
-                    <div class="settings-card" id="twoFaCard">
-                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-                            <div class="settings-card-icon" style="background:#f0fdf4;"><i class="fas fa-shield-halved" style="color:#16a34a;font-size:13px;"></i></div>
-                            <div style="flex:1;">
-                                <h3 style="font-size:13px;font-weight:700;color:#111827;margin:0 0 2px;">Double authentification (2FA)</h3>
-                                <p style="font-size:11px;color:#6b7280;margin:0;">Code email requis à chaque connexion.</p>
-                            </div>
-                            <span id="twoFaBadge" style="display:none;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;"></span>
-                        </div>
-                        <div id="twoFaStatusRow" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-                            <p id="twoFaStatusText" style="font-size:13px;color:#6b7280;margin:0;flex:1;"></p>
-                            <button id="twoFaToggleBtn" onclick="toggle2FA()"
-                                style="padding:10px 18px;font-size:13px;font-weight:700;border:none;border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:7px;font-family:inherit;transition:opacity .2s;">
-                            </button>
-                        </div>
-                        <!-- Étape OTP pour activer -->
-                        <div id="twoFaEnableStep" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid #f3f4f6;">
-                            <p style="font-size:12px;color:#6b7280;margin:0 0 8px;">Un code à 6 chiffres a été envoyé à votre email.</p>
-                            <p id="twoFaEnableDevHint" style="display:none;background:#fef9c3;border:1px solid #fde68a;border-radius:8px;padding:6px 10px;font-size:11px;color:#92400e;margin-bottom:8px;"></p>
-                            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                                <input type="text" id="twoFaEnableCode" maxlength="6" placeholder="_ _ _ _ _ _"
-                                    style="flex:1;min-width:120px;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:18px;font-weight:700;text-align:center;letter-spacing:6px;outline:none;"
-                                    onfocus="this.style.borderColor='#16a34a'" onblur="this.style.borderColor='#e5e7eb'"
-                                    oninput="this.value=this.value.replace(/\D/g,'')"
-                                    onkeydown="if(event.key==='Enter') confirm2FA()">
-                                <button onclick="confirm2FA()" id="twoFaConfirmBtn"
-                                    style="padding:10px 16px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">
-                                    <i class="fas fa-check"></i> Confirmer
-                                </button>
-                                <button onclick="cancel2FAEnable()"
-                                    style="padding:10px 14px;background:transparent;color:#6b7280;border:1.5px solid #e5e7eb;border-radius:10px;font-size:13px;cursor:pointer;">
-                                    Annuler
-                                </button>
-                            </div>
-                            <p id="twoFaEnableErr" style="color:#ef4444;font-size:12px;margin:6px 0 0;display:none;"></p>
-                        </div>
-                        <!-- Étape mot de passe pour désactiver -->
-                        <div id="twoFaDisableStep" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid #f3f4f6;">
-                            <p style="font-size:12px;color:#6b7280;margin:0 0 8px;">Confirmez votre mot de passe pour désactiver la 2FA.</p>
-                            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                                <input type="password" id="twoFaDisablePwd" placeholder="Mot de passe actuel"
-                                    style="flex:1;min-width:140px;padding:10px 12px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:13px;outline:none;"
-                                    onfocus="this.style.borderColor='#ef4444'" onblur="this.style.borderColor='#e5e7eb'"
-                                    onkeydown="if(event.key==='Enter') disable2FA()">
-                                <button onclick="disable2FA()" id="twoFaDisableBtn"
-                                    style="padding:10px 16px;background:#ef4444;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">
-                                    <i class="fas fa-shield-xmark"></i> Désactiver
-                                </button>
-                                <button onclick="cancel2FADisable()"
-                                    style="padding:10px 14px;background:transparent;color:#6b7280;border:1.5px solid #e5e7eb;border-radius:10px;font-size:13px;cursor:pointer;">
-                                    Annuler
-                                </button>
-                            </div>
-                            <p id="twoFaDisableErr" style="color:#ef4444;font-size:12px;margin:6px 0 0;display:none;"></p>
-                        </div>
-                    </div>
 
                 </div>
             </section>
@@ -3552,7 +3495,7 @@
             if (id === 'notifications') renderNotifications();
             if (id === 'messagerie') initClientMessagerie();
             if (id === 'carte') initClientMap();
-            if (id === 'settings') { loadTelephoneFromBackend(); load2FAStatus(); }
+            if (id === 'settings') { loadTelephoneFromBackend(); }
 
             if (id !== 'messagerie' && clientMsgPolling) {
                 clearInterval(clientMsgPolling);
@@ -3952,116 +3895,6 @@
             const hidden = inp.type === 'password';
             inp.type = hidden ? 'text' : 'password';
             btn.querySelector('i').className = hidden ? 'fas fa-eye-slash' : 'fas fa-eye';
-        }
-
-        // ═══ DOUBLE AUTHENTIFICATION (2FA) ═══════════════════════════════════
-        let _2faEnabled = false;
-
-        async function load2FAStatus() {
-            try {
-                const res = await apiFetch(`${API}/auth/2fa-status`);
-                if (res.success) _2faEnabled = res.twoFactorEnabled === true;
-            } catch(e) {}
-            render2FACard();
-        }
-
-        function render2FACard() {
-            const badge  = document.getElementById('twoFaBadge');
-            const text   = document.getElementById('twoFaStatusText');
-            const btn    = document.getElementById('twoFaToggleBtn');
-            if (_2faEnabled) {
-                badge.textContent = 'Activée';
-                badge.style.cssText = 'display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#dcfce7;color:#16a34a;';
-                text.textContent = 'Votre compte est protégé. Un code email est requis à chaque connexion.';
-                btn.textContent  = '';
-                btn.innerHTML    = '<i class="fas fa-shield-xmark"></i> Désactiver la 2FA';
-                btn.style.cssText = 'padding:10px 18px;font-size:13px;font-weight:700;border:none;border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:7px;font-family:inherit;background:#fef2f2;color:#ef4444;transition:opacity .2s;';
-            } else {
-                badge.textContent = 'Désactivée';
-                badge.style.cssText = 'display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#f3f4f6;color:#6b7280;';
-                text.textContent = 'Activez la 2FA pour renforcer la sécurité de votre compte.';
-                btn.innerHTML    = '<i class="fas fa-shield-halved"></i> Activer la 2FA';
-                btn.style.cssText = 'padding:10px 18px;font-size:13px;font-weight:700;border:none;border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:7px;font-family:inherit;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;transition:opacity .2s;box-shadow:0 4px 14px rgba(22,163,74,.25);';
-            }
-        }
-
-        async function toggle2FA() {
-            if (_2faEnabled) {
-                document.getElementById('twoFaDisablePwd').value = '';
-                document.getElementById('twoFaDisableErr').style.display = 'none';
-                document.getElementById('twoFaDisableStep').style.display = 'block';
-                document.getElementById('twoFaEnableStep').style.display  = 'none';
-                setTimeout(() => document.getElementById('twoFaDisablePwd').focus(), 100);
-            } else {
-                const btn = document.getElementById('twoFaToggleBtn');
-                btn.disabled = true;
-                try {
-                    const res = await apiFetch(`${API}/auth/request-enable-2fa`, { method: 'POST' });
-                    if (!res.success) { showToast('error', 'Erreur', res.message || 'Impossible d\'envoyer le code.'); return; }
-                    document.getElementById('twoFaEnableCode').value = '';
-                    document.getElementById('twoFaEnableErr').style.display  = 'none';
-                    const hint = document.getElementById('twoFaEnableDevHint');
-                    if (res.devOtp) {
-                        hint.textContent = `Mode dev — code : ${res.devOtp}`;
-                        hint.style.display = 'block';
-                    } else {
-                        hint.style.display = 'none';
-                    }
-                    document.getElementById('twoFaEnableStep').style.display  = 'block';
-                    document.getElementById('twoFaDisableStep').style.display = 'none';
-                    setTimeout(() => document.getElementById('twoFaEnableCode').focus(), 100);
-                } catch(e) {
-                    showToast('error', 'Erreur', 'Impossible de contacter le serveur.');
-                } finally {
-                    btn.disabled = false;
-                }
-            }
-        }
-
-        async function confirm2FA() {
-            const code  = document.getElementById('twoFaEnableCode').value.trim();
-            const errEl = document.getElementById('twoFaEnableErr');
-            const btn   = document.getElementById('twoFaConfirmBtn');
-            if (code.length !== 6) { errEl.textContent = 'Code à 6 chiffres requis.'; errEl.style.display = 'block'; return; }
-            errEl.style.display = 'none';
-            btn.disabled = true;
-            const res = await apiFetch(`${API}/auth/confirm-enable-2fa`, {
-                method: 'POST',
-                body: JSON.stringify({ Code: code })
-            });
-            btn.disabled = false;
-            if (!res.success) { errEl.textContent = res.message || 'Code incorrect.'; errEl.style.display = 'block'; return; }
-            _2faEnabled = true;
-            document.getElementById('twoFaEnableStep').style.display = 'none';
-            render2FACard();
-            showToast('success', 'Sécurité', 'Double authentification activée !');
-        }
-
-        function cancel2FAEnable() {
-            document.getElementById('twoFaEnableStep').style.display = 'none';
-        }
-
-        async function disable2FA() {
-            const pwd   = document.getElementById('twoFaDisablePwd').value;
-            const errEl = document.getElementById('twoFaDisableErr');
-            const btn   = document.getElementById('twoFaDisableBtn');
-            if (!pwd) { errEl.textContent = 'Mot de passe requis.'; errEl.style.display = 'block'; return; }
-            errEl.style.display = 'none';
-            btn.disabled = true;
-            const res = await apiFetch(`${API}/auth/disable-2fa`, {
-                method: 'POST',
-                body: JSON.stringify({ Password: pwd })
-            });
-            btn.disabled = false;
-            if (!res.success) { errEl.textContent = res.message || 'Mot de passe incorrect.'; errEl.style.display = 'block'; return; }
-            _2faEnabled = false;
-            document.getElementById('twoFaDisableStep').style.display = 'none';
-            render2FACard();
-            showToast('success', 'Sécurité', 'Double authentification désactivée.');
-        }
-
-        function cancel2FADisable() {
-            document.getElementById('twoFaDisableStep').style.display = 'none';
         }
 
         async function changePassword() {

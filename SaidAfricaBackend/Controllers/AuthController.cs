@@ -250,38 +250,25 @@ namespace SaidAfricaBackend.Controllers
                 if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
                     return Unauthorized(new { success = false, message = "Email ou mot de passe incorrect." });
 
-                // 2FA activée → envoyer OTP avant de délivrer le JWT
-                if (user.TwoFactorEnabled)
-                {
-                    var otp       = new Random().Next(100000, 999999).ToString();
-                    var tempToken = Guid.NewGuid().ToString("N");
+                // OTP obligatoire à chaque connexion
+                var otp       = new Random().Next(100000, 999999).ToString();
+                var tempToken = Guid.NewGuid().ToString("N");
 
-                    user.TwoFactorOtp       = otp;
-                    user.TwoFactorOtpExpiry = DateTime.UtcNow.AddMinutes(10);
-                    user.TwoFactorTempToken = tempToken;
-                    await _context.SaveChangesAsync();
+                user.TwoFactorOtp       = otp;
+                user.TwoFactorOtpExpiry = DateTime.UtcNow.AddMinutes(10);
+                user.TwoFactorTempToken = tempToken;
+                await _context.SaveChangesAsync();
 
-                    bool emailSent = false;
-                    try { await _email.SendTwoFactorOtpAsync(user.Email, user.Prenom, otp); emailSent = true; }
-                    catch { /* email non critique */ }
+                bool emailSent = false;
+                try { await _email.SendTwoFactorOtpAsync(user.Email, user.Prenom, otp); emailSent = true; }
+                catch { /* email non critique */ }
 
-                    return Ok(new
-                    {
-                        success           = true,
-                        requiresTwoFactor = true,
-                        tempToken,
-                        devOtp = emailSent ? null : otp   // visible si l'email n'a pas été envoyé
-                    });
-                }
-
-                // 2FA désactivée → JWT immédiat
-                var token = GenerateJwt(user);
                 return Ok(new
                 {
-                    success = true,
-                    message = $"Ravi de vous revoir, {user.Prenom} !",
-                    token,
-                    user = new { user.Id, user.Nom, user.Prenom, user.Email, user.Role, user.EstValide, user.EstBloque }
+                    success           = true,
+                    requiresTwoFactor = true,
+                    tempToken,
+                    devOtp = emailSent ? null : otp
                 });
             }
             catch (Exception ex)
