@@ -12,24 +12,23 @@ namespace SaidAfricaBackend.Controllers
     public class PaymentsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-        private readonly IMoMoService _momo;
+        private readonly ICamPayService _campay;
 
         private int    CurrentUserId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         private string CurrentRole()   => User.FindFirstValue(ClaimTypes.Role) ?? "";
 
-        public PaymentsController(ApplicationDbContext context, IMoMoService momo)
+        public PaymentsController(ApplicationDbContext context, ICamPayService campay)
         {
             _context = context;
-            _momo    = momo;
+            _campay  = campay;
         }
 
         // ─── POST /api/payments/initier ───────────────────────────────────────
-        // Corps : { TypePaiement, Montant, NumeroPayeur, BienId?, ReservationId? }
         [HttpPost("initier")]
         public async Task<IActionResult> Initier([FromBody] InitierPaiementRequest req)
         {
             if (string.IsNullOrWhiteSpace(req.NumeroPayeur))
-                return BadRequest(new { success = false, message = "Numéro MTN requis." });
+                return BadRequest(new { success = false, message = "Numéro de téléphone requis." });
 
             if (req.Montant <= 0)
                 return BadRequest(new { success = false, message = "Montant invalide." });
@@ -40,7 +39,6 @@ namespace SaidAfricaBackend.Controllers
 
             var userId = CurrentUserId();
 
-            // Créer l'enregistrement Payment en base (statut EnAttente)
             var payment = new Payment
             {
                 TypePaiement  = req.TypePaiement,
@@ -54,42 +52,35 @@ namespace SaidAfricaBackend.Controllers
             _context.Payments.Add(payment);
             await _context.SaveChangesAsync();
 
-            // Appel MTN MoMo
-            if (_momo.IsConfigured)
+            if (!_campay.IsConfigured)
+                return Ok(new { success = true, paymentId = payment.Id, unconfigured = true });
+
+            var description = req.TypePaiement switch
             {
-                var description = req.TypePaiement switch
-                {
-                    "Reservation"  => $"Frais de visite — Said Africa",
-                    "Abonnement"   => $"Abonnement Propriétaire — Said Africa",
-                    "Commission"   => $"Commission — Said Africa",
-                    _              => "Said Africa",
-                };
+                "Reservation" => "Frais de visite — Levetimmo",
+                "Abonnement"  => "Abonnement Propriétaire — Levetimmo",
+                "Commission"  => "Commission — Levetimmo",
+                _             => "Levetimmo",
+            };
 
-                var (success, referenceId, error) = await _momo.InitiateCollectionAsync(
-                    phoneNumber: req.NumeroPayeur.Trim(),
-                    amount:      req.Montant,
-                    description: description,
-                    externalId:  payment.Id.ToString());
+            var (success, reference, error) = await _campay.CollectAsync(
+                phoneNumber:       req.NumeroPayeur.Trim(),
+                amount:            req.Montant,
+                description:       description,
+                externalReference: payment.Id.ToString());
 
-                if (!success)
-                {
-                    payment.Statut     = "Echoue";
-                    payment.MotifEchec = error;
-                    await _context.SaveChangesAsync();
-                    return BadRequest(new { success = false, message = error ?? "Erreur lors de l'envoi de la demande de paiement." });
-                }
-
-                // Stocker le referenceId MTN dans le champ ReferenceId
-                payment.ReferenceId = referenceId;
+            if (!success)
+            {
+                payment.Statut     = "Echoue";
+                payment.MotifEchec = error;
                 await _context.SaveChangesAsync();
+                return BadRequest(new { success = false, message = error ?? "Erreur lors de l'envoi de la demande de paiement." });
+            }
 
-                return Ok(new { success = true, paymentId = payment.Id, referenceId });
-            }
-            else
-            {
-                // Mode sans credentials : retourner le paymentId pour simulation côté frontend
-                return Ok(new { success = true, paymentId = payment.Id, referenceId = payment.ReferenceId, unconfigured = true });
-            }
+            payment.ReferenceId = reference;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, paymentId = payment.Id, reference });
         }
 
         // ─── GET /api/payments/status/{paymentId} ─────────────────────────────
@@ -102,15 +93,14 @@ namespace SaidAfricaBackend.Controllers
             if (payment == null)
                 return NotFound(new { success = false, message = "Paiement introuvable." });
 
-            // Si déjà résolu, pas besoin de rappeler MTN
             if (payment.Statut != "EnAttente")
                 return Ok(new { success = true, statut = payment.Statut });
 
-            if (_momo.IsConfigured)
+            if (_campay.IsConfigured && !string.IsNullOrEmpty(payment.ReferenceId))
             {
-                var momoStatus = await _momo.GetPaymentStatusAsync(payment.ReferenceId);
+                var campayStatus = await _campay.GetStatusAsync(payment.ReferenceId);
 
-                payment.Statut = momoStatus switch
+                payment.Statut = campayStatus switch
                 {
                     "SUCCESSFUL" => "Reussi",
                     "FAILED"     => "Echoue",
@@ -127,14 +117,14 @@ namespace SaidAfricaBackend.Controllers
         }
 
         // ─── POST /api/payments/callback ──────────────────────────────────────
-        // Webhook MTN MoMo (notification automatique après paiement)
+        // Webhook CamPay (notification automatique après paiement)
         [HttpPost("callback")]
         [AllowAnonymous]
-        public async Task<IActionResult> Callback([FromBody] MoMoCallbackPayload payload)
+        public async Task<IActionResult> Callback([FromBody] CamPayWebhookPayload payload)
         {
-            if (string.IsNullOrWhiteSpace(payload.ExternalId)) return Ok();
+            if (string.IsNullOrWhiteSpace(payload.ExternalReference)) return Ok();
 
-            if (!int.TryParse(payload.ExternalId, out var paymentId)) return Ok();
+            if (!int.TryParse(payload.ExternalReference, out var paymentId)) return Ok();
 
             var payment = await _context.Payments.FindAsync(paymentId);
             if (payment == null) return Ok();
@@ -142,7 +132,7 @@ namespace SaidAfricaBackend.Controllers
             payment.Statut    = payload.Status == "SUCCESSFUL" ? "Reussi" : "Echoue";
             payment.UpdatedAt = DateTime.UtcNow;
             if (payload.Status != "SUCCESSFUL")
-                payment.MotifEchec = payload.Reason ?? "Paiement refusé";
+                payment.MotifEchec = "Paiement refusé ou annulé";
 
             await _context.SaveChangesAsync();
             return Ok();
@@ -198,10 +188,12 @@ namespace SaidAfricaBackend.Controllers
         public int?    ReservationId { get; set; }
     }
 
-    public class MoMoCallbackPayload
+    public class CamPayWebhookPayload
     {
-        public string? ExternalId { get; set; }
-        public string? Status     { get; set; }
-        public string? Reason     { get; set; }
+        public string? Reference         { get; set; }
+        public string? Status            { get; set; }
+        public string? ExternalReference { get; set; }
+        public string? Operator          { get; set; }
+        public string? Amount            { get; set; }
     }
 }

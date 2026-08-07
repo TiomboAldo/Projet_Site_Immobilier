@@ -90,7 +90,7 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddSingleton<IEmailService, EmailService>();
 builder.Services.AddHttpClient();
-builder.Services.AddSingleton<IMoMoService, MoMoService>();
+builder.Services.AddSingleton<ICamPayService, CamPayService>();
 
 builder.Services.AddControllers();
 
