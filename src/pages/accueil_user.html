@@ -2511,16 +2511,40 @@
             showToast('info', 'Réservation enregistrée', 'Vous pourrez effectuer le paiement plus tard depuis vos réservations.');
         }
 
+        function detectNetwork(phone) {
+            const digits = phone.replace(/\D/g, '').replace(/^237/, '');
+            const p = digits.substring(0, 3);
+            const mtn    = ['650','651','652','653','654','670','671','672','673','674','675','676','677','678','679','680','681','682','683','684','685','686','687','688','689'];
+            const orange = ['655','656','657','658','659','690','691','692','693','694','695','696','697','698','699'];
+            if (mtn.includes(p))    return 'MTN';
+            if (orange.includes(p)) return 'Orange';
+            return null;
+        }
+
         async function submitMoMoPayment() {
             const rawPhone = document.getElementById('payPhoneInput').value.trim();
             const errEl    = document.getElementById('payErr1');
             const btn      = document.getElementById('payConfirmBtn');
 
-            if (!rawPhone || rawPhone.replace(/\D/g, '').length < 8) {
-                errEl.textContent = `Numéro ${_payNetwork === 'MTN' ? 'MTN' : 'Orange'} invalide (ex : ${_payNetwork === 'MTN' ? '677000000' : '699000000'}).`;
+            const digits = rawPhone.replace(/\D/g, '');
+            if (!digits || digits.length < 8) {
+                errEl.textContent = `Numéro invalide (ex : ${_payNetwork === 'MTN' ? '677000000' : '699000000'}).`;
                 errEl.style.display = 'block';
                 return;
             }
+
+            const detectedNetwork = detectNetwork(digits);
+            if (detectedNetwork && detectedNetwork !== _payNetwork) {
+                errEl.textContent = `Ce numéro est un numéro ${detectedNetwork}. Sélectionnez "${detectedNetwork} ${detectedNetwork === 'MTN' ? 'MoMo' : 'Money'}" ci-dessus.`;
+                errEl.style.display = 'block';
+                return;
+            }
+            if (!detectedNetwork) {
+                errEl.textContent = 'Numéro non reconnu. Vérifiez le numéro saisi.';
+                errEl.style.display = 'block';
+                return;
+            }
+
             errEl.style.display = 'none';
 
             // Normaliser le numéro : ajouter 237 si absent
