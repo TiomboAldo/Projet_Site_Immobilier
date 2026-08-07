@@ -1385,13 +1385,20 @@
             if (btn) btn.style.color = res.liked ? '#f43f5e' : '#9ca3af';
         }
 
-        async function ouvrirDocument(filename) {
+        async function ouvrirDocument(path) {
             const token = localStorage.getItem('jwtToken');
+            // Extraire uniquement le nom de fichier (supporte chemin complet ou URL)
+            const filename = (path || '').split('/').pop().split('\\').pop();
+            if (!filename) { showToast('error', 'Erreur', 'Chemin de document invalide.'); return; }
             try {
                 const res = await fetch(`${API}/biens/document/${encodeURIComponent(filename)}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                if (!res.ok) { showToast('error', 'Erreur', 'Document inaccessible.'); return; }
+                if (!res.ok) {
+                    const msg = res.status === 404 ? 'Fichier introuvable sur le serveur.' : `Erreur ${res.status}.`;
+                    showToast('error', 'Erreur', msg);
+                    return;
+                }
                 const blob = await res.blob();
                 const blobUrl = URL.createObjectURL(blob);
                 window.open(blobUrl, '_blank');
