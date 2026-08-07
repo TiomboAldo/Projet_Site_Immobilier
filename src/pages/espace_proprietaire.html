@@ -936,13 +936,27 @@
         }
 
         // ─── GÉOCODAGE AUTOMATIQUE depuis le champ Localisation ─────────────────
-        let _geocodeTimer = null;
+        let _geocodeTimer = null, _geocodeAbort = null;
 
         async function geocodeAndPin(query) {
-            if (!query || query.length < 3) return;
+            // Input vide ou trop court → effacer le marqueur et réinitialiser
+            if (!query || query.length < 3) {
+                if (_pickMarker) { _pickMarker.remove(); _pickMarker = null; }
+                document.getElementById('pfLatitude').value  = '';
+                document.getElementById('pfLongitude').value = '';
+                const bar = document.getElementById('pickMapCoords');
+                if (bar) bar.style.display = 'none';
+                return;
+            }
+
+            // Annuler toute requête précédente encore en vol
+            if (_geocodeAbort) _geocodeAbort.abort();
+            _geocodeAbort = new AbortController();
+            const signal = _geocodeAbort.signal;
+
             try {
                 const url = `https://api.maptiler.com/geocoding/${encodeURIComponent(query)}.json?key=${MAPTILER_KEY}&language=fr&limit=1&country=cm`;
-                const res  = await fetch(url);
+                const res  = await fetch(url, { signal });
                 const data = await res.json();
                 if (!data.features || !data.features.length) return;
                 const [lng, lat] = data.features[0].geometry.coordinates;
@@ -963,6 +977,7 @@
                 if (_pickMap.loaded()) applyPin();
                 else _pickMap.once('load', applyPin);
             } catch(e) {
+                if (e.name === 'AbortError') return; // requête annulée, on ignore
                 console.warn('Geocoding error:', e);
             }
         }
