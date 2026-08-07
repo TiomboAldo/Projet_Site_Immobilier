@@ -233,6 +233,10 @@
                 <i class="fas fa-plus-circle"></i>
                 <span>Publier une annonce</span>
             </button>
+            <button onclick="switchSection('reservations', this)" class="sidebar-item">
+                <i class="fas fa-calendar-check"></i>
+                <span>Mes Réservations</span>
+            </button>
             <button onclick="switchSection('notifications', this)" class="sidebar-item">
                 <i class="fas fa-bell"></i>
                 <span>Notifications</span>
@@ -409,6 +413,24 @@
                         <i class="fas fa-plus"></i> Créer une annonce
                     </button>
                 </div>
+            </section>
+
+            <!-- RÉSERVATIONS -->
+            <section id="section-reservations" class="section-fade">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:16px;">
+                    <h1 style="font-size:28px;font-weight:800;color:#111827;">Mes Réservations</h1>
+                    <button onclick="loadAdminReservations()" style="background:#f3f4f6;border:none;border-radius:12px;padding:10px 18px;font-size:13px;font-weight:700;color:#6b7280;cursor:pointer;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-rotate-right"></i> Actualiser
+                    </button>
+                </div>
+                <!-- Filtres statut -->
+                <div class="filter-btn-container" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
+                    <button onclick="adminResaFilter='all';renderAdminReservations()" class="filter-btn active" id="adminResaTab-all" style="padding:8px 18px;border-radius:999px;border:none;font-size:13px;font-weight:700;cursor:pointer;background:#2563eb;color:#fff;">Toutes</button>
+                    <button onclick="adminResaFilter='En attente';renderAdminReservations()" class="filter-btn" id="adminResaTab-attente" style="padding:8px 18px;border-radius:999px;border:1.5px solid #e5e7eb;font-size:13px;font-weight:700;cursor:pointer;background:#fff;color:#6b7280;">En attente</button>
+                    <button onclick="adminResaFilter='Confirmée';renderAdminReservations()" class="filter-btn" id="adminResaTab-confirmee" style="padding:8px 18px;border-radius:999px;border:1.5px solid #e5e7eb;font-size:13px;font-weight:700;cursor:pointer;background:#fff;color:#6b7280;">Confirmées</button>
+                    <button onclick="adminResaFilter='Refusée';renderAdminReservations()" class="filter-btn" id="adminResaTab-refusee" style="padding:8px 18px;border-radius:999px;border:1.5px solid #e5e7eb;font-size:13px;font-weight:700;cursor:pointer;background:#fff;color:#6b7280;">Refusées</button>
+                </div>
+                <div id="adminReservationsGrid" style="display:flex;flex-direction:column;gap:14px;"></div>
             </section>
 
             <!-- NOTIFICATIONS -->
@@ -2000,6 +2022,7 @@
             if (btn) btn.classList.add('active');
             closeSidebar();
             if (id === 'dashboard')     renderAdminDashboard();
+            if (id === 'reservations')  loadAdminReservations();
             if (id === 'notifications') renderNotifications();
             if (id === 'proprietaires') renderProprietaires();
             if (id === 'demandes')      loadDemandes(currentFilter || 'En attente');
@@ -2008,6 +2031,100 @@
             if (id === 'publier')       openAdminBienModal();
             if (id === 'parametres')    aLoadProfile();
             window.scrollTo(0, 0);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // RÉSERVATIONS (admin)
+        // ═══════════════════════════════════════════════════════════════════
+        let adminReservations = [];
+        let adminResaFilter   = 'all';
+
+        async function loadAdminReservations() {
+            const grid = document.getElementById('adminReservationsGrid');
+            grid.innerHTML = `<div style="text-align:center;padding:40px 0;"><i class="fas fa-spinner fa-spin" style="color:#2563eb;font-size:24px;"></i></div>`;
+            const res = await apiFetch(`${API}/reservations/admin`);
+            if (!res.success) {
+                grid.innerHTML = `<p style="text-align:center;color:#ef4444;padding:40px 0;">Impossible de charger les réservations.</p>`;
+                return;
+            }
+            adminReservations = res.data;
+            renderAdminReservations();
+        }
+
+        function renderAdminReservations() {
+            const grid = document.getElementById('adminReservationsGrid');
+            // sync active filter button
+            document.querySelectorAll('[id^="adminResaTab-"]').forEach(b => {
+                b.style.background = '#fff';
+                b.style.color = '#6b7280';
+                b.style.border = '1.5px solid #e5e7eb';
+            });
+            const activeTab = document.getElementById(
+                adminResaFilter === 'all' ? 'adminResaTab-all' :
+                adminResaFilter === 'En attente' ? 'adminResaTab-attente' :
+                adminResaFilter === 'Confirmée'  ? 'adminResaTab-confirmee' : 'adminResaTab-refusee'
+            );
+            if (activeTab) { activeTab.style.background = '#2563eb'; activeTab.style.color = '#fff'; activeTab.style.border = 'none'; }
+
+            let list = adminResaFilter === 'all'
+                ? adminReservations
+                : adminReservations.filter(r => r.statut === adminResaFilter);
+
+            if (!list.length) {
+                grid.innerHTML = `<div style="text-align:center;padding:60px 0;background:#fff;border-radius:24px;border:2px dashed #e5e7eb;">
+                    <i class="fas fa-calendar-xmark" style="font-size:36px;color:#d1d5db;display:block;margin-bottom:12px;"></i>
+                    <p style="color:#9ca3af;font-weight:600;">${adminResaFilter !== 'all' ? 'Aucune réservation pour ce filtre.' : 'Aucune réservation pour l\'instant.'}</p>
+                </div>`;
+                return;
+            }
+
+            const statutColors = {
+                'En attente': { bg: '#fef3c7', text: '#92400e' },
+                'Confirmée':  { bg: '#d1fae5', text: '#065f46' },
+                'Refusée':    { bg: '#fee2e2', text: '#991b1b' },
+                'Annulée':    { bg: '#f3f4f6', text: '#6b7280' },
+            };
+
+            grid.innerHTML = list.map(r => {
+                const d = new Date(r.dateVisite).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+                const c = statutColors[r.statut] || statutColors['En attente'];
+                const payBadge = r.statutPaiement === 'Reussi'
+                    ? `<span style="font-size:11px;font-weight:800;padding:5px 12px;border-radius:999px;background:#dcfce7;color:#15803d;"><i class="fas fa-circle-check" style="margin-right:4px;"></i>Payé</span>`
+                    : r.statutPaiement === 'EnAttente'
+                    ? `<span style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:999px;background:#fef9c3;color:#92400e;"><i class="fas fa-clock" style="margin-right:4px;"></i>Paiement en cours</span>`
+                    : `<span style="font-size:11px;font-weight:700;padding:5px 12px;border-radius:999px;background:#f3f4f6;color:#6b7280;"><i class="fas fa-hourglass" style="margin-right:4px;"></i>Non payé</span>`;
+                return `
+                <div style="background:#fff;border-radius:20px;padding:24px;border:1px solid #f3f4f6;box-shadow:0 1px 4px rgba(0,0,0,0.04);">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;">
+                        <div style="flex:1;min-width:0;">
+                            <h4 style="font-weight:800;color:#111827;font-size:16px;">${escapeHtml(r.bienTitre || ('Bien #' + r.bienId))}</h4>
+                            <p style="font-size:13px;color:#6b7280;margin-top:6px;"><i class="fas fa-user" style="color:#2563eb;margin-right:6px;"></i>${escapeHtml(r.prenom)} ${escapeHtml(r.nom)} — ${escapeHtml(r.telephone)}</p>
+                            <p style="font-size:13px;color:#6b7280;margin-top:4px;"><i class="fas fa-envelope" style="color:#2563eb;margin-right:6px;"></i>${escapeHtml(r.email)}</p>
+                            <p style="font-size:13px;color:#6b7280;margin-top:4px;"><i class="fas fa-calendar-day" style="color:#2563eb;margin-right:6px;"></i>Visite souhaitée le <strong>${d}</strong></p>
+                            ${r.message ? `<p style="font-size:12px;color:#9ca3af;margin-top:8px;font-style:italic;background:#f8fafc;padding:8px 12px;border-radius:10px;">"${escapeHtml(r.message)}"</p>` : ''}
+                        </div>
+                        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px;flex-shrink:0;">
+                            <span style="font-size:11px;font-weight:800;padding:6px 14px;border-radius:999px;background:${c.bg};color:${c.text};">${r.statut}</span>
+                            ${payBadge}
+                            ${r.statut === 'En attente' ? `
+                            <div style="display:flex;gap:8px;">
+                                <button onclick="adminUpdateReservation(${r.id},'Confirmée')" style="background:#d1fae5;color:#059669;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;"><i class="fas fa-check" style="margin-right:4px;"></i>Accepter</button>
+                                <button onclick="adminUpdateReservation(${r.id},'Refusée')" style="background:#fee2e2;color:#dc2626;border:none;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;"><i class="fas fa-times" style="margin-right:4px;"></i>Refuser</button>
+                            </div>` : ''}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function adminUpdateReservation(id, statut) {
+            const result = await apiFetch(`${API}/reservations/${id}/statut`, { method: 'PUT', body: JSON.stringify({ Statut: statut }) });
+            if (result.success) {
+                showToast(statut === 'Confirmée' ? 'success' : 'info', `Réservation ${statut.toLowerCase()}`, '');
+                await loadAdminReservations();
+            } else {
+                showToast('error', 'Erreur', result.message || 'Une erreur est survenue.');
+            }
         }
 
         // ═══════════════════════════════════════════════════════════════════
@@ -2143,7 +2260,6 @@
                 showToast('error', 'Erreur réseau', 'Impossible de charger le document.');
             }
         }
-
         // ═══════════════════════════════════════════════════════════════════
         // INIT
         // ═══════════════════════════════════════════════════════════════════
