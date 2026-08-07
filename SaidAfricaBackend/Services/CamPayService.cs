@@ -66,9 +66,11 @@ namespace SaidAfricaBackend.Services
             client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Token", token);
 
+            var amountToSend = IsSandbox ? 5 : (int)Math.Ceiling(amount);
+
             var payload = JsonSerializer.Serialize(new
             {
-                amount             = ((int)Math.Ceiling(amount)).ToString(),
+                amount             = amountToSend.ToString(),
                 currency           = "XAF",
                 from               = msisdn,
                 description,
