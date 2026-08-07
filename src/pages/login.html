@@ -529,6 +529,7 @@
             }
 
             modal.style.display = "flex";
+            modal.classList.remove('active');
             setTimeout(() => { modal.classList.add('active'); }, 10);
 
             if (autoClose) {
@@ -541,6 +542,7 @@
         function closeInfoModal() {
             const modal = document.getElementById('infoModal');
             modal.classList.remove('active');
+            modal.style.display = 'none';
         }
         // ═══ MOT DE PASSE OUBLIÉ ════════════════════════════════════════════════
         const API_AUTH = '/api/auth';
