@@ -2317,7 +2317,7 @@
                     _showAbCoords(lat, lng);
                 };
 
-                if (_abPickMap.loaded()) applyPin();
+                if (_abPickMap.isStyleLoaded()) applyPin();
                 else _abPickMap.once('load', applyPin);
             } catch(e) {
                 if (e.name === 'AbortError') return;

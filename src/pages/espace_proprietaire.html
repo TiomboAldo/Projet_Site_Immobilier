@@ -974,7 +974,7 @@
                     showPickCoords(lat, lng);
                 };
 
-                if (_pickMap.loaded()) applyPin();
+                if (_pickMap.isStyleLoaded()) applyPin();
                 else _pickMap.once('load', applyPin);
             } catch(e) {
                 if (e.name === 'AbortError') return; // requête annulée, on ignore
