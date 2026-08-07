@@ -13,14 +13,16 @@ namespace SaidAfricaBackend.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly ICamPayService _campay;
+        private readonly IEmailService _email;
 
         private int    CurrentUserId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         private string CurrentRole()   => User.FindFirstValue(ClaimTypes.Role) ?? "";
 
-        public PaymentsController(ApplicationDbContext context, ICamPayService campay)
+        public PaymentsController(ApplicationDbContext context, ICamPayService campay, IEmailService email)
         {
             _context = context;
             _campay  = campay;
+            _email   = email;
         }
 
         // ─── POST /api/payments/initier ───────────────────────────────────────
@@ -123,11 +125,12 @@ namespace SaidAfricaBackend.Controllers
         public async Task<IActionResult> Callback([FromBody] CamPayWebhookPayload payload)
         {
             if (string.IsNullOrWhiteSpace(payload.ExternalReference)) return Ok();
-
             if (!int.TryParse(payload.ExternalReference, out var paymentId)) return Ok();
 
             var payment = await _context.Payments.FindAsync(paymentId);
             if (payment == null) return Ok();
+
+            var wasEnAttente = payment.Statut == "EnAttente";
 
             payment.Statut    = payload.Status == "SUCCESSFUL" ? "Reussi" : "Echoue";
             payment.UpdatedAt = DateTime.UtcNow;
@@ -135,7 +138,37 @@ namespace SaidAfricaBackend.Controllers
                 payment.MotifEchec = "Paiement refusé ou annulé";
 
             await _context.SaveChangesAsync();
+
+            // Notifier le propriétaire uniquement lors du premier succès
+            if (wasEnAttente && payment.Statut == "Reussi" && payment.ReservationId.HasValue)
+                _ = NotifierProprietaireAsync(payment);
+
             return Ok();
+        }
+
+        private async Task NotifierProprietaireAsync(Payment payment)
+        {
+            try
+            {
+                var reservation = await _context.Reservations
+                    .Include(r => r.Bien)
+                        .ThenInclude(b => b!.Proprietaire)
+                    .FirstOrDefaultAsync(r => r.Id == payment.ReservationId);
+
+                if (reservation?.Bien?.Proprietaire == null) return;
+
+                var proprio = reservation.Bien.Proprietaire;
+                var dateStr = reservation.DateVisite.HasValue
+                    ? reservation.DateVisite.Value.ToString("dd/MM/yyyy")
+                    : "non précisée";
+
+                await _email.SendPaiementConfirmeProprietaireAsync(
+                    proprio.Email, proprio.Prenom,
+                    reservation.Bien.Titre,
+                    reservation.Prenom, reservation.Nom,
+                    payment.Montant, dateStr);
+            }
+            catch { /* email non bloquant */ }
         }
 
         // ─── GET /api/payments/mes-paiements ─────────────────────────────────

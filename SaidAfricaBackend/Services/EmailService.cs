@@ -9,6 +9,7 @@ namespace SaidAfricaBackend.Services
         Task SendReservationConfirmeeAsync(string clientEmail, string clientPrenom, string bienTitre, string dateVisite, string prix);
         Task SendReservationRefuseeAsync(string clientEmail, string clientPrenom, string bienTitre, string? messageProprietaire);
         Task SendNouvelleReservationAsync(string proprietaireEmail, string proprietairePrenom, string bienTitre, string clientPrenom, string clientNom, string dateVisite);
+        Task SendPaiementConfirmeProprietaireAsync(string proprietaireEmail, string proprietairePrenom, string bienTitre, string clientPrenom, string clientNom, decimal montant, string dateVisite);
         Task SendNouveauMessageAsync(string destinataireEmail, string destinatairePrenom, string expediteurPrenom, string bienTitre, string apercu);
         Task SendDemandeProprietaireValideeAsync(string clientEmail, string clientPrenom);
         Task SendDemandeProprietaireRefuseeAsync(string clientEmail, string clientPrenom, string? motif);
@@ -96,6 +97,20 @@ namespace SaidAfricaBackend.Services
                    </div>
                    <p>Rendez-vous dans votre espace propriétaire pour accepter ou refuser cette demande.</p>
                    <a href='https://levetimmo.com/src/pages/espace_proprietaire.html' style='display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px;'>Gérer mes réservations</a>");
+
+        public Task SendPaiementConfirmeProprietaireAsync(string proprietaireEmail, string proprietairePrenom, string bienTitre, string clientPrenom, string clientNom, decimal montant, string dateVisite)
+            => SendAsync(proprietaireEmail, proprietairePrenom,
+                $"✅ Paiement reçu — visite de {bienTitre}",
+                $@"<h2>Bonjour {proprietairePrenom},</h2>
+                   <p>Bonne nouvelle ! <strong>{clientPrenom} {clientNom}</strong> a payé les frais de visite pour votre bien <strong>{bienTitre}</strong>.</p>
+                   <div style='background:#f0fdf4;border-left:4px solid #16a34a;padding:16px;border-radius:8px;margin:20px 0;'>
+                       <p style='margin:0;'><strong>Client :</strong> {clientPrenom} {clientNom}</p>
+                       <p style='margin:8px 0 0;'><strong>Date souhaitée :</strong> {dateVisite}</p>
+                       <p style='margin:8px 0 0;'><strong>Bien :</strong> {bienTitre}</p>
+                       <p style='margin:8px 0 0;'><strong>Montant payé :</strong> {montant:N0} XAF</p>
+                   </div>
+                   <p>Rendez-vous dans votre espace propriétaire pour confirmer ou refuser la visite.</p>
+                   <a href='https://levetimmo.com/src/pages/espace_proprietaire.html' style='display:inline-block;background:#16a34a;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px;'>Gérer mes réservations</a>");
 
         public Task SendNouveauMessageAsync(string destinataireEmail, string destinatairePrenom, string expediteurPrenom, string bienTitre, string apercu)
             => SendAsync(destinataireEmail, destinatairePrenom,

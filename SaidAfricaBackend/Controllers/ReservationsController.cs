@@ -118,10 +118,30 @@ namespace SaidAfricaBackend.Controllers
                 .Include(r => r.Bien)
                 .Where(r => r.Bien != null && r.Bien.ProprietaireId == userId)
                 .OrderByDescending(r => r.CreatedAt)
-                .Select(r => new ReservationDto(r, r.Bien!.Titre))
                 .ToListAsync();
 
-            return Ok(new { success = true, data = reservations });
+            var reservationIds = reservations.Select(r => r.Id).ToList();
+            var payments = await _context.Payments
+                .Where(p => p.ReservationId.HasValue && reservationIds.Contains(p.ReservationId!.Value))
+                .GroupBy(p => p.ReservationId)
+                .Select(g => new { ReservationId = g.Key, Statut = g.OrderByDescending(p => p.UpdatedAt).First().Statut })
+                .ToListAsync();
+
+            var paymentMap = payments.ToDictionary(p => p.ReservationId!.Value, p => p.Statut);
+
+            var result = reservations.Select(r =>
+            {
+                var dto = new ReservationDto(r, r.Bien!.Titre);
+                return new
+                {
+                    dto.Id, dto.UserId, dto.BienId, dto.BienTitre,
+                    dto.Prenom, dto.Nom, dto.Email, dto.Telephone,
+                    dto.Lieu, dto.DateVisite, dto.Message, dto.Statut, dto.CreatedAt,
+                    StatutPaiement = paymentMap.TryGetValue(r.Id, out var sp) ? sp : "NonPayé",
+                };
+            });
+
+            return Ok(new { success = true, data = result });
         }
 
         // ─── PUT /api/reservations/{id}/statut ────────────────────────────────
