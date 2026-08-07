@@ -695,7 +695,9 @@
                 });
                 const result = await response.json();
 
-                if (response.ok && result.success) {
+                if (result.requiresTwoFactor) {
+                    openTwoFaModal(result.tempToken, result.devOtp);
+                } else if (response.ok && result.success) {
                     localStorage.setItem('isLoggedIn', 'true');
                     localStorage.setItem('userPrenom', result.user.prenom);
                     localStorage.setItem('userNom', result.user.nom);
@@ -732,9 +734,6 @@
                         }
                     }, 2500);
 
-
-                } else if (result.requiresTwoFactor) {
-                    openTwoFaModal(result.tempToken, result.devOtp);
                 } else {
                     showMessage("Échec", result.message || "Identifiants incorrects", "error");
                 }
