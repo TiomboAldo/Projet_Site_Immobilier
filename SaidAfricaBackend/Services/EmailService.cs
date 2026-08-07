@@ -1,6 +1,5 @@
-using MailKit.Net.Smtp;
-using MailKit.Security;
-using MimeKit;
+using System.Text;
+using System.Text.Json;
 
 namespace SaidAfricaBackend.Services
 {
@@ -29,33 +28,36 @@ namespace SaidAfricaBackend.Services
             _logger = logger;
         }
 
-        // ─── Envoi générique ─────────────────────────────────────────────────
+        // ─── Envoi générique via Brevo API ───────────────────────────────────
         public async Task SendAsync(string toEmail, string toName, string subject, string htmlBody)
         {
-            var host     = _config["Smtp:Host"]     ?? "smtp.gmail.com";
-            var port     = int.Parse(_config["Smtp:Port"] ?? "587");
-            var user     = _config["Smtp:Username"] ?? "";
-            var pass     = _config["Smtp:Password"] ?? "";
-            var fromName = _config["Smtp:FromName"] ?? "Levetimmo";
-            var fromMail = _config["Smtp:FromEmail"] ?? user;
+            var apiKey   = _config["Brevo:ApiKey"]    ?? "";
+            var fromName = _config["Smtp:FromName"]   ?? "Levetimmo";
+            var fromMail = _config["Smtp:FromEmail"]  ?? "tiomboaldo@gmail.com";
 
-            if (string.IsNullOrEmpty(user) || string.IsNullOrEmpty(pass))
-                throw new InvalidOperationException("SMTP non configuré — identifiants manquants.");
+            if (string.IsNullOrEmpty(apiKey))
+                throw new InvalidOperationException("Brevo:ApiKey non configurée.");
 
-            var message = new MimeMessage();
-            message.From.Add(new MailboxAddress(fromName, fromMail));
-            message.To.Add(new MailboxAddress(toName, toEmail));
-            message.Subject = subject;
-            message.Body = new TextPart("html") { Text = WrapTemplate(subject, htmlBody) };
+            var payload = new
+            {
+                sender     = new { name = fromName, email = fromMail },
+                to         = new[] { new { email = toEmail, name = toName } },
+                subject,
+                htmlContent = WrapTemplate(subject, htmlBody)
+            };
 
-            using var client = new SmtpClient();
-            client.Timeout = 15000;
-            var secureOption = port == 465 ? SecureSocketOptions.SslOnConnect : SecureSocketOptions.StartTls;
-            await client.ConnectAsync(host, port, secureOption);
-            await client.AuthenticateAsync(user, pass);
-            await client.SendAsync(message);
-            await client.DisconnectAsync(true);
-            _logger.LogInformation("Email envoyé à {Email} : {Subject}", toEmail, subject);
+            using var http = new HttpClient();
+            http.DefaultRequestHeaders.Add("api-key", apiKey);
+            var content  = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+            var response = await http.PostAsync("https://api.brevo.com/v3/smtp/email", content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var err = await response.Content.ReadAsStringAsync();
+                throw new Exception($"Brevo {response.StatusCode}: {err}");
+            }
+
+            _logger.LogInformation("Email envoyé via Brevo à {Email} : {Subject}", toEmail, subject);
         }
 
         // ─── Emails métier ────────────────────────────────────────────────────
