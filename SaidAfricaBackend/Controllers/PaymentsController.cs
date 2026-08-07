@@ -158,9 +158,7 @@ namespace SaidAfricaBackend.Controllers
                 if (reservation?.Bien?.Proprietaire == null) return;
 
                 var proprio = reservation.Bien.Proprietaire;
-                var dateStr = reservation.DateVisite.HasValue
-                    ? reservation.DateVisite.Value.ToString("dd/MM/yyyy")
-                    : "non précisée";
+                var dateStr = reservation.DateVisite.ToString("dd/MM/yyyy");
 
                 await _email.SendPaiementConfirmeProprietaireAsync(
                     proprio.Email, proprio.Prenom,
