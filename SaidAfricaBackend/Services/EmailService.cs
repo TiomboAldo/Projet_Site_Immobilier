@@ -36,7 +36,7 @@ namespace SaidAfricaBackend.Services
             var port     = int.Parse(_config["Smtp:Port"] ?? "587");
             var user     = _config["Smtp:Username"] ?? "";
             var pass     = _config["Smtp:Password"] ?? "";
-            var fromName = _config["Smtp:FromName"] ?? "Said Africa";
+            var fromName = _config["Smtp:FromName"] ?? "Levetimmo";
             var fromMail = _config["Smtp:FromEmail"] ?? user;
 
             if (string.IsNullOrEmpty(user) || string.IsNullOrEmpty(pass))
@@ -51,19 +51,12 @@ namespace SaidAfricaBackend.Services
             message.Subject = subject;
             message.Body = new TextPart("html") { Text = WrapTemplate(subject, htmlBody) };
 
-            try
-            {
-                using var client = new SmtpClient();
-                await client.ConnectAsync(host, port, SecureSocketOptions.StartTls);
-                await client.AuthenticateAsync(user, pass);
-                await client.SendAsync(message);
-                await client.DisconnectAsync(true);
-                _logger.LogInformation("Email envoyé à {Email} : {Subject}", toEmail, subject);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erreur lors de l'envoi email à {Email}", toEmail);
-            }
+            using var client = new SmtpClient();
+            await client.ConnectAsync(host, port, SecureSocketOptions.StartTls);
+            await client.AuthenticateAsync(user, pass);
+            await client.SendAsync(message);
+            await client.DisconnectAsync(true);
+            _logger.LogInformation("Email envoyé à {Email} : {Subject}", toEmail, subject);
         }
 
         // ─── Emails métier ────────────────────────────────────────────────────
@@ -116,26 +109,26 @@ namespace SaidAfricaBackend.Services
 
         public Task SendDemandeProprietaireValideeAsync(string clientEmail, string clientPrenom)
             => SendAsync(clientEmail, clientPrenom,
-                "🎉 Votre compte Propriétaire est activé — Said Africa",
+                "🎉 Votre compte Propriétaire est activé — Levetimmo",
                 $@"<h2>Félicitations {clientPrenom} !</h2>
-                   <p>Votre demande pour devenir propriétaire sur <strong>Said Africa</strong> a été <strong style='color:#16a34a;'>approuvée</strong>.</p>
+                   <p>Votre demande pour devenir propriétaire sur <strong>Levetimmo</strong> a été <strong style='color:#16a34a;'>approuvée</strong>.</p>
                    <p>Vous pouvez maintenant publier vos annonces, gérer vos réservations et communiquer avec vos clients.</p>
                    <a href='https://levetimmo.com/src/pages/espace_proprietaire.html' style='display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px;'>Accéder à mon espace propriétaire</a>");
 
         public Task SendDemandeProprietaireRefuseeAsync(string clientEmail, string clientPrenom, string? motif)
             => SendAsync(clientEmail, clientPrenom,
-                "❌ Demande propriétaire refusée — Said Africa",
+                "❌ Demande propriétaire refusée — Levetimmo",
                 $@"<h2>Bonjour {clientPrenom},</h2>
-                   <p>Votre demande pour devenir propriétaire sur Said Africa n'a pas pu être acceptée pour le moment.</p>
+                   <p>Votre demande pour devenir propriétaire sur Levetimmo n'a pas pu être acceptée pour le moment.</p>
                    {(string.IsNullOrEmpty(motif) ? "" : $"<div style='background:#fef2f2;border-left:4px solid #ef4444;padding:16px;border-radius:8px;margin:20px 0;'><p style='margin:0;'><strong>Motif :</strong> {motif}</p></div>")}
                    <p>Vous pouvez soumettre une nouvelle demande depuis votre espace client.</p>
                    <a href='https://levetimmo.com/src/pages/accueil_user.html' style='display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;margin-top:8px;'>Mon espace client</a>");
 
         public Task SendBienvenueAsync(string email, string prenom)
             => SendAsync(email, prenom,
-                "🎉 Bienvenue sur Said Africa !",
+                "🎉 Bienvenue sur Levetimmo !",
                 $@"<h2>Bienvenue, {prenom} ! 🎉</h2>
-                   <p>Nous sommes ravis de vous compter parmi les membres de <strong>Said Africa</strong>, la plateforme immobilière premium dédiée à l'Afrique.</p>
+                   <p>Nous sommes ravis de vous compter parmi les membres de <strong>Levetimmo</strong>, la plateforme immobilière premium dédiée à l'Afrique.</p>
                    <div style='background:#eff6ff;border-left:4px solid #2563eb;padding:16px;border-radius:8px;margin:20px 0;'>
                        <p style='margin:0;font-weight:700;'>Avec votre compte vous pouvez :</p>
                        <ul style='margin:12px 0 0;padding-left:20px;'>
@@ -166,9 +159,9 @@ namespace SaidAfricaBackend.Services
         {
             var link = $"https://levetimmo.com/src/pages/login.html?token={resetToken}";
             return SendAsync(email, prenom,
-                "🔐 Réinitialisation de votre mot de passe — Said Africa",
+                "🔐 Réinitialisation de votre mot de passe — Levetimmo",
                 $@"<h2>Bonjour {prenom},</h2>
-                   <p>Vous avez demandé à réinitialiser votre mot de passe sur <strong>Said Africa</strong>.</p>
+                   <p>Vous avez demandé à réinitialiser votre mot de passe sur <strong>Levetimmo</strong>.</p>
                    <p>Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe. Ce lien est valable <strong>1 heure</strong>.</p>
                    <a href='{link}' style='display:inline-block;background:#2563eb;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;margin:20px 0;font-size:15px;'>Réinitialiser mon mot de passe</a>
                    <p style='font-size:13px;color:#6b7280;margin-top:16px;'>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email — votre mot de passe ne sera pas modifié.</p>");
@@ -189,11 +182,11 @@ namespace SaidAfricaBackend.Services
 </style></head>
 <body><div class='wrapper'>
   <div class='header'>
-    <h1>🏠 Said Africa</h1>
+    <h1>🏠 Levetimmo</h1>
   </div>
   <div class='body'>{content}</div>
   <div class='footer'>
-    © {DateTime.UtcNow.Year} Said Africa — Plateforme immobilière premium<br>
+    © {DateTime.UtcNow.Year} Levetimmo — Plateforme immobilière premium<br>
     Cet email a été envoyé automatiquement, merci de ne pas y répondre directement.
   </div>
 </div></body></html>";

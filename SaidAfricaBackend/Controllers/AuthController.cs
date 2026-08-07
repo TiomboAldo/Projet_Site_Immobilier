@@ -261,15 +261,16 @@ namespace SaidAfricaBackend.Controllers
                     user.TwoFactorTempToken = tempToken;
                     await _context.SaveChangesAsync();
 
-                    bool smtpOk = !string.IsNullOrEmpty(_config["Smtp:Username"]);
-                    _ = _email.SendTwoFactorOtpAsync(user.Email, user.Prenom, otp);
+                    bool emailSent = false;
+                    try { await _email.SendTwoFactorOtpAsync(user.Email, user.Prenom, otp); emailSent = true; }
+                    catch { /* email non critique */ }
 
                     return Ok(new
                     {
                         success           = true,
                         requiresTwoFactor = true,
                         tempToken,
-                        devOtp = smtpOk ? null : otp   // visible seulement sans SMTP
+                        devOtp = emailSent ? null : otp   // visible si l'email n'a pas été envoyé
                     });
                 }
 
@@ -345,10 +346,11 @@ namespace SaidAfricaBackend.Controllers
             user.TwoFactorOtpExpiry = DateTime.UtcNow.AddMinutes(10);
             await _context.SaveChangesAsync();
 
-            bool smtpOk = !string.IsNullOrEmpty(_config["Smtp:Username"]);
-            _ = _email.SendTwoFactorOtpAsync(user.Email, user.Prenom, otp);
+            bool emailSent = false;
+            try { await _email.SendTwoFactorOtpAsync(user.Email, user.Prenom, otp); emailSent = true; }
+            catch { /* email non critique */ }
 
-            return Ok(new { success = true, devOtp = smtpOk ? null : otp });
+            return Ok(new { success = true, devOtp = emailSent ? null : otp });
         }
 
         // --- ACTIVER LA 2FA : confirmer l'OTP ---
