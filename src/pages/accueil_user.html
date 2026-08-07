@@ -1525,20 +1525,20 @@
     <!-- TOAST CONTAINER -->
     <div id="toast-container"></div>
 
-    <!-- ═══ MODAL PAIEMENT MTN MOBILE MONEY ════════════════════════════════ -->
+    <!-- ═══ MODAL PAIEMENT MOBILE MONEY ════════════════════════════════════ -->
     <div id="paymentModal" class="fixed inset-0 z-[120] modal-hidden items-center justify-center p-4"
          style="background:rgba(0,0,0,0.65);backdrop-filter:blur(5px);">
         <div style="background:#fff;border-radius:24px;width:100%;max-width:400px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.3);">
 
-            <!-- En-tête jaune MTN -->
-            <div style="background:linear-gradient(135deg,#f59e0b,#d97706);padding:24px 24px 20px;text-align:center;position:relative;">
+            <!-- En-tête dynamique selon réseau -->
+            <div id="payModalHeader" style="background:linear-gradient(135deg,#f59e0b,#d97706);padding:24px 24px 20px;text-align:center;position:relative;">
                 <button onclick="closePaymentModal()" style="position:absolute;top:12px;right:14px;background:rgba(255,255,255,0.2);border:none;border-radius:50%;width:32px;height:32px;color:#fff;cursor:pointer;font-size:14px;">
                     <i class="fas fa-times"></i>
                 </button>
                 <div style="width:52px;height:52px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;">
                     <i class="fas fa-mobile-screen-button" style="color:#fff;font-size:22px;"></i>
                 </div>
-                <h3 style="font-size:16px;font-weight:800;color:#fff;margin:0 0 4px;">Payer par MTN Mobile Money</h3>
+                <h3 id="payModalNetworkTitle" style="font-size:16px;font-weight:800;color:#fff;margin:0 0 4px;">Payer par MTN Mobile Money</h3>
                 <p id="payModalLabel" style="font-size:13px;color:rgba(255,255,255,0.85);margin:0;"></p>
                 <div style="margin-top:12px;background:rgba(255,255,255,0.15);border-radius:12px;padding:10px 14px;display:inline-block;">
                     <span style="font-size:22px;font-weight:900;color:#fff;" id="payModalAmount">0</span>
@@ -1548,12 +1548,23 @@
 
             <div style="padding:24px;">
 
-                <!-- Étape 1 : saisie du numéro -->
+                <!-- Étape 1 : choix réseau + saisie numéro -->
                 <div id="payStep1">
-                    <p style="font-size:13px;color:#6b7280;margin:0 0 14px;line-height:1.5;">
-                        Entrez votre numéro MTN Mobile Money. Une demande de paiement USSD sera envoyée sur votre téléphone.
+                    <!-- Sélecteur MTN / Orange -->
+                    <div style="display:flex;gap:10px;margin-bottom:16px;">
+                        <button id="btnNetMTN" onclick="selectPayNetwork('MTN')"
+                                style="flex:1;padding:10px;border-radius:12px;border:2px solid #f59e0b;background:#fef3c7;color:#92400e;font-size:13px;font-weight:800;cursor:pointer;transition:all .2s;">
+                            📲 MTN MoMo
+                        </button>
+                        <button id="btnNetOrange" onclick="selectPayNetwork('Orange')"
+                                style="flex:1;padding:10px;border-radius:12px;border:2px solid #e5e7eb;background:#fff;color:#6b7280;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;">
+                            📲 Orange Money
+                        </button>
+                    </div>
+                    <p id="payNetworkDesc" style="font-size:13px;color:#6b7280;margin:0 0 14px;line-height:1.5;">
+                        Entrez votre numéro MTN Mobile Money. Une demande USSD sera envoyée sur votre téléphone.
                     </p>
-                    <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px;">Numéro MTN Mobile Money</label>
+                    <label id="payPhoneLabel" style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px;">Numéro MTN Mobile Money</label>
                     <div style="position:relative;">
                         <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:13px;font-weight:700;color:#374151;">🇨🇲 +237</span>
                         <input type="tel" id="payPhoneInput" placeholder="6XXXXXXXX"
@@ -2415,7 +2426,7 @@
         }
 
         // ═══════════════════════════════════════════════════════════════════════
-        // PAIEMENT MTN MOBILE MONEY
+        // PAIEMENT MOBILE MONEY (MTN + Orange)
         // ═══════════════════════════════════════════════════════════════════════
         const FRAIS_VISITE    = 2000;  // XAF — modifiable
         const FRAIS_ABONNEMENT = 5000; // XAF — modifiable
@@ -2425,6 +2436,40 @@
         let _payCurrentPaymentId     = null;
         let _payPollInterval         = null;
         let _payCountdownInterval    = null;
+        let _payNetwork              = 'MTN'; // 'MTN' | 'Orange'
+
+        function selectPayNetwork(network) {
+            _payNetwork = network;
+            const isMTN = network === 'MTN';
+            const color = isMTN ? '#f59e0b' : '#f97316';
+            const colorDark = isMTN ? '#d97706' : '#ea580c';
+            const bg    = isMTN ? '#fef3c7' : '#fff7ed';
+            const text  = isMTN ? '#92400e'  : '#7c2d12';
+
+            document.getElementById('payModalHeader').style.background =
+                `linear-gradient(135deg,${color},${colorDark})`;
+            document.getElementById('payModalNetworkTitle').textContent =
+                isMTN ? 'Payer par MTN Mobile Money' : 'Payer par Orange Money';
+            document.getElementById('payNetworkDesc').textContent =
+                `Entrez votre numéro ${isMTN ? 'MTN Mobile Money' : 'Orange Money'}. Une demande USSD sera envoyée sur votre téléphone.`;
+            document.getElementById('payPhoneLabel').textContent =
+                isMTN ? 'Numéro MTN Mobile Money' : 'Numéro Orange Money';
+            document.getElementById('payConfirmBtn').style.background =
+                `linear-gradient(135deg,${color},${colorDark})`;
+
+            // Boutons réseau
+            document.getElementById('btnNetMTN').style.border    = isMTN ? `2px solid ${color}` : '2px solid #e5e7eb';
+            document.getElementById('btnNetMTN').style.background = isMTN ? bg : '#fff';
+            document.getElementById('btnNetMTN').style.color      = isMTN ? text : '#6b7280';
+            document.getElementById('btnNetOrange').style.border    = !isMTN ? '2px solid #f97316' : '2px solid #e5e7eb';
+            document.getElementById('btnNetOrange').style.background = !isMTN ? '#fff7ed' : '#fff';
+            document.getElementById('btnNetOrange').style.color      = !isMTN ? '#7c2d12' : '#6b7280';
+
+            const input = document.getElementById('payPhoneInput');
+            input.style.borderColor = '#e5e7eb';
+            input.onfocus = () => input.style.borderColor = color;
+            input.onblur  = () => input.style.borderColor = '#e5e7eb';
+        }
 
         function openPaymentModal(reservationId, bienId, amount, label) {
             _payCurrentReservationId = reservationId;
@@ -2435,6 +2480,8 @@
             document.getElementById('payModalLabel').textContent  = label;
             document.getElementById('payPhoneInput').value = localStorage.getItem('userTelephone')?.replace('+237','').replace('237','') || '';
             document.getElementById('payErr1').style.display = 'none';
+
+            selectPayNetwork('MTN'); // réinitialiser sur MTN
 
             // Afficher étape 1
             ['payStep1','payStep2','payStep3','payStep4'].forEach(id => {
@@ -2470,7 +2517,7 @@
             const btn      = document.getElementById('payConfirmBtn');
 
             if (!rawPhone || rawPhone.replace(/\D/g, '').length < 8) {
-                errEl.textContent = 'Numéro MTN invalide (ex : 677000000).';
+                errEl.textContent = `Numéro ${_payNetwork === 'MTN' ? 'MTN' : 'Orange'} invalide (ex : ${_payNetwork === 'MTN' ? '677000000' : '699000000'}).`;
                 errEl.style.display = 'block';
                 return;
             }
