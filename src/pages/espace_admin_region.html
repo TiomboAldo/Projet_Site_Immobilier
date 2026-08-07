@@ -840,11 +840,11 @@
                 </div>
                 <!-- Titre foncier -->
                 <div id="adTitreFoncierSection" class="hidden">
-                    <a id="adTitreFoncierLink" href="#" target="_blank" rel="noopener"
-                       class="flex items-center gap-2 bg-purple-50 rounded-2xl p-4 text-purple-700 font-bold text-sm no-underline hover:bg-purple-100 transition">
+                    <button id="adTitreFoncierLink" onclick=""
+                       class="flex items-center gap-2 bg-purple-50 rounded-2xl p-4 text-purple-700 font-bold text-sm hover:bg-purple-100 transition w-full border-none cursor-pointer">
                         <i class="fas fa-file-contract text-purple-600 text-lg"></i>
                         Consulter le titre foncier
-                    </a>
+                    </button>
                 </div>
                 <!-- Motif rejet -->
                 <div id="adMotifSection" class="hidden bg-red-50 rounded-2xl p-4">
@@ -1271,10 +1271,10 @@
 
                 // Titre foncier
                 const tfHtml = b.titreFoncierPath
-                    ? `<a href="${API}/biens/document/${encodeURIComponent(b.titreFoncierPath)}" target="_blank" rel="noopener"
-                           style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#7c3aed;font-weight:700;text-decoration:none;margin-bottom:10px;">
+                    ? `<button onclick="ouvrirDocument('${b.titreFoncierPath.replace(/'/g, "\\'")}')"
+                           style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#7c3aed;font-weight:700;background:none;border:none;cursor:pointer;padding:0;margin-bottom:10px;">
                            <i class="fas fa-file-contract"></i> Voir le titre foncier
-                       </a>`
+                       </button>`
                     : `<p style="font-size:11px;color:#9ca3af;margin-bottom:10px;"><i class="fas fa-file-contract" style="margin-right:4px;"></i>Pas de titre foncier</p>`;
 
                 // Motif de rejet
@@ -1385,6 +1385,22 @@
             if (btn) btn.style.color = res.liked ? '#f43f5e' : '#9ca3af';
         }
 
+        async function ouvrirDocument(filename) {
+            const token = localStorage.getItem('jwtToken');
+            try {
+                const res = await fetch(`${API}/biens/document/${encodeURIComponent(filename)}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) { showToast('error', 'Erreur', 'Document inaccessible.'); return; }
+                const blob = await res.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                window.open(blobUrl, '_blank');
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+            } catch(e) {
+                showToast('error', 'Erreur', 'Impossible d\'ouvrir le document.');
+            }
+        }
+
         function ouvrirPhoto(url) {
             if (!url) return;
             const lb = document.getElementById('adminLightbox');
@@ -1438,7 +1454,7 @@
             const tfSection = document.getElementById('adTitreFoncierSection');
             const tfLink    = document.getElementById('adTitreFoncierLink');
             if (b.titreFoncierPath) {
-                tfLink.href = `${API}/biens/document/${encodeURIComponent(b.titreFoncierPath)}`;
+                tfLink.onclick = () => ouvrirDocument(b.titreFoncierPath);
                 tfSection.classList.remove('hidden');
             } else {
                 tfSection.classList.add('hidden');
