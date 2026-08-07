@@ -1038,7 +1038,7 @@
                     if (result.success) {
                         window.closeVisitForm();
                         this.reset();
-                        showMessage('Demande envoyée !', result.message || 'Votre demande de visite a été enregistrée.', 'success');
+                        openPaymentModal(result.data?.id, propertyId, 2000, currentProperty?.title || 'Visite');
                     } else {
                         showMessage('Erreur', result.message || 'Une erreur est survenue.', 'error');
                     }
@@ -1090,13 +1090,282 @@
                 if (e.key === 'Escape') {
                     const m = document.getElementById('contactModal');
                     if (m && !m.classList.contains('hidden')) window.closeContactForm();
+                    closePaymentModal();
                 }
             });
         });
+
+        // ═══ PAIEMENT MOBILE MONEY (MTN + Orange) ══════════════════════════════
+        let _payCurrentReservationId = null;
+        let _payCurrentBienId        = null;
+        let _payCurrentPaymentId     = null;
+        let _payPollInterval         = null;
+        let _payCountdownInterval    = null;
+        let _payNetwork              = 'MTN';
+
+        function detectNetwork(phone) {
+            const digits = phone.replace(/\D/g, '').replace(/^237/, '');
+            const p = digits.substring(0, 3);
+            const mtn    = ['650','651','652','653','654','670','671','672','673','674','675','676','677','678','679','680','681','682','683','684','685','686','687','688','689'];
+            const orange = ['655','656','657','658','659','690','691','692','693','694','695','696','697','698','699'];
+            if (mtn.includes(p))    return 'MTN';
+            if (orange.includes(p)) return 'Orange';
+            return null;
+        }
+
+        function selectPayNetwork(network) {
+            _payNetwork = network;
+            const isMTN     = network === 'MTN';
+            const color     = isMTN ? '#f59e0b' : '#f97316';
+            const colorDark = isMTN ? '#d97706' : '#ea580c';
+            const bg        = isMTN ? '#fef3c7' : '#fff7ed';
+            const text      = isMTN ? '#92400e'  : '#7c2d12';
+
+            document.getElementById('payModalHeader').style.background     = `linear-gradient(135deg,${color},${colorDark})`;
+            document.getElementById('payModalNetworkTitle').textContent    = isMTN ? 'Payer par MTN Mobile Money' : 'Payer par Orange Money';
+            document.getElementById('payNetworkDesc').textContent          = `Entrez votre numéro ${isMTN ? 'MTN Mobile Money' : 'Orange Money'}. Une demande USSD sera envoyée sur votre téléphone.`;
+            document.getElementById('payPhoneLabel').textContent           = isMTN ? 'Numéro MTN Mobile Money' : 'Numéro Orange Money';
+            document.getElementById('payConfirmBtn').style.background      = `linear-gradient(135deg,${color},${colorDark})`;
+            document.getElementById('btnNetMTN').style.border              = isMTN ? `2px solid ${color}` : '2px solid #e5e7eb';
+            document.getElementById('btnNetMTN').style.background          = isMTN ? bg : '#fff';
+            document.getElementById('btnNetMTN').style.color               = isMTN ? text : '#6b7280';
+            document.getElementById('btnNetOrange').style.border           = !isMTN ? '2px solid #f97316' : '2px solid #e5e7eb';
+            document.getElementById('btnNetOrange').style.background       = !isMTN ? '#fff7ed' : '#fff';
+            document.getElementById('btnNetOrange').style.color            = !isMTN ? '#7c2d12' : '#6b7280';
+            const input = document.getElementById('payPhoneInput');
+            input.style.borderColor = '#e5e7eb';
+            input.onfocus = () => input.style.borderColor = color;
+            input.onblur  = () => input.style.borderColor = '#e5e7eb';
+        }
+
+        function openPaymentModal(reservationId, bienId, amount, label) {
+            _payCurrentReservationId = reservationId;
+            _payCurrentBienId        = bienId;
+            _payCurrentPaymentId     = null;
+            document.getElementById('payModalAmount').textContent = Number(amount).toLocaleString('fr-FR');
+            document.getElementById('payModalLabel').textContent  = label;
+            document.getElementById('payPhoneInput').value = localStorage.getItem('userTelephone')?.replace('+237','').replace('237','') || '';
+            document.getElementById('payErr1').style.display = 'none';
+            selectPayNetwork('MTN');
+            ['payStep1','payStep2','payStep3','payStep4'].forEach(id => {
+                document.getElementById(id).style.display = id === 'payStep1' ? 'block' : 'none';
+            });
+            document.getElementById('paymentModal').style.display = 'flex';
+        }
+
+        function closePaymentModal() {
+            clearInterval(_payPollInterval);
+            clearInterval(_payCountdownInterval);
+            document.getElementById('paymentModal').style.display = 'none';
+        }
+
+        function retryPayment() {
+            document.getElementById('payStep4').style.display = 'none';
+            document.getElementById('payStep1').style.display = 'block';
+        }
+
+        function skipPaymentForNow() {
+            closePaymentModal();
+            showMessage('Réservation enregistrée', 'Vous pourrez effectuer le paiement plus tard.', 'success');
+        }
+
+        async function submitMoMoPayment() {
+            const rawPhone = document.getElementById('payPhoneInput').value.trim();
+            const errEl    = document.getElementById('payErr1');
+            const btn      = document.getElementById('payConfirmBtn');
+            const digits   = rawPhone.replace(/\D/g, '');
+
+            if (!digits || digits.length < 8) {
+                errEl.textContent = `Numéro invalide (ex : ${_payNetwork === 'MTN' ? '677000000' : '699000000'}).`;
+                errEl.style.display = 'block';
+                return;
+            }
+            const detectedNetwork = detectNetwork(digits);
+            if (detectedNetwork && detectedNetwork !== _payNetwork) {
+                errEl.textContent = `Ce numéro est un numéro ${detectedNetwork}. Sélectionnez "${detectedNetwork} ${detectedNetwork === 'MTN' ? 'MoMo' : 'Money'}" ci-dessus.`;
+                errEl.style.display = 'block';
+                return;
+            }
+            if (!detectedNetwork) {
+                errEl.textContent = 'Numéro non reconnu. Vérifiez le numéro saisi.';
+                errEl.style.display = 'block';
+                return;
+            }
+            errEl.style.display = 'none';
+
+            const phone = digits.startsWith('237') ? digits : `237${digits}`;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Envoi...';
+
+            try {
+                const token  = localStorage.getItem('jwtToken');
+                const amount = parseFloat(document.getElementById('payModalAmount').textContent.replace(/\s/g,'')) || 2000;
+                const res    = await fetch(`${API_BASE}/payments/initier`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ TypePaiement: 'Reservation', Montant: amount, NumeroPayeur: phone, BienId: _payCurrentBienId, ReservationId: _payCurrentReservationId }),
+                });
+                const data = await res.json();
+
+                if (!data.success) {
+                    errEl.textContent = data.message || 'Erreur lors de l\'envoi.';
+                    errEl.style.display = 'block';
+                    return;
+                }
+
+                _payCurrentPaymentId = data.paymentId;
+                document.getElementById('payStep1').style.display = 'none';
+                document.getElementById('payStep2').style.display = 'block';
+                document.getElementById('payPhoneDisplay').textContent = phone;
+
+                if (data.unconfigured) {
+                    _startPayCountdown(30);
+                    setTimeout(() => _handlePaymentSuccess(), 3000);
+                } else {
+                    _startPayCountdown(120);
+                    _startPolling(_payCurrentPaymentId);
+                }
+            } catch (_) {
+                errEl.textContent = 'Serveur injoignable.';
+                errEl.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-lock" style="margin-right:6px;"></i>Payer maintenant';
+            }
+        }
+
+        function _startPayCountdown(seconds) {
+            let remaining = seconds;
+            const el = document.getElementById('payCountdown');
+            clearInterval(_payCountdownInterval);
+            _payCountdownInterval = setInterval(() => {
+                remaining--;
+                const m = String(Math.floor(remaining / 60));
+                const s = String(remaining % 60).padStart(2, '0');
+                if (el) el.textContent = `${m}:${s}`;
+                if (remaining <= 0) {
+                    clearInterval(_payCountdownInterval);
+                    clearInterval(_payPollInterval);
+                    _handlePaymentFailure('La demande de paiement a expiré. Veuillez réessayer.');
+                }
+            }, 1000);
+        }
+
+        function _startPolling(paymentId) {
+            let attempts = 0;
+            const token  = localStorage.getItem('jwtToken');
+            clearInterval(_payPollInterval);
+            _payPollInterval = setInterval(async () => {
+                attempts++;
+                try {
+                    const res  = await fetch(`${API_BASE}/payments/status/${paymentId}`, { headers: { Authorization: `Bearer ${token}` } });
+                    const data = await res.json();
+                    if (data.statut === 'Reussi') { clearInterval(_payPollInterval); _handlePaymentSuccess(); }
+                    if (data.statut === 'Echoue') { clearInterval(_payPollInterval); _handlePaymentFailure(); }
+                } catch (_) {}
+                if (attempts >= 40) { clearInterval(_payPollInterval); _handlePaymentFailure('Délai dépassé. Réessayez.'); }
+            }, 3000);
+        }
+
+        function _handlePaymentSuccess() {
+            clearInterval(_payCountdownInterval);
+            clearInterval(_payPollInterval);
+            document.getElementById('payStep2').style.display = 'none';
+            document.getElementById('payStep3').style.display = 'block';
+        }
+
+        function _handlePaymentFailure(msg) {
+            clearInterval(_payCountdownInterval);
+            document.getElementById('payStep2').style.display = 'none';
+            document.getElementById('payStep4').style.display = 'block';
+            if (msg) document.getElementById('payFailMsg').textContent = msg;
+        }
+
+        // Exposer pour les onclick inline du modal
+        window.selectPayNetwork   = selectPayNetwork;
+        window.closePaymentModal  = closePaymentModal;
+        window.submitMoMoPayment  = submitMoMoPayment;
+        window.skipPaymentForNow  = skipPaymentForNow;
+        window.retryPayment       = retryPayment;
     </script>
 
 
     <script type="module" src="/src/js/main.js"></script>
+
+    <!-- ═══ MODAL PAIEMENT MOBILE MONEY ════════════════════════════════════ -->
+    <div id="paymentModal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,0.65);backdrop-filter:blur(5px);">
+        <div style="background:#fff;border-radius:24px;width:100%;max-width:400px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.3);">
+
+            <div id="payModalHeader" style="background:linear-gradient(135deg,#f59e0b,#d97706);padding:24px 24px 20px;text-align:center;position:relative;">
+                <button onclick="closePaymentModal()" style="position:absolute;top:12px;right:14px;background:rgba(255,255,255,0.2);border:none;border-radius:50%;width:32px;height:32px;color:#fff;cursor:pointer;font-size:14px;"><i class="fas fa-times"></i></button>
+                <div style="width:52px;height:52px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;">
+                    <i class="fas fa-mobile-screen-button" style="color:#fff;font-size:22px;"></i>
+                </div>
+                <h3 id="payModalNetworkTitle" style="font-size:16px;font-weight:800;color:#fff;margin:0 0 4px;">Payer par MTN Mobile Money</h3>
+                <p id="payModalLabel" style="font-size:13px;color:rgba(255,255,255,0.85);margin:0;"></p>
+                <div style="margin-top:12px;background:rgba(255,255,255,0.15);border-radius:12px;padding:10px 14px;display:inline-block;">
+                    <span style="font-size:22px;font-weight:900;color:#fff;" id="payModalAmount">0</span>
+                    <span style="font-size:13px;color:rgba(255,255,255,0.8);margin-left:4px;">XAF</span>
+                </div>
+            </div>
+
+            <div style="padding:24px;">
+                <!-- Étape 1 -->
+                <div id="payStep1">
+                    <div style="display:flex;gap:10px;margin-bottom:16px;">
+                        <button id="btnNetMTN" onclick="selectPayNetwork('MTN')" style="flex:1;padding:10px;border-radius:12px;border:2px solid #f59e0b;background:#fef3c7;color:#92400e;font-size:13px;font-weight:800;cursor:pointer;">📲 MTN MoMo</button>
+                        <button id="btnNetOrange" onclick="selectPayNetwork('Orange')" style="flex:1;padding:10px;border-radius:12px;border:2px solid #e5e7eb;background:#fff;color:#6b7280;font-size:13px;font-weight:700;cursor:pointer;">📲 Orange Money</button>
+                    </div>
+                    <p id="payNetworkDesc" style="font-size:13px;color:#6b7280;margin:0 0 14px;line-height:1.5;">Entrez votre numéro MTN Mobile Money. Une demande USSD sera envoyée sur votre téléphone.</p>
+                    <label id="payPhoneLabel" style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px;">Numéro MTN Mobile Money</label>
+                    <div style="position:relative;">
+                        <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:13px;font-weight:700;color:#374151;">🇨🇲 +237</span>
+                        <input type="tel" id="payPhoneInput" placeholder="6XXXXXXXX" style="width:100%;padding:12px 14px 12px 80px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:14px;outline:none;box-sizing:border-box;">
+                    </div>
+                    <p id="payErr1" style="color:#ef4444;font-size:12px;margin:6px 0 0;display:none;"></p>
+                    <button id="payConfirmBtn" onclick="submitMoMoPayment()" style="width:100%;margin-top:16px;padding:13px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;">
+                        <i class="fas fa-lock" style="margin-right:6px;"></i>Payer maintenant
+                    </button>
+                    <button onclick="skipPaymentForNow()" style="width:100%;margin-top:8px;padding:10px;background:transparent;color:#6b7280;border:1.5px solid #e5e7eb;border-radius:12px;font-size:13px;cursor:pointer;">Payer plus tard</button>
+                </div>
+
+                <!-- Étape 2 : attente USSD -->
+                <div id="payStep2" style="display:none;text-align:center;">
+                    <div style="width:64px;height:64px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+                        <i class="fas fa-spinner fa-spin" style="color:#d97706;font-size:24px;"></i>
+                    </div>
+                    <h4 style="font-size:15px;font-weight:800;color:#111827;margin:0 0 8px;">En attente de confirmation</h4>
+                    <p style="font-size:13px;color:#6b7280;margin:0 0 14px;line-height:1.5;">Une demande USSD a été envoyée au <strong id="payPhoneDisplay"></strong>.<br>Entrez votre code PIN Mobile Money pour confirmer.</p>
+                    <div style="background:#fef9c3;border:1px solid #fde68a;border-radius:10px;padding:10px 14px;display:inline-block;margin-bottom:16px;">
+                        <span style="font-size:13px;font-weight:700;color:#92400e;">Expire dans : </span>
+                        <span id="payCountdown" style="font-size:13px;font-weight:900;color:#d97706;">2:00</span>
+                    </div><br>
+                    <button onclick="closePaymentModal()" style="padding:10px 20px;background:transparent;color:#6b7280;border:1.5px solid #e5e7eb;border-radius:10px;font-size:13px;cursor:pointer;">Annuler</button>
+                </div>
+
+                <!-- Étape 3 : succès -->
+                <div id="payStep3" style="display:none;text-align:center;">
+                    <div style="width:64px;height:64px;border-radius:50%;background:#f0fdf4;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+                        <i class="fas fa-circle-check" style="color:#059669;font-size:28px;"></i>
+                    </div>
+                    <h4 style="font-size:16px;font-weight:800;color:#111827;margin:0 0 8px;">Paiement reçu !</h4>
+                    <p style="font-size:13px;color:#6b7280;margin:0 0 20px;line-height:1.5;">Votre paiement a bien été reçu. Votre demande de visite est enregistrée et en attente de confirmation du propriétaire.</p>
+                    <button onclick="closePaymentModal()" style="width:100%;padding:12px;background:#059669;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;">Fermer</button>
+                </div>
+
+                <!-- Étape 4 : échec -->
+                <div id="payStep4" style="display:none;text-align:center;">
+                    <div style="width:64px;height:64px;border-radius:50%;background:#fef2f2;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+                        <i class="fas fa-circle-xmark" style="color:#ef4444;font-size:28px;"></i>
+                    </div>
+                    <h4 style="font-size:16px;font-weight:800;color:#111827;margin:0 0 8px;">Paiement échoué</h4>
+                    <p id="payFailMsg" style="font-size:13px;color:#6b7280;margin:0 0 20px;line-height:1.5;">Le paiement n'a pas abouti. Votre réservation reste enregistrée — vous pourrez payer plus tard.</p>
+                    <button onclick="retryPayment()" style="width:100%;margin-bottom:8px;padding:12px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;">Réessayer</button>
+                    <button onclick="closePaymentModal()" style="width:100%;padding:10px;background:transparent;color:#6b7280;border:1.5px solid #e5e7eb;border-radius:12px;font-size:13px;cursor:pointer;">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
