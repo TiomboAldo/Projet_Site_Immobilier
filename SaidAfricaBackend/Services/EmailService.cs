@@ -40,10 +40,7 @@ namespace SaidAfricaBackend.Services
             var fromMail = _config["Smtp:FromEmail"] ?? user;
 
             if (string.IsNullOrEmpty(user) || string.IsNullOrEmpty(pass))
-            {
-                _logger.LogWarning("Email non envoyé : identifiants SMTP manquants.");
-                return;
-            }
+                throw new InvalidOperationException("SMTP non configuré — identifiants manquants.");
 
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress(fromName, fromMail));
@@ -52,6 +49,7 @@ namespace SaidAfricaBackend.Services
             message.Body = new TextPart("html") { Text = WrapTemplate(subject, htmlBody) };
 
             using var client = new SmtpClient();
+            client.Timeout = 8000; // 8s max — évite que le login freeze si SMTP lent
             await client.ConnectAsync(host, port, SecureSocketOptions.StartTls);
             await client.AuthenticateAsync(user, pass);
             await client.SendAsync(message);

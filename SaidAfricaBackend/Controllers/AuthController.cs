@@ -260,7 +260,12 @@ namespace SaidAfricaBackend.Controllers
                 await _context.SaveChangesAsync();
 
                 bool emailSent = false;
-                try { await _email.SendTwoFactorOtpAsync(user.Email, user.Prenom, otp); emailSent = true; }
+                try
+                {
+                    var sendTask = _email.SendTwoFactorOtpAsync(user.Email, user.Prenom, otp);
+                    var winner   = await Task.WhenAny(sendTask, Task.Delay(9000));
+                    if (winner == sendTask && !sendTask.IsFaulted) emailSent = true;
+                }
                 catch { /* email non critique */ }
 
                 return Ok(new
