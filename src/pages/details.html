@@ -382,7 +382,7 @@
     </div>
 
     <script type="module">
-        import { getBienById, getBiens, createReservation, normalizeBien, getCommentaires, createCommentaire, updateCommentaire, deleteCommentaire, recommanderBien, sendMessage } from '../js/api.js';
+        import { getBienById, getBiens, createReservation, normalizeBien, getCommentaires, createCommentaire, updateCommentaire, deleteCommentaire, recommanderBien, sendMessage, API_BASE } from '../js/api.js';
 
         // ---------- HELPERS ----------
         function escapeHtml(str = '') {
@@ -1205,7 +1205,7 @@
                     : 2000;
 
                 const _ctrl  = new AbortController();
-                const _tmout = setTimeout(() => _ctrl.abort(), 20000);
+                const _tmout = setTimeout(() => _ctrl.abort(), 45000);
                 let res;
                 try {
                     res = await fetch(`${API_BASE}/payments/initier`, {
@@ -1216,8 +1216,8 @@
                     });
                 } catch (fetchErr) {
                     errEl.textContent = fetchErr?.name === 'AbortError'
-                        ? 'Le serveur met trop de temps à répondre. Réessayez dans quelques secondes.'
-                        : 'Impossible de contacter le serveur. Vérifiez votre connexion et réessayez.';
+                        ? 'Le serveur met trop de temps à répondre (> 45s). Réessayez dans quelques secondes.'
+                        : 'Réseau indisponible. Vérifiez votre connexion et réessayez.';
                     errEl.style.display = 'block';
                     return;
                 } finally { clearTimeout(_tmout); }
