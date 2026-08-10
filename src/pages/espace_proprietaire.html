@@ -192,13 +192,66 @@
         .cal-day.cal-resa-confirm { background: #dbeafe; color: #1d4ed8; }
         .cal-day.cal-resa-attente { background: #fef3c7; color: #92400e; }
 
-        .msg-bubble {
-            max-width: 72%; padding: 10px 16px; border-radius: 18px; font-size: 13px;
-            font-weight: 500; line-height: 1.5; word-break: break-word;
+        /* ─── Messagerie moderne ─────────────────────────────────────────── */
+        .msg-container { display:flex; height:calc(100vh - 180px); min-height:480px; border-radius:20px; border:1px solid #f3f4f6; overflow:hidden; background:#f8fafc; box-shadow:0 2px 16px rgba(0,0,0,0.05); }
+        .msg-panel-left { width:320px; flex-shrink:0; border-right:1px solid #f3f4f6; display:flex; flex-direction:column; background:#fff; }
+        .msg-panel-left-head { padding:20px 20px 16px; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:white; }
+        .msg-panel-left-head h3 { font-size:18px; font-weight:800; margin-bottom:14px; }
+        .msg-search-box { display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.15); border-radius:12px; padding:8px 12px; }
+        .msg-search-box input { flex:1; background:none; border:none; outline:none; color:white; font-size:13px; font-weight:500; }
+        .msg-search-box input::placeholder { color:rgba(255,255,255,0.6); }
+        .msg-search-box i { color:rgba(255,255,255,0.7); font-size:13px; }
+        .msg-conv-list { flex:1; overflow-y:auto; }
+        .msg-conv-list::-webkit-scrollbar { width:4px; }
+        .msg-conv-list::-webkit-scrollbar-thumb { background:#e5e7eb; border-radius:4px; }
+        .msg-conv-item { display:flex; align-items:center; gap:12px; padding:14px 16px; cursor:pointer; border-bottom:1px solid #f9fafb; }
+        .msg-conv-item:hover { background:#f8fafc; }
+        .msg-conv-item.active { background:#eff6ff; }
+        .msg-conv-avatar { width:44px; height:44px; border-radius:50%; flex-shrink:0; background:#dbeafe; color:#2563eb; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px; }
+        .msg-conv-body { flex:1; min-width:0; }
+        .msg-conv-name { font-size:14px; font-weight:700; color:#111827; }
+        .msg-conv-bien { font-size:11px; color:#2563eb; font-weight:600; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .msg-conv-preview { font-size:12px; color:#9ca3af; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+        .msg-conv-meta { display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0; }
+        .msg-conv-time { font-size:10px; color:#d1d5db; font-weight:600; }
+        .msg-unread-badge { background:#2563eb; color:#fff; font-size:10px; font-weight:800; padding:2px 7px; border-radius:999px; }
+        .msg-panel-right { flex:1; display:flex; flex-direction:column; min-width:0; }
+        .msg-thread-head { padding:0 20px; height:64px; flex-shrink:0; border-bottom:1px solid #f3f4f6; background:#fff; display:flex; align-items:center; gap:12px; }
+        .msg-back-btn { display:none; width:36px; height:36px; border-radius:10px; border:none; background:#f3f4f6; cursor:pointer; align-items:center; justify-content:center; color:#374151; font-size:15px; flex-shrink:0; }
+        .msg-thread-avatar { width:38px; height:38px; border-radius:50%; flex-shrink:0; background:#dbeafe; color:#2563eb; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; }
+        .msg-thread-info { flex:1; min-width:0; }
+        .msg-thread-name { font-size:15px; font-weight:800; color:#111827; }
+        .msg-thread-bien { font-size:12px; color:#6b7280; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .msg-thread-status { font-size:11px; color:#10b981; font-weight:600; }
+        .msg-thread-empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#d1d5db; gap:12px; }
+        .msg-thread-empty i { font-size:48px; }
+        .msg-thread-empty p { font-size:14px; font-weight:600; color:#9ca3af; }
+        .msg-messages-area { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:10px; background:#f8fafc; }
+        .msg-messages-area::-webkit-scrollbar { width:4px; }
+        .msg-messages-area::-webkit-scrollbar-thumb { background:#e5e7eb; border-radius:4px; }
+        .msg-bubble-wrap { display:flex; align-items:flex-end; gap:6px; }
+        .msg-bubble-wrap.mine { flex-direction:row-reverse; }
+        .msg-bubble { max-width:68%; padding:10px 14px; border-radius:18px; font-size:13px; font-weight:500; line-height:1.5; word-break:break-word; }
+        .msg-bubble.mine { background:#2563eb; color:#fff; border-radius:18px 18px 4px 18px; }
+        .msg-bubble.other { background:#fff; color:#1e293b; border-radius:18px 18px 18px 4px; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
+        .msg-time { font-size:10px; opacity:0.55; margin-top:3px; }
+        .msg-bubble.mine .msg-time { text-align:right; color:#fff; }
+        .msg-bubble.other .msg-time { color:#9ca3af; }
+        .msg-avatar-small { width:28px; height:28px; border-radius:50%; flex-shrink:0; background:#dbeafe; color:#2563eb; font-size:11px; display:flex; align-items:center; justify-content:center; font-weight:700; }
+        .msg-input-bar { padding:14px 20px; border-top:1px solid #f3f4f6; display:flex; align-items:center; gap:10px; background:#fff; }
+        .msg-input-bar input { flex:1; padding:12px 18px; border:1.5px solid #e5e7eb; border-radius:999px; font-size:14px; outline:none; background:#fff; transition:border-color 0.2s; font-weight:500; }
+        .msg-input-bar input:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,0.1); }
+        .msg-input-bar button { width:44px; height:44px; border-radius:50%; background:#2563eb; color:#fff; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; transition:background 0.2s; flex-shrink:0; box-shadow:0 4px 12px rgba(37,99,235,0.3); }
+        .msg-input-bar button:hover { background:#1d4ed8; }
+        .msg-input-bar button:disabled { background:#93c5fd; cursor:not-allowed; box-shadow:none; }
+        @media (max-width:767px) {
+            .msg-container { height:calc(100vh - 120px); position:relative; min-height:0; border-radius:16px; }
+            .msg-panel-left { width:100%; }
+            .msg-panel-left.msg-mobile-hidden { display:none; }
+            .msg-panel-right { position:absolute; inset:0; background:#fff; z-index:2; }
+            .msg-panel-right.msg-mobile-hidden { display:none; }
+            .msg-back-btn { display:flex !important; }
         }
-        .msg-mine { background: #2563eb; color: #fff; border-bottom-right-radius: 4px; align-self: flex-end; }
-        .msg-other { background: #f3f4f6; color: #111827; border-bottom-left-radius: 4px; align-self: flex-start; }
-
     </style>
 </head>
 
@@ -353,34 +406,42 @@
 
             <!-- MESSAGERIE -->
             <section id="section-messagerie" class="section-fade">
-                <h1 style="font-size:28px; font-weight:800; color:#111827; margin-bottom:24px;">Messagerie</h1>
-                <div style="display:flex; gap:20px; height:600px;">
-                    <!-- Liste des conversations -->
-                    <div style="width:300px; flex-shrink:0; display:flex; flex-direction:column; gap:8px; overflow-y:auto;" id="convList">
-                        <div style="text-align:center; padding:40px 0; color:#9ca3af;">
-                            <i class="fas fa-spinner fa-spin" style="font-size:24px;"></i>
-                        </div>
-                    </div>
-                    <!-- Thread de messages -->
-                    <div style="flex:1; display:flex; flex-direction:column; background:#fff; border-radius:24px; overflow:hidden; border:1px solid #f3f4f6; box-shadow:0 1px 8px rgba(0,0,0,0.04);">
-                        <div id="threadHeader" style="padding:20px 24px; border-bottom:1px solid #f3f4f6; display:none; align-items:center; gap:12px;">
-                            <div id="threadAvatar" style="width:40px; height:40px; border-radius:12px; background:#dbeafe; color:#2563eb; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; flex-shrink:0;"></div>
-                            <div>
-                                <p id="threadNom" style="font-weight:800; color:#111827; font-size:15px;"></p>
-                                <p id="threadBien" style="font-size:12px; color:#6b7280;"></p>
+                <h1 style="font-size:28px; font-weight:800; color:#111827; margin-bottom:6px;">Messagerie</h1>
+                <p style="color:#6b7280; font-size:13px; margin-bottom:20px;">Vos échanges avec les clients.</p>
+                <div class="msg-container">
+                    <!-- Panel gauche : liste -->
+                    <div class="msg-panel-left" id="propPanelLeft">
+                        <div class="msg-panel-left-head">
+                            <h3>Messages</h3>
+                            <div class="msg-search-box">
+                                <i class="fas fa-search"></i>
+                                <input id="propMsgSearch" placeholder="Rechercher…" oninput="filterPropConvList(this.value)">
                             </div>
                         </div>
-                        <div id="threadMessages" style="flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:10px;"></div>
-                        <div id="threadEmpty" style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#9ca3af; gap:12px;">
-                            <i class="fas fa-comments" style="font-size:40px; color:#e5e7eb;"></i>
-                            <p style="font-weight:600;">Sélectionnez une conversation</p>
+                        <div class="msg-conv-list" id="convList"></div>
+                    </div>
+                    <!-- Panel droit : thread -->
+                    <div class="msg-panel-right msg-mobile-hidden" id="propPanelRight">
+                        <div class="msg-thread-head" id="threadHeader" style="display:none;">
+                            <button class="msg-back-btn" onclick="propMsgGoBack()" title="Retour">
+                                <i class="fas fa-arrow-left"></i>
+                            </button>
+                            <div class="msg-thread-avatar" id="threadAvatar"></div>
+                            <div class="msg-thread-info">
+                                <div class="msg-thread-name" id="threadNom"></div>
+                                <div class="msg-thread-bien" id="threadBien"></div>
+                            </div>
+                            <span class="msg-thread-status">En ligne</span>
                         </div>
-                        <div id="msgInputBar" style="padding:16px 20px; border-top:1px solid #f3f4f6; display:none; gap:10px;">
+                        <div class="msg-thread-empty" id="threadEmpty">
+                            <i class="fas fa-comments"></i>
+                            <p>Sélectionnez une conversation</p>
+                        </div>
+                        <div class="msg-messages-area" id="threadMessages" style="display:none;"></div>
+                        <div class="msg-input-bar" id="msgInputBar" style="display:none;">
                             <input id="msgText" type="text" placeholder="Écrire un message…"
-                                style="flex:1; padding:12px 16px; border:none; background:#f3f4f6; border-radius:14px; font-size:14px; font-weight:600; color:#111827; outline:none;"
                                 onkeydown="if(event.key==='Enter') sendMessage()">
-                            <button onclick="sendMessage()"
-                                style="background:#2563eb; color:#fff; border:none; padding:12px 20px; border-radius:14px; font-weight:700; cursor:pointer; font-size:13px; flex-shrink:0;">
+                            <button id="propMsgSendBtn" onclick="sendMessage()">
                                 <i class="fas fa-paper-plane"></i>
                             </button>
                         </div>
@@ -2141,14 +2202,27 @@ moderation:     { icon: 'fa-shield-halved', bg: '#fef3c7', color: '#92400e' },
         async function initMessagerie() {
             activeConv = null;
             renderThreadEmpty();
+            // Mobile : afficher panel gauche par défaut
+            const left  = document.getElementById('propPanelLeft');
+            const right = document.getElementById('propPanelRight');
+            if (left)  left.classList.remove('msg-mobile-hidden');
+            if (right) right.classList.add('msg-mobile-hidden');
             await loadConversations();
-            // Polling toutes les 15s
             if (msgPollingTimer) clearInterval(msgPollingTimer);
             msgPollingTimer = setInterval(async () => {
                 await loadConversations();
-                if (activeConv) loadThread(activeConv.autreUserId, activeConv.bienId, false);
+                if (activeConv) propLoadThread(activeConv.autreUserId, activeConv.bienId, false);
             }, 15000);
         }
+
+        function propMsgGoBack() {
+            const left  = document.getElementById('propPanelLeft');
+            const right = document.getElementById('propPanelRight');
+            if (left)  left.classList.remove('msg-mobile-hidden');
+            if (right) right.classList.add('msg-mobile-hidden');
+        }
+
+        function filterPropConvList(val) { renderConversationList(val); }
 
         async function loadConversations() {
             const res = await apiFetch(`${API}/messages/conversations`);
@@ -2173,79 +2247,100 @@ moderation:     { icon: 'fa-shield-halved', bg: '#fef3c7', color: '#92400e' },
             renderConversationList();
         }
 
-        function renderConversationList() {
+        function renderConversationList(filter = '') {
             const list = document.getElementById('convList');
-            if (!conversations.length) {
-                list.innerHTML = `<div style="text-align:center; padding:40px 16px; background:#fff; border-radius:16px; border:2px dashed #e5e7eb;">
-                    <i class="fas fa-comments" style="font-size:28px; color:#e5e7eb; display:block; margin-bottom:8px;"></i>
-                    <p style="color:#9ca3af; font-weight:600; font-size:13px;">Aucune conversation</p>
+            if (!list) return;
+            const q = filter.toLowerCase();
+            const visible = q
+                ? conversations.filter(c => (c.autreUserNom || '').toLowerCase().includes(q) || (c.bienTitre || '').toLowerCase().includes(q))
+                : conversations;
+
+            if (!visible.length) {
+                list.innerHTML = `<div style="text-align:center;color:#94a3b8;padding:40px 16px;font-size:13px;font-weight:600;">
+                    <i class="fa-regular fa-comment-dots" style="font-size:36px;margin-bottom:12px;display:block;color:#e5e7eb;"></i>
+                    ${q ? 'Aucun résultat.' : 'Aucune conversation pour l\'instant.'}
                 </div>`;
                 return;
             }
-            list.innerHTML = conversations.map(c => {
-                const initiales = (c.autreUserNom || '?').split(' ').map(w => w[0] || '').join('').toUpperCase().slice(0,2);
+            list.innerHTML = visible.map(c => {
+                const initiales = (c.autreUserNom || '?').charAt(0).toUpperCase();
                 const isActive  = activeConv && activeConv.autreUserId === c.autreUserId && activeConv.bienId === c.bienId;
-                const heure     = new Date(c.dernierMessageAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-                return `
-                <div onclick="loadThread(${c.autreUserId}, ${c.bienId ?? 'null'}, true)"
-                     style="padding:14px 16px; border-radius:16px; background:${isActive ? '#eff6ff' : '#fff'}; border:1px solid ${isActive ? '#bfdbfe' : '#f3f4f6'}; cursor:pointer; display:flex; align-items:center; gap:12px; transition:all 0.2s;"
-                     onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='${isActive ? '#eff6ff' : '#fff'}'">
-                    <div style="width:42px; height:42px; border-radius:12px; background:#dbeafe; color:#2563eb; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; flex-shrink:0; position:relative;">
-                        ${initiales}
-                        ${c.nonLus > 0 ? `<span style="position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;font-size:9px;font-weight:800;min-width:16px;height:16px;border-radius:999px;display:flex;align-items:center;justify-content:center;padding:0 3px;">${c.nonLus}</span>` : ''}
+                const time      = c.dernierMessageAt ? new Date(c.dernierMessageAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
+                return `<div class="msg-conv-item${isActive ? ' active' : ''}"
+                    onclick="propLoadThread(${c.autreUserId}, ${c.bienId ?? 'null'}, true)">
+                    <div class="msg-conv-avatar">${initiales}</div>
+                    <div class="msg-conv-body">
+                        <div class="msg-conv-name">${escapeHtml(c.autreUserNom || 'Client')}</div>
+                        <div class="msg-conv-bien">${escapeHtml(c.bienTitre || '')}</div>
+                        <div class="msg-conv-preview">${escapeHtml(c.dernierMessage || 'Démarrer la conversation')}</div>
                     </div>
-                    <div style="flex:1; min-width:0;">
-                        <p style="font-weight:800; color:#111827; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(c.autreUserNom)}</p>
-                        ${c.bienTitre ? `<p style="font-size:11px; color:#2563eb; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(c.bienTitre)}</p>` : ''}
-                        <p style="font-size:11px; color:#9ca3af; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px;">${escapeHtml(c.dernierMessage)}</p>
+                    <div class="msg-conv-meta">
+                        <span class="msg-conv-time">${time}</span>
+                        ${c.nonLus > 0 ? `<span class="msg-unread-badge">${c.nonLus}</span>` : ''}
                     </div>
-                    <span style="font-size:10px; color:#d1d5db; flex-shrink:0;">${heure}</span>
                 </div>`;
             }).join('');
         }
 
-        async function loadThread(autreUserId, bienId, scrollBottom = true) {
-            activeConv = { autreUserId, bienId, nom: (conversations.find(c => c.autreUserId === autreUserId && c.bienId === bienId) || {}).autreUserNom || '' };
+        async function propLoadThread(autreUserId, bienId, scrollBottom = true) {
+            activeConv = { autreUserId, bienId };
+            renderConversationList();
 
-            // Header
-            const header = document.getElementById('threadHeader');
-            const initiales = (activeConv.nom || '?').split(' ').map(w => w[0] || '').join('').toUpperCase().slice(0,2);
-            document.getElementById('threadAvatar').textContent = initiales;
-            document.getElementById('threadNom').textContent    = activeConv.nom;
+            // Mobile : basculer sur le panel droit
+            const left  = document.getElementById('propPanelLeft');
+            const right = document.getElementById('propPanelRight');
+            if (left)  left.classList.add('msg-mobile-hidden');
+            if (right) right.classList.remove('msg-mobile-hidden');
+
+            const header  = document.getElementById('threadHeader');
+            const msgs    = document.getElementById('threadMessages');
+            const empty   = document.getElementById('threadEmpty');
+            const bar     = document.getElementById('msgInputBar');
+            const nomEl   = document.getElementById('threadNom');
+            const bienEl  = document.getElementById('threadBien');
+            const avatarEl= document.getElementById('threadAvatar');
+
+            if (empty)  empty.style.display  = 'none';
+            if (msgs)   msgs.style.display   = 'flex';
+            if (bar)    bar.style.display    = 'flex';
+            if (header) header.style.display = 'flex';
+
             const conv = conversations.find(c => c.autreUserId === autreUserId && c.bienId === bienId);
-            document.getElementById('threadBien').textContent   = conv?.bienTitre ? `Concernant : ${conv.bienTitre}` : '';
-            header.style.display = 'flex';
-
-            document.getElementById('threadEmpty').style.display = 'none';
-            document.getElementById('msgInputBar').style.display = 'flex';
-            document.getElementById('msgText').focus();
+            const nom  = conv?.autreUserNom || 'Client';
+            if (nomEl)    nomEl.textContent    = nom;
+            if (bienEl)   bienEl.textContent   = conv?.bienTitre ? `Concernant : ${conv.bienTitre}` : '';
+            if (avatarEl) avatarEl.textContent = nom.charAt(0).toUpperCase();
 
             const url = bienId ? `${API}/messages/${autreUserId}?bienId=${bienId}` : `${API}/messages/${autreUserId}`;
             const res = await apiFetch(url);
-            if (!res.success) return;
+            if (!res.success || !msgs) return;
 
-            const box = document.getElementById('threadMessages');
-            const myId = getUserId();
-            box.innerHTML = res.data.map(m => {
-                const h = new Date(m.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-                return `<div style="display:flex; flex-direction:column; align-items:${m.estMoi ? 'flex-end' : 'flex-start'};">
-                    <div class="msg-bubble ${m.estMoi ? 'msg-mine' : 'msg-other'}">${escapeHtml(m.contenu)}</div>
-                    <span style="font-size:10px; color:#d1d5db; margin-top:3px; padding:0 4px;">${h}${m.estMoi && m.estLu ? ' · Lu' : ''}</span>
+            msgs.innerHTML = res.data.length ? res.data.map(m => {
+                const initiales = m.estMoi ? '' : nom.charAt(0).toUpperCase();
+                const heure = new Date(m.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                return `<div class="msg-bubble-wrap${m.estMoi ? ' mine' : ''}">
+                    ${!m.estMoi ? `<div class="msg-avatar-small">${initiales}</div>` : ''}
+                    <div class="msg-bubble ${m.estMoi ? 'mine' : 'other'}">
+                        <div>${escapeHtml(m.contenu)}</div>
+                        <div class="msg-time">${heure}${m.estMoi ? (m.estLu ? ' ✓✓' : ' ✓') : ''}</div>
+                    </div>
                 </div>`;
-            }).join('');
+            }).join('') : `<div style="text-align:center;color:#94a3b8;font-size:13px;padding:20px;font-weight:600;">Aucun message. Dites bonjour !</div>`;
 
-            if (scrollBottom) box.scrollTop = box.scrollHeight;
-
-            // Rafraîchir la liste pour enlever les badges non-lus
+            if (scrollBottom) msgs.scrollTop = msgs.scrollHeight;
+            if (document.getElementById('msgText')) document.getElementById('msgText').focus();
             await loadConversations();
-            renderConversationList();
         }
 
         function renderThreadEmpty() {
-            document.getElementById('threadHeader').style.display    = 'none';
-            document.getElementById('threadMessages').innerHTML       = '';
-            document.getElementById('threadEmpty').style.display      = 'flex';
-            document.getElementById('msgInputBar').style.display      = 'none';
+            const header = document.getElementById('threadHeader');
+            const msgs   = document.getElementById('threadMessages');
+            const empty  = document.getElementById('threadEmpty');
+            const bar    = document.getElementById('msgInputBar');
+            if (header) header.style.display = 'none';
+            if (msgs)   { msgs.style.display = 'none'; msgs.innerHTML = ''; }
+            if (empty)  empty.style.display  = 'flex';
+            if (bar)    bar.style.display    = 'none';
         }
 
         async function sendMessage() {
@@ -2260,7 +2355,7 @@ moderation:     { icon: 'fa-shield-halved', bg: '#fef3c7', color: '#92400e' },
                 body: JSON.stringify({ DestinataireId: activeConv.autreUserId, BienId: activeConv.bienId, Contenu: text })
             });
             if (res.success) {
-                loadThread(activeConv.autreUserId, activeConv.bienId, true);
+                propLoadThread(activeConv.autreUserId, activeConv.bienId, true);
             } else {
                 showToast('error', 'Erreur', res.message || 'Impossible d\'envoyer le message.');
             }
