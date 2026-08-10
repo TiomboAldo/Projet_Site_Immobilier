@@ -2564,17 +2564,29 @@
                     ? (parseFloat(amountEl.textContent.replace(/[\s ]/g, '')) || FRAIS_VISITE)
                     : FRAIS_VISITE;
 
-                const res = await fetch(`${API}/payments/initier`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                    body: JSON.stringify({
-                        TypePaiement:  'Reservation',
-                        Montant:       amount,
-                        NumeroPayeur:  phone,
-                        BienId:        _payCurrentBienId,
-                        ReservationId: _payCurrentReservationId,
-                    }),
-                });
+                const _ctrl    = new AbortController();
+                const _tmout   = setTimeout(() => _ctrl.abort(), 20000);
+                let res;
+                try {
+                    res = await fetch(`${API}/payments/initier`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({
+                            TypePaiement:  'Reservation',
+                            Montant:       amount,
+                            NumeroPayeur:  phone,
+                            BienId:        _payCurrentBienId,
+                            ReservationId: _payCurrentReservationId,
+                        }),
+                        signal: _ctrl.signal,
+                    });
+                } catch (fetchErr) {
+                    errEl.textContent = fetchErr?.name === 'AbortError'
+                        ? 'Le serveur met trop de temps à répondre. Réessayez dans quelques secondes.'
+                        : 'Impossible de contacter le serveur. Vérifiez votre connexion et réessayez.';
+                    errEl.style.display = 'block';
+                    return;
+                } finally { clearTimeout(_tmout); }
 
                 let data;
                 try { data = await res.json(); }
@@ -2609,7 +2621,7 @@
 
             } catch (err) {
                 console.error('submitMoMoPayment:', err);
-                errEl.textContent = 'Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.';
+                errEl.textContent = 'Erreur inattendue. Réessayez ou contactez le support.';
                 errEl.style.display = 'block';
             } finally {
                 btn.disabled = false;

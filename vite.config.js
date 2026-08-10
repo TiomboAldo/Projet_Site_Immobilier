@@ -5,11 +5,21 @@ export default defineConfig({
 
   // ==================== SERVEUR DE DÉVELOPPEMENT ====================
   server: {
-    port: 3000,          // Port fixe (change si besoin)
-    strictPort: false,   // Si port occupé, Vite en cherche un autre
-    open: true,          // Ouvre automatiquement le navigateur au démarrage
+    port: 3000,
+    strictPort: false,
+    open: true,
     watch: {
-      usePolling: true,  // Utile sur Windows pour détecter les changements
+      usePolling: true,
+    },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5257',
+        changeOrigin: true,
+      },
+      '/uploads': {
+        target: 'http://localhost:5257',
+        changeOrigin: true,
+      },
     },
   },
 
