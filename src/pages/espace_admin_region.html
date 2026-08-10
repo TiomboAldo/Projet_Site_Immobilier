@@ -38,6 +38,8 @@
             opacity: 0;
             transform: translateY(20px);
             transition: all 0.5s ease;
+            overflow-x: hidden;
+            max-width: 100%;
         }
         .section-fade.active { display: block; opacity: 1; transform: translateY(0); }
 
@@ -96,7 +98,7 @@
         .sidebar:hover .sidebar-item span { opacity: 1; }
         .sidebar-footer { width: 100%; padding: 16px; border-top: 1px solid #f3f4f6; display: flex; flex-direction: column; gap: 8px; }
 
-        main { flex: 1; margin-left: 80px; transition: margin-left 0.3s; }
+        main { flex: 1; margin-left: 80px; transition: margin-left 0.3s; overflow-x: hidden; min-width: 0; }
 
         /* ─── Responsive Mobile ──────────────────────────────────────── */
         .sidebar-backdrop {
@@ -282,7 +284,7 @@
             </div>
         </header>
 
-        <div class="p-8" style="padding:32px;">
+        <div class="p-8" style="padding:32px; overflow-x:hidden; box-sizing:border-box; width:100%;">
             <!-- DASHBOARD -->
             <section id="section-dashboard" class="section-fade active">
                 <div style="margin-bottom:28px;">

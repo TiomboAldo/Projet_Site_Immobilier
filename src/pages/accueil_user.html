@@ -57,6 +57,8 @@
             opacity: 0;
             transform: translateY(20px);
             transition: all 0.5s ease;
+            overflow-x: hidden;
+            max-width: 100%;
         }
 
         .section-fade.active {
@@ -479,6 +481,8 @@
             flex: 1;
             margin-left: 80px;
             transition: margin-left 0.3s;
+            overflow-x: hidden;
+            min-width: 0;
         }
 
         body {
@@ -875,7 +879,7 @@
             </div>
         </header>
 
-        <div class="p-8">
+        <div class="p-8" style="overflow-x:hidden; box-sizing:border-box; width:100%;">
             <!-- ACCUEIL -->
             <section id="section-accueil" class="section-fade active">
                 <div class="relative rounded-2xl md:rounded-[2.5rem] overflow-hidden shadow-2xl mb-8 md:mb-12" style="min-height:200px;">
