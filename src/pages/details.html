@@ -1198,14 +1198,25 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Envoi...';
 
             try {
-                const token  = localStorage.getItem('jwtToken');
-                const amount = parseFloat(document.getElementById('payModalAmount').textContent.replace(/\s/g,'')) || 2000;
-                const res    = await fetch(`${API_BASE}/payments/initier`, {
+                const token    = localStorage.getItem('jwtToken');
+                const amountEl = document.getElementById('payModalAmount');
+                const amount   = amountEl
+                    ? (parseFloat(amountEl.textContent.replace(/[\s ]/g, '')) || 2000)
+                    : 2000;
+
+                const res = await fetch(`${API_BASE}/payments/initier`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                     body: JSON.stringify({ TypePaiement: 'Reservation', Montant: amount, NumeroPayeur: phone, BienId: _payCurrentBienId, ReservationId: _payCurrentReservationId }),
                 });
-                const data = await res.json();
+
+                let data;
+                try { data = await res.json(); }
+                catch {
+                    errEl.textContent = `Erreur serveur (HTTP ${res.status}). Réessayez dans quelques secondes.`;
+                    errEl.style.display = 'block';
+                    return;
+                }
 
                 if (!data.success) {
                     errEl.textContent = data.message || 'Erreur lors de l\'envoi.';
@@ -1225,8 +1236,9 @@
                     _startPayCountdown(120);
                     _startPolling(_payCurrentPaymentId);
                 }
-            } catch (_) {
-                errEl.textContent = 'Serveur injoignable.';
+            } catch (err) {
+                console.error('submitMoMoPayment:', err);
+                errEl.textContent = 'Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.';
                 errEl.style.display = 'block';
             } finally {
                 btn.disabled = false;
