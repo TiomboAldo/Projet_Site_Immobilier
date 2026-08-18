@@ -780,8 +780,8 @@
                 <span>Notifications</span>
             </button>
             <button onclick="switchSection('devenir-proprietaire', this)" class="sidebar-item">
-                <i class="fas fa-key"></i>
-                <span>Devenir Propriétaire</span>
+                <i class="fas fa-briefcase"></i>
+                <span>Compte Professionnel</span>
             </button>
         </nav>
         <div class="sidebar-footer">
@@ -1120,8 +1120,8 @@
 
             <!-- DEVENIR PROPRIÉTAIRE -->
             <section id="section-devenir-proprietaire" class="section-fade">
-                <h2 class="text-3xl font-extrabold text-gray-900 mb-2 text-center">Devenir Propriétaire</h2>
-                <p class="text-gray-400 text-sm mb-8 text-center">Proposez vos propres biens à la location ou à la vente sur Levetimmo.</p>
+                <h2 class="text-3xl font-extrabold text-gray-900 mb-2 text-center">Compte Professionnel</h2>
+                <p class="text-gray-400 text-sm mb-8 text-center">Ouvrez un compte professionnel pour publier des annonces sur Levetimmo.</p>
 
                 <div id="demandeStatusBox" class="max-w-2xl mx-auto"></div>
             </section>
@@ -2877,8 +2877,10 @@
         //   2) Selfie live (caméra frontale)
         //   3) Formulaire + soumission
         // ═══════════════════════════════════════════════════════════════════════
+        let _demandeTypeCompte = 'Proprietaire';
         let _demandeDocType  = '';
         let _demandeDocFile  = null;
+        let _demandeDocVerso = null;
         let _demandeSelfie   = null;
         let _scanStream      = null;
         let _scanProgress    = 0;
@@ -2890,8 +2892,35 @@
         let _cornerFrames    = [0, 0, 0, 0];
         const _CORNER_TARGET = 10;
 
+        function selectDemandeType(type) {
+            _demandeTypeCompte = type;
+            ['Proprietaire','PromoteurImmobilier','AgenceImmobiliere','AgentImmobilier'].forEach(t => {
+                const el = document.getElementById('demType_' + t);
+                if (!el) return;
+                if (t === type) {
+                    el.style.borderColor = '#2563eb';
+                    el.style.background  = '#eff6ff';
+                } else {
+                    el.style.borderColor = '#e5e7eb';
+                    el.style.background  = '#fff';
+                }
+            });
+            const agenceRow = document.getElementById('demNomAgenceRow');
+            if (agenceRow) agenceRow.style.display = (type === 'AgentImmobilier') ? 'block' : 'none';
+        }
+
+        function _updateStep1Btn() {
+            const btn = document.getElementById('demStep1Btn');
+            if (!btn) return;
+            const versoRequired = _demandeDocType === 'CNI';
+            const ok = _demandeDocType && _demandeDocFile && (!versoRequired || _demandeDocVerso);
+            btn.disabled    = !ok;
+            btn.style.opacity = ok ? '1' : '0.4';
+        }
+
         function selectDemandeDocType(type) {
             _demandeDocType = type;
+            _demandeDocVerso = null;
             ['CNI','Passeport'].forEach(t => {
                 const el = document.getElementById('demDocLabel' + t);
                 if (el) {
@@ -2899,8 +2928,15 @@
                     el.style.background  = t === type ? '#eff6ff' : '#fff';
                 }
             });
-            const btn = document.getElementById('demStep1Btn');
-            if (btn && _demandeDocFile) { btn.disabled = false; btn.style.opacity = '1'; }
+            const versoZone = document.getElementById('demVersoSection');
+            if (versoZone) {
+                versoZone.style.display = (type === 'CNI') ? 'block' : 'none';
+                const versoName = document.getElementById('demVersoFileName');
+                const versoZ    = document.getElementById('demVersoZone');
+                if (versoName) versoName.textContent = 'Cliquez ou glissez le verso ici';
+                if (versoZ)    { versoZ.style.borderColor = '#d1d5db'; versoZ.style.background = ''; }
+            }
+            _updateStep1Btn();
         }
 
         function previewDemandeFile(input) {
@@ -2910,8 +2946,17 @@
             const z  = document.getElementById('demDocZone');
             if (nm) nm.textContent = _demandeDocFile.name;
             if (z)  { z.style.borderColor = '#2563eb'; z.style.background = '#eff6ff'; }
-            const btn = document.getElementById('demStep1Btn');
-            if (btn && _demandeDocType) { btn.disabled = false; btn.style.opacity = '1'; }
+            _updateStep1Btn();
+        }
+
+        function previewDemandeVerso(input) {
+            if (!input.files.length) return;
+            _demandeDocVerso = input.files[0];
+            const nm = document.getElementById('demVersoFileName');
+            const z  = document.getElementById('demVersoZone');
+            if (nm) nm.textContent = _demandeDocVerso.name;
+            if (z)  { z.style.borderColor = '#2563eb'; z.style.background = '#eff6ff'; }
+            _updateStep1Btn();
         }
 
         function demandeFormHtml() {
@@ -2938,37 +2983,78 @@
                     </div>
                 </div>
 
-                <!-- ── ÉTAPE 1 : Pièce d'identité ── -->
+                <!-- ── ÉTAPE 1 : Type de compte + Pièce d'identité ── -->
                 <div id="demandeStep1" style="padding:28px;">
-                    <h3 style="font-size:18px;font-weight:800;color:#111827;margin:0 0 4px;">Étape 1 — Pièce d'identité</h3>
-                    <p style="font-size:13px;color:#6b7280;margin:0 0 22px;">Choisissez le type et importez la photo ou le scan de votre document.</p>
+                    <h3 style="font-size:18px;font-weight:800;color:#111827;margin:0 0 4px;">Étape 1 — Votre profil professionnel</h3>
+                    <p style="font-size:13px;color:#6b7280;margin:0 0 18px;">Sélectionnez votre statut et importez votre pièce d'identité.</p>
 
-                    <!-- Choix type -->
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
-                        <div id="demDocLabelCNI" onclick="selectDemandeDocType('CNI')"
-                            style="border:2px solid #e5e7eb;border-radius:16px;padding:20px 12px;cursor:pointer;transition:all 0.2s;text-align:center;background:#fff;">
-                            <i class="fas fa-id-card" style="font-size:26px;color:#2563eb;margin-bottom:8px;display:block;"></i>
-                            <p style="font-weight:800;font-size:14px;color:#111827;margin:0;">CNI</p>
-                            <p style="font-size:11px;color:#9ca3af;margin:3px 0 0;">Carte Nationale d'Identité</p>
+                    <!-- Sélection type de compte -->
+                    <p style="font-size:12px;font-weight:700;color:#374151;margin:0 0 10px;text-transform:uppercase;letter-spacing:0.05em;">Je suis un(e) :</p>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px;">
+                        <div id="demType_Proprietaire" onclick="selectDemandeType('Proprietaire')"
+                            style="border:2px solid #2563eb;border-radius:14px;padding:14px 10px;cursor:pointer;transition:all 0.2s;text-align:center;background:#eff6ff;">
+                            <i class="fas fa-home" style="font-size:20px;color:#2563eb;margin-bottom:6px;display:block;"></i>
+                            <p style="font-weight:800;font-size:12px;color:#111827;margin:0;">Propriétaire</p>
                         </div>
-                        <div id="demDocLabelPasseport" onclick="selectDemandeDocType('Passeport')"
-                            style="border:2px solid #e5e7eb;border-radius:16px;padding:20px 12px;cursor:pointer;transition:all 0.2s;text-align:center;background:#fff;">
-                            <i class="fas fa-passport" style="font-size:26px;color:#2563eb;margin-bottom:8px;display:block;"></i>
-                            <p style="font-weight:800;font-size:14px;color:#111827;margin:0;">Passeport</p>
-                            <p style="font-size:11px;color:#9ca3af;margin:3px 0 0;">Passeport biométrique</p>
+                        <div id="demType_PromoteurImmobilier" onclick="selectDemandeType('PromoteurImmobilier')"
+                            style="border:2px solid #e5e7eb;border-radius:14px;padding:14px 10px;cursor:pointer;transition:all 0.2s;text-align:center;background:#fff;">
+                            <i class="fas fa-building" style="font-size:20px;color:#2563eb;margin-bottom:6px;display:block;"></i>
+                            <p style="font-weight:800;font-size:12px;color:#111827;margin:0;">Promoteur</p>
+                        </div>
+                        <div id="demType_AgenceImmobiliere" onclick="selectDemandeType('AgenceImmobiliere')"
+                            style="border:2px solid #e5e7eb;border-radius:14px;padding:14px 10px;cursor:pointer;transition:all 0.2s;text-align:center;background:#fff;">
+                            <i class="fas fa-city" style="font-size:20px;color:#2563eb;margin-bottom:6px;display:block;"></i>
+                            <p style="font-weight:800;font-size:12px;color:#111827;margin:0;">Agence Immo.</p>
+                        </div>
+                        <div id="demType_AgentImmobilier" onclick="selectDemandeType('AgentImmobilier')"
+                            style="border:2px solid #e5e7eb;border-radius:14px;padding:14px 10px;cursor:pointer;transition:all 0.2s;text-align:center;background:#fff;">
+                            <i class="fas fa-user-tie" style="font-size:20px;color:#2563eb;margin-bottom:6px;display:block;"></i>
+                            <p style="font-weight:800;font-size:12px;color:#111827;margin:0;">Agent Immo.</p>
                         </div>
                     </div>
 
-                    <!-- Zone import fichier -->
+                    <!-- Choix type de pièce -->
+                    <p style="font-size:12px;font-weight:700;color:#374151;margin:0 0 10px;text-transform:uppercase;letter-spacing:0.05em;">Pièce d'identité :</p>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                        <div id="demDocLabelCNI" onclick="selectDemandeDocType('CNI')"
+                            style="border:2px solid #e5e7eb;border-radius:14px;padding:16px 10px;cursor:pointer;transition:all 0.2s;text-align:center;background:#fff;">
+                            <i class="fas fa-id-card" style="font-size:22px;color:#2563eb;margin-bottom:6px;display:block;"></i>
+                            <p style="font-weight:800;font-size:13px;color:#111827;margin:0;">CNI</p>
+                            <p style="font-size:10px;color:#9ca3af;margin:2px 0 0;">Recto + Verso requis</p>
+                        </div>
+                        <div id="demDocLabelPasseport" onclick="selectDemandeDocType('Passeport')"
+                            style="border:2px solid #e5e7eb;border-radius:14px;padding:16px 10px;cursor:pointer;transition:all 0.2s;text-align:center;background:#fff;">
+                            <i class="fas fa-passport" style="font-size:22px;color:#2563eb;margin-bottom:6px;display:block;"></i>
+                            <p style="font-weight:800;font-size:13px;color:#111827;margin:0;">Passeport</p>
+                            <p style="font-size:10px;color:#9ca3af;margin:2px 0 0;">Page photo uniquement</p>
+                        </div>
+                    </div>
+
+                    <!-- Zone import recto -->
                     <div id="demDocZone" onclick="document.getElementById('demDocInput').click()"
-                        style="border:2px dashed #d1d5db;border-radius:14px;padding:28px 20px;text-align:center;cursor:pointer;transition:all 0.2s;margin-bottom:20px;"
+                        style="border:2px dashed #d1d5db;border-radius:14px;padding:24px 20px;text-align:center;cursor:pointer;transition:all 0.2s;margin-bottom:14px;"
                         ondragover="event.preventDefault();this.style.borderColor='#2563eb';this.style.background='#eff6ff';"
                         ondragleave="this.style.borderColor='#d1d5db';this.style.background='';"
                         ondrop="(function(e){e.preventDefault();const f=e.dataTransfer.files[0];if(f){const inp=document.getElementById('demDocInput');const dt=new DataTransfer();dt.items.add(f);inp.files=dt.files;previewDemandeFile(inp);}})(event)">
-                        <i class="fas fa-cloud-arrow-up" style="font-size:28px;color:#9ca3af;margin-bottom:10px;display:block;"></i>
-                        <p style="font-weight:700;color:#374151;font-size:13px;margin:0 0 4px;" id="demDocFileName">Cliquez ou glissez votre document ici</p>
+                        <i class="fas fa-cloud-arrow-up" style="font-size:24px;color:#9ca3af;margin-bottom:8px;display:block;"></i>
+                        <p style="font-weight:700;color:#374151;font-size:13px;margin:0 0 3px;" id="demDocFileName">Cliquez ou glissez le recto ici</p>
                         <p style="font-size:11px;color:#9ca3af;margin:0;">JPG, PNG ou PDF — 5 Mo max</p>
                         <input id="demDocInput" type="file" accept=".jpg,.jpeg,.png,.pdf" style="display:none;" onchange="previewDemandeFile(this)">
+                    </div>
+
+                    <!-- Zone import verso (CNI uniquement) -->
+                    <div id="demVersoSection" style="display:none;margin-bottom:14px;">
+                        <p style="font-size:11px;font-weight:700;color:#374151;margin:0 0 6px;">Verso de la CNI :</p>
+                        <div id="demVersoZone" onclick="document.getElementById('demVersoInput').click()"
+                            style="border:2px dashed #d1d5db;border-radius:14px;padding:20px 20px;text-align:center;cursor:pointer;transition:all 0.2s;"
+                            ondragover="event.preventDefault();this.style.borderColor='#2563eb';this.style.background='#eff6ff';"
+                            ondragleave="this.style.borderColor='#d1d5db';this.style.background='';"
+                            ondrop="(function(e){e.preventDefault();const f=e.dataTransfer.files[0];if(f){const inp=document.getElementById('demVersoInput');const dt=new DataTransfer();dt.items.add(f);inp.files=dt.files;previewDemandeVerso(inp);}})(event)">
+                            <i class="fas fa-rotate" style="font-size:20px;color:#9ca3af;margin-bottom:6px;display:block;"></i>
+                            <p style="font-weight:700;color:#374151;font-size:13px;margin:0 0 3px;" id="demVersoFileName">Cliquez ou glissez le verso ici</p>
+                            <p style="font-size:11px;color:#9ca3af;margin:0;">JPG ou PNG — 5 Mo max</p>
+                            <input id="demVersoInput" type="file" accept=".jpg,.jpeg,.png" style="display:none;" onchange="previewDemandeVerso(this)">
+                        </div>
                     </div>
 
                     <button id="demStep1Btn" onclick="goToDemandeStep2()" disabled
@@ -3101,6 +3187,23 @@
                             <span id="demandeRegionErrMsg"></span>
                         </p>
                     </div>
+
+                    <!-- Nom d'agence (visible uniquement pour Agent Immobilier) -->
+                    <div id="demNomAgenceRow" class="form-group" style="display:none;">
+                        <label>Nom de l'agence <span style="color:#ef4444;">*</span></label>
+                        <input id="demandeNomAgence" type="text" placeholder="Ex : Immo Elite Yaoundé"
+                            style="width:100%;padding:12px 14px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:14px;outline:none;background:#fff;color:#111827;box-sizing:border-box;"
+                            onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e5e7eb'">
+                    </div>
+
+                    <div class="form-group">
+                        <label>NIU — Numéro d'Identification Unique <span style="color:#6b7280;font-weight:400;">(optionnel)</span></label>
+                        <input id="demandeNIU" type="text" placeholder="Ex : M123456789A"
+                            style="width:100%;padding:12px 14px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:14px;outline:none;background:#fff;color:#111827;box-sizing:border-box;"
+                            onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e5e7eb'">
+                        <p style="font-size:11px;color:#9ca3af;margin:4px 0 0;">Vous pouvez l'ajouter plus tard si vous ne l'avez pas encore.</p>
+                    </div>
+
                     <div class="form-group">
                         <label>Message (optionnel)</label>
                         <textarea id="demandeMessage" placeholder="Parlez-nous de votre projet immobilier..."></textarea>
@@ -3123,6 +3226,10 @@
 
         function goToDemandeStep2() {
             if (!_demandeDocType || !_demandeDocFile) return;
+            if (_demandeDocType === 'CNI' && !_demandeDocVerso) {
+                showToast('error','Erreur','Veuillez importer le verso de votre CNI.');
+                return;
+            }
             document.getElementById('demandeStep1').style.display = 'none';
             document.getElementById('demandeStep2').style.display = 'block';
             _setStepIndicator(2);
@@ -3174,6 +3281,8 @@
             _stopCamera();
             document.getElementById('demandeStep2').style.display = 'none';
             document.getElementById('demandeStep3').style.display = 'block';
+            const agenceRow = document.getElementById('demNomAgenceRow');
+            if (agenceRow) agenceRow.style.display = (_demandeTypeCompte === 'AgentImmobilier') ? 'block' : 'none';
             _setStepIndicator(3);
             await _loadRegionsAvecAdmin();
             validateDemandeRegion();
@@ -3483,11 +3592,17 @@
             btn.disabled = true;
 
             const form = new FormData();
-            form.append('Region',       region);
-            form.append('Message',      document.getElementById('demandeMessage')?.value.trim() || '');
-            form.append('DocumentType', _demandeDocType);
-            form.append('Document',     _demandeDocFile);
-            form.append('Selfie',       _demandeSelfie);
+            form.append('Region',         region);
+            form.append('Message',        document.getElementById('demandeMessage')?.value.trim() || '');
+            form.append('DocumentType',   _demandeDocType);
+            form.append('Document',       _demandeDocFile);
+            form.append('Selfie',         _demandeSelfie);
+            form.append('TypeCompteProf', _demandeTypeCompte);
+            if (_demandeDocVerso) form.append('DocumentVerso', _demandeDocVerso);
+            const niu      = document.getElementById('demandeNIU')?.value.trim();
+            const nomAgence = document.getElementById('demandeNomAgence')?.value.trim();
+            if (niu)       form.append('NIU',       niu);
+            if (nomAgence) form.append('NomAgence', nomAgence);
 
             try {
                 const token = localStorage.getItem('jwtToken');
@@ -3500,7 +3615,7 @@
                 if (data.success) {
                     showToast('success','Demande envoyée !', data.message);
                     _stopCamera();
-                    _demandeDocType = ''; _demandeDocFile = null; _demandeSelfie = null;
+                    _demandeTypeCompte = 'Proprietaire'; _demandeDocType = ''; _demandeDocFile = null; _demandeDocVerso = null; _demandeSelfie = null;
                     renderDemandeProprietaire();
                 } else {
                     showToast('error','Erreur', data.message || 'Une erreur est survenue.');
@@ -3515,9 +3630,15 @@
         }
 
         function demandeStatusBadgeHtml(demande) {
+            const typeLabels = {
+                'PromoteurImmobilier': 'Promoteur Immobilier',
+                'AgenceImmobiliere':   'Agence Immobilière',
+                'AgentImmobilier':     'Agent Immobilier',
+            };
+            const typeLabel = typeLabels[demande.typeCompteProf] || 'Propriétaire';
             const styles = {
-                'En attente': { bg: '#fef3c7', color: '#d97706', icon: 'fa-hourglass-half', text: 'Votre demande est en attente de validation par l\'administration régionale.' },
-                'Valide':     { bg: '#d1fae5', color: '#059669', icon: 'fa-circle-check',    text: 'Votre demande a été validée ! Vous êtes maintenant Propriétaire.' },
+                'En attente': { bg: '#fef3c7', color: '#d97706', icon: 'fa-hourglass-half', text: `Votre demande de compte ${typeLabel} est en attente de validation par l'administration régionale.` },
+                'Valide':     { bg: '#d1fae5', color: '#059669', icon: 'fa-circle-check',    text: `Votre demande a été validée ! Vous êtes maintenant ${typeLabel}.` },
                 'Refusée':    { bg: '#fee2e2', color: '#dc2626', icon: 'fa-circle-xmark',    text: 'Votre demande a été refusée. Vous pouvez en soumettre une nouvelle.' },
             };
             const s = styles[demande.statut] || styles['En attente'];
@@ -3546,7 +3667,7 @@
             }
 
             box.innerHTML = (derniere ? demandeStatusBadgeHtml(derniere) : '') + demandeFormHtml();
-            _demandeDocType = ''; _demandeDocFile = null; _demandeSelfie = null;
+            _demandeTypeCompte = 'Proprietaire'; _demandeDocType = ''; _demandeDocFile = null; _demandeDocVerso = null; _demandeSelfie = null;
         }
 
         // ═══════════════════════════════════════════════════════════════════════

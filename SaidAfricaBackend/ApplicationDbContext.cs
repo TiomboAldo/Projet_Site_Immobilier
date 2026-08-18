@@ -212,6 +212,16 @@ namespace SaidAfricaBackend
         /// <summary>Motif de refus renseigné par l'admin</summary>
         public string?  KycRemarque    { get; set; }
 
+        // ── Compte professionnel ─────────────────────────────────────────────
+        /// <summary>Proprietaire | PromoteurImmobilier | AgenceImmobiliere | AgentImmobilier</summary>
+        public string? TypeCompteProf { get; set; }
+
+        /// <summary>Numéro d'Identification Unique fiscal (Cameroun)</summary>
+        public string? NIU { get; set; }
+
+        /// <summary>Nom de l'agence déclarée (pour AgentImmobilier)</summary>
+        public string? NomAgence { get; set; }
+
         // Navigation
         public ICollection<Reservation> Reservations { get; set; } = new List<Reservation>();
         public ICollection<Favori>      Favoris      { get; set; } = new List<Favori>();
@@ -334,6 +344,19 @@ namespace SaidAfricaBackend
         public string?  DocumentPath       { get; set; }
         /// <summary>Selfie de vérification (photo live du visage), stocké dans Uploads/Demandes/</summary>
         public string?  SelfieDocumentPath { get; set; }
+
+        /// <summary>Photo verso de la CNI, stockée dans Uploads/Demandes/</summary>
+        public string? CNIVersoPath { get; set; }
+
+        // ── Compte professionnel ─────────────────────────────────────────────
+        /// <summary>Proprietaire | PromoteurImmobilier | AgenceImmobiliere | AgentImmobilier</summary>
+        public string TypeCompteProf { get; set; } = "Proprietaire";
+
+        /// <summary>Nom de l'agence déclarée (pour AgentImmobilier)</summary>
+        public string? NomAgence { get; set; }
+
+        /// <summary>NIU saisi par le demandeur (optionnel — laissé vide si non encore obtenu)</summary>
+        public string? NIU { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

@@ -42,7 +42,7 @@ namespace SaidAfricaBackend.Controllers
         // ─── POST /api/demandesproprietaire ───────────────────────────────────
         [HttpPost]
         [Authorize(Roles = "Client")]
-        [RequestSizeLimit(15 * 1024 * 1024)] // 15 Mo max (document + selfie)
+        [RequestSizeLimit(20 * 1024 * 1024)] // 20 Mo max (recto + verso + selfie)
         public async Task<IActionResult> Create([FromForm] CreateDemandeRequest req)
         {
             var userId = CurrentUserId();
@@ -53,16 +53,27 @@ namespace SaidAfricaBackend.Controllers
             if (dejaEnAttente)
                 return BadRequest(new { success = false, message = "Vous avez déjà une demande en attente." });
 
-            // Validation pièce d'identité
+            // Validation type de compte professionnel
+            var validTypes = new[] { "Proprietaire", "PromoteurImmobilier", "AgenceImmobiliere", "AgentImmobilier" };
+            if (!validTypes.Contains(req.TypeCompteProf))
+                return BadRequest(new { success = false, message = "Type de compte professionnel invalide." });
+
+            // Validation pièce d'identité (recto)
             if (req.Document == null || req.Document.Length == 0)
-                return BadRequest(new { success = false, message = "Veuillez joindre une pièce d'identité." });
+                return BadRequest(new { success = false, message = "Veuillez joindre le recto de votre CNI." });
             if (req.Document.Length > 5 * 1024 * 1024)
                 return BadRequest(new { success = false, message = "La pièce d'identité ne doit pas dépasser 5 Mo." });
             var allowedDoc = new[] { "image/jpeg", "image/jpg", "image/png", "application/pdf" };
             if (!allowedDoc.Contains(req.Document.ContentType.ToLowerInvariant()))
-                return BadRequest(new { success = false, message = "Pièce d'identité : format accepté JPG, PNG ou PDF." });
+                return BadRequest(new { success = false, message = "CNI recto : format accepté JPG, PNG ou PDF." });
             if (req.DocumentType is not ("CNI" or "Passeport"))
                 return BadRequest(new { success = false, message = "Type de document invalide." });
+
+            // Validation verso CNI (obligatoire uniquement pour CNI)
+            if (req.DocumentType == "CNI" && (req.DocumentVerso == null || req.DocumentVerso.Length == 0))
+                return BadRequest(new { success = false, message = "Veuillez joindre le verso de votre CNI." });
+            if (req.DocumentVerso != null && req.DocumentVerso.Length > 5 * 1024 * 1024)
+                return BadRequest(new { success = false, message = "Le verso de la CNI ne doit pas dépasser 5 Mo." });
 
             // Vérifier qu'un admin régional existe pour cette région
             bool adminExiste = await _context.Users
@@ -88,9 +99,26 @@ namespace SaidAfricaBackend.Controllers
             using (var s = System.IO.File.Create(Path.Combine(uploadDir, docFileName)))
                 await req.Document.CopyToAsync(s);
 
+            string? versoFileName = null;
+            if (req.DocumentVerso != null && req.DocumentVerso.Length > 0)
+            {
+                var versoExt = Path.GetExtension(req.DocumentVerso.FileName);
+                versoFileName = $"{Guid.NewGuid()}{versoExt}";
+                using var sv = System.IO.File.Create(Path.Combine(uploadDir, versoFileName));
+                await req.DocumentVerso.CopyToAsync(sv);
+            }
+
             var selfieFileName = $"{Guid.NewGuid()}.jpg";
             using (var s = System.IO.File.Create(Path.Combine(uploadDir, selfieFileName)))
                 await req.Selfie.CopyToAsync(s);
+
+            var typeLabel = req.TypeCompteProf switch
+            {
+                "PromoteurImmobilier" => "Promoteur Immobilier",
+                "AgenceImmobiliere"   => "Agence Immobilière",
+                "AgentImmobilier"     => "Agent Immobilier",
+                _                     => "Propriétaire",
+            };
 
             var demande = new DemandeProprietaire
             {
@@ -99,7 +127,11 @@ namespace SaidAfricaBackend.Controllers
                 Message            = req.Message,
                 DocumentType       = req.DocumentType,
                 DocumentPath       = docFileName,
+                CNIVersoPath       = versoFileName,
                 SelfieDocumentPath = selfieFileName,
+                TypeCompteProf     = req.TypeCompteProf,
+                NomAgence          = req.NomAgence?.Trim(),
+                NIU                = req.NIU?.Trim(),
             };
 
             _context.DemandesProprietaire.Add(demande);
@@ -112,14 +144,14 @@ namespace SaidAfricaBackend.Controllers
             foreach (var admin in adminsRegion)
             {
                 NotificationHelper.Creer(_context, admin.Id,
-                    "NouvelleDemandeProprietaire", "Nouvelle demande Propriétaire",
-                    $"{demandeur?.Prenom} {demandeur?.Nom} souhaite devenir Propriétaire (région {req.Region}) — {req.DocumentType} joint.",
+                    "NouvelleDemandeProprietaire", "Nouvelle demande Compte Professionnel",
+                    $"{demandeur?.Prenom} {demandeur?.Nom} souhaite ouvrir un compte {typeLabel} (région {req.Region}) — {req.DocumentType} joint.",
                     "demandes");
             }
 
             await _context.SaveChangesAsync();
 
-            return Ok(new { success = true, message = "Votre demande et votre pièce d'identité ont été envoyées à l'administration régionale.", data = new DemandeDto(demande, null) });
+            return Ok(new { success = true, message = "Votre demande a été envoyée à l'administration régionale.", data = new DemandeDto(demande, null) });
         }
 
         // ─── GET /api/demandesproprietaire/document/{filename} ────────────────
@@ -232,11 +264,24 @@ namespace SaidAfricaBackend.Controllers
                 if (demande.Region != moi!.Region) return Forbid();
             }
 
+            var typeLabel = demande.TypeCompteProf switch
+            {
+                "PromoteurImmobilier" => "Promoteur Immobilier",
+                "AgenceImmobiliere"   => "Agence Immobilière",
+                "AgentImmobilier"     => "Agent Immobilier",
+                _                     => "Propriétaire",
+            };
+
             demande.Statut           = "Valide";
             demande.TraiteParAdminId = CurrentUserId();
             demande.TraiteLe         = DateTime.UtcNow;
             demande.User!.Role       = "Proprietaire";
             demande.User.Region      = demande.Region;
+
+            // Copier les infos du compte professionnel sur l'utilisateur
+            demande.User.TypeCompteProf = demande.TypeCompteProf;
+            demande.User.NIU            = demande.NIU;
+            demande.User.NomAgence      = demande.NomAgence;
 
             // Marquer le KYC comme approuvé
             demande.User.KycStatut       = "Approuve";
@@ -245,14 +290,14 @@ namespace SaidAfricaBackend.Controllers
             demande.User.KycSoumisAt     = demande.CreatedAt;
 
             NotificationHelper.Creer(_context, demande.UserId,
-                "DemandeValidee", "Demande Propriétaire validée",
-                "Votre demande et votre pièce d'identité ont été validées ! Vous pouvez maintenant publier des annonces.",
+                "DemandeValidee", "Compte Professionnel validé",
+                $"Votre demande a été validée ! Vous êtes maintenant {typeLabel} et pouvez publier des annonces.",
                 "devenir-proprietaire");
 
             await _context.SaveChangesAsync();
             _ = _email.SendDemandeProprietaireValideeAsync(demande.User!.Email, demande.User.Prenom);
 
-            return Ok(new { success = true, message = $"{demande.User.Prenom} {demande.User.Nom} est maintenant Propriétaire." });
+            return Ok(new { success = true, message = $"{demande.User.Prenom} {demande.User.Nom} est maintenant {typeLabel}." });
         }
 
         // ─── PUT /api/demandesproprietaire/{id}/rejeter ───────────────────────
@@ -314,7 +359,11 @@ namespace SaidAfricaBackend.Controllers
         public string    Statut             { get; set; } = string.Empty;
         public string?   DocumentType       { get; set; }
         public string?   DocumentPath       { get; set; }
+        public string?   CNIVersoPath       { get; set; }
         public string?   SelfieDocumentPath { get; set; }
+        public string    TypeCompteProf     { get; set; } = "Proprietaire";
+        public string?   NomAgence          { get; set; }
+        public string?   NIU                { get; set; }
         public DateTime  CreatedAt          { get; set; }
 
         public DemandeDto(DemandeProprietaire d, User? user)
@@ -329,7 +378,11 @@ namespace SaidAfricaBackend.Controllers
             Statut             = d.Statut;
             DocumentType       = d.DocumentType;
             DocumentPath       = d.DocumentPath;
+            CNIVersoPath       = d.CNIVersoPath;
             SelfieDocumentPath = d.SelfieDocumentPath;
+            TypeCompteProf     = d.TypeCompteProf;
+            NomAgence          = d.NomAgence;
+            NIU                = d.NIU;
             CreatedAt          = d.CreatedAt;
         }
     }
@@ -345,6 +398,9 @@ namespace SaidAfricaBackend.Controllers
         public int       NbBiensPublies { get; set; }
         public DateTime? DateValidation { get; set; }
         public bool      EstBloque      { get; set; }
+        public string?   TypeCompteProf { get; set; }
+        public string?   NIU            { get; set; }
+        public string?   NomAgence      { get; set; }
 
         public ProprietaireDto(User u, int nbBiens, DateTime? dateValidation)
         {
@@ -357,16 +413,23 @@ namespace SaidAfricaBackend.Controllers
             NbBiensPublies = nbBiens;
             DateValidation = dateValidation;
             EstBloque      = u.EstBloque;
+            TypeCompteProf = u.TypeCompteProf;
+            NIU            = u.NIU;
+            NomAgence      = u.NomAgence;
         }
     }
 
     public class CreateDemandeRequest
     {
-        public string     Region       { get; set; } = string.Empty;
-        public string?    Message      { get; set; }
-        public string     DocumentType { get; set; } = string.Empty;
-        public IFormFile? Document     { get; set; }
-        public IFormFile? Selfie       { get; set; }
+        public string     Region         { get; set; } = string.Empty;
+        public string?    Message        { get; set; }
+        public string     DocumentType   { get; set; } = string.Empty;
+        public IFormFile? Document       { get; set; }
+        public IFormFile? DocumentVerso  { get; set; }
+        public IFormFile? Selfie         { get; set; }
+        public string     TypeCompteProf { get; set; } = "Proprietaire";
+        public string?    NomAgence      { get; set; }
+        public string?    NIU            { get; set; }
     }
 
     public class RejeterDemandeRequest
