@@ -26,16 +26,16 @@ namespace SaidAfricaBackend.Controllers
         private bool    IsAdmin()       => CurrentRole() is "AdminRegion" or "AdminPays" or "DirecteurProjet";
 
         // ─── GET /api/demandesproprietaire/regions-with-admin ────────────────
+        // Retourne toutes les régions Cameroun — l'admin du Littoral couvre tout jusqu'à déploiement complet
         [HttpGet("regions-with-admin")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetRegionsWithAdmin()
+        public IActionResult GetRegionsWithAdmin()
         {
-            var regions = await _context.Users
-                .Where(u => u.Role == "AdminRegion" && u.Region != null)
-                .Select(u => u.Region!)
-                .Distinct()
-                .OrderBy(r => r)
-                .ToListAsync();
+            var regions = new[]
+            {
+                "Adamaoua","Centre","Est","Extrême-Nord",
+                "Littoral","Nord","Nord-Ouest","Ouest","Sud","Sud-Ouest"
+            };
             return Ok(new { success = true, data = regions });
         }
 
@@ -75,11 +75,10 @@ namespace SaidAfricaBackend.Controllers
             if (req.DocumentVerso != null && req.DocumentVerso.Length > 5 * 1024 * 1024)
                 return BadRequest(new { success = false, message = "Le verso de la CNI ne doit pas dépasser 5 Mo." });
 
-            // Vérifier qu'un admin régional existe pour cette région
-            bool adminExiste = await _context.Users
-                .AnyAsync(u => u.Role == "AdminRegion" && u.Region == req.Region);
+            // Vérifier qu'au moins un admin régional existe sur la plateforme
+            bool adminExiste = await _context.Users.AnyAsync(u => u.Role == "AdminRegion");
             if (!adminExiste)
-                return BadRequest(new { success = false, message = $"La région '{req.Region}' ne dispose pas encore d'administrateur régional. Veuillez choisir une autre région ou contacter le support." });
+                return BadRequest(new { success = false, message = "Aucun administrateur régional disponible pour le moment. Contactez le support." });
 
             // Validation selfie
             if (req.Selfie == null || req.Selfie.Length == 0)
@@ -137,9 +136,15 @@ namespace SaidAfricaBackend.Controllers
             _context.DemandesProprietaire.Add(demande);
 
             var demandeur    = await _context.Users.FindAsync(userId);
+
+            // Admins de la région sélectionnée ; si aucun, on prend tous les admins régionaux disponibles
             var adminsRegion = await _context.Users
                 .Where(u => u.Role == "AdminRegion" && u.Region == req.Region)
                 .ToListAsync();
+            if (adminsRegion.Count == 0)
+                adminsRegion = await _context.Users
+                    .Where(u => u.Role == "AdminRegion")
+                    .ToListAsync();
 
             foreach (var admin in adminsRegion)
             {
