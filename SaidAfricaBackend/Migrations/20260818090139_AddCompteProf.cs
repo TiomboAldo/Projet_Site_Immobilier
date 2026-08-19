@@ -55,7 +55,8 @@ namespace SaidAfricaBackend.Migrations
             migrationBuilder.AddColumn<string>(
                 name: "TypeCompteProf",
                 table: "DemandesProprietaire",
-                type: "longtext",
+                type: "varchar(50)",
+                maxLength: 50,
                 nullable: false,
                 defaultValue: "Proprietaire")
                 .Annotation("MySql:CharSet", "utf8mb4");

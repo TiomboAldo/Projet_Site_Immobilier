@@ -246,7 +246,9 @@ namespace SaidAfricaBackend.Migrations
 
                     b.Property<string>("TypeCompteProf")
                         .IsRequired()
-                        .HasColumnType("longtext");
+                        .HasDefaultValue("Proprietaire")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
 
                     b.Property<int>("UserId")
                         .HasColumnType("int");

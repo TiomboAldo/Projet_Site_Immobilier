@@ -43,8 +43,8 @@ else
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 36)),
         mySqlOptions => mySqlOptions.EnableRetryOnFailure(
-            maxRetryCount: 5,
-            maxRetryDelay: TimeSpan.FromSeconds(10),
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(5),
             errorNumbersToAdd: null)));
 
 // 2. CORS — développement local + production (levetimmo.com)

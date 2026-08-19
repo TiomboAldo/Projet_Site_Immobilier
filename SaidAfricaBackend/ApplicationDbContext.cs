@@ -49,6 +49,11 @@ namespace SaidAfricaBackend
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<DemandeProprietaire>()
+                .Property(d => d.TypeCompteProf)
+                .HasMaxLength(50)
+                .HasDefaultValue("Proprietaire");
+
+            modelBuilder.Entity<DemandeProprietaire>()
                 .HasOne(d => d.TraiteParAdmin)
                 .WithMany()
                 .HasForeignKey(d => d.TraiteParAdminId)
