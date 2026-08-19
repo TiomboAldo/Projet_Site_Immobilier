@@ -3561,6 +3561,27 @@
             _startSelfieCamera();
         }
 
+        // ── Compression image avant upload ───────────────────────────────────────
+        function _compressFile(file, maxMb = 3) {
+            return new Promise(resolve => {
+                if (file.size <= maxMb * 1024 * 1024) { resolve(file); return; }
+                const img = new Image();
+                const url = URL.createObjectURL(file);
+                img.onload = () => {
+                    URL.revokeObjectURL(url);
+                    const scale = Math.sqrt((maxMb * 1024 * 1024) / file.size);
+                    const w = Math.max(1, Math.floor(img.width  * scale));
+                    const h = Math.max(1, Math.floor(img.height * scale));
+                    const c = document.createElement('canvas');
+                    c.width = w; c.height = h;
+                    c.getContext('2d').drawImage(img, 0, 0, w, h);
+                    c.toBlob(b => resolve(new File([b], file.name, {type:'image/jpeg'})), 'image/jpeg', 0.82);
+                };
+                img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+                img.src = url;
+            });
+        }
+
         // ── Soumission ───────────────────────────────────────────────────────────
         async function submitDemandeProprietaire() {
             if (!_demandeDocType)  { showToast('error','Erreur','Type de document manquant.'); return; }
@@ -3573,14 +3594,18 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Envoi en cours…';
             btn.disabled = true;
 
+            // Compression des fichiers (évite fermeture connexion si photos trop grandes)
+            const docCompressed   = _demandeDocFile instanceof File ? await _compressFile(_demandeDocFile, 3) : _demandeDocFile;
+            const versoCompressed = (_demandeDocVerso instanceof File) ? await _compressFile(_demandeDocVerso, 3) : _demandeDocVerso;
+
             const form = new FormData();
             form.append('Region',         region);
             form.append('Message',        document.getElementById('demandeMessage')?.value.trim() || '');
             form.append('DocumentType',   _demandeDocType);
-            form.append('Document',       _demandeDocFile);
-            form.append('Selfie',         _demandeSelfie);
+            form.append('Document',       docCompressed,   docCompressed.name   || 'document.jpg');
+            form.append('Selfie',         _demandeSelfie,  'selfie.jpg');
             form.append('TypeCompteProf', _demandeTypeCompte);
-            if (_demandeDocVerso) form.append('DocumentVerso', _demandeDocVerso);
+            if (versoCompressed) form.append('DocumentVerso', versoCompressed, versoCompressed.name || 'verso.jpg');
             const niu      = document.getElementById('demandeNIU')?.value.trim();
             const nomAgence = document.getElementById('demandeNomAgence')?.value.trim();
             if (niu)       form.append('NIU',       niu);

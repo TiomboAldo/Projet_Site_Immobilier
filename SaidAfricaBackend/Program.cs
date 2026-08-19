@@ -24,6 +24,10 @@ if (File.Exists(envFile))
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Limite Kestrel globale : 50 Mo (évite fermeture connexion pendant upload)
+builder.WebHost.ConfigureKestrel(k =>
+    k.Limits.MaxRequestBodySize = 50L * 1024 * 1024);
+
 // 1. Connexion MySQL — supporte Railway (MYSQLHOST) et local (localhost)
 string connectionString;
 var mysqlHost = Environment.GetEnvironmentVariable("MYSQLHOST");

@@ -42,7 +42,7 @@ namespace SaidAfricaBackend.Controllers
         // ─── POST /api/demandesproprietaire ───────────────────────────────────
         [HttpPost]
         [Authorize(Roles = "Client")]
-        [RequestSizeLimit(20 * 1024 * 1024)] // 20 Mo max (recto + verso + selfie)
+        [RequestSizeLimit(40 * 1024 * 1024)] // 40 Mo max (recto + verso + selfie compressés)
         public async Task<IActionResult> Create([FromForm] CreateDemandeRequest req)
         {
             var userId = CurrentUserId();
