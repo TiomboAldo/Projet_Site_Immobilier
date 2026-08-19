@@ -3561,7 +3561,17 @@
             _startSelfieCamera();
         }
 
-        // ── Compression image avant upload ───────────────────────────────────────
+        // ── Conversion fichier/blob en base64 ────────────────────────────────────
+        function _fileToBase64(fileOrBlob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload  = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(fileOrBlob);
+            });
+        }
+
+        // ── Compression image (si > maxMb) puis retourne File compressé ──────────
         function _compressFile(file, maxMb = 3) {
             return new Promise(resolve => {
                 if (file.size <= maxMb * 1024 * 1024) { resolve(file); return; }
@@ -3582,7 +3592,7 @@
             });
         }
 
-        // ── Soumission ───────────────────────────────────────────────────────────
+        // ── Soumission (JSON+base64 — évite tout problème multipart/Railway) ─────
         async function submitDemandeProprietaire() {
             if (!_demandeDocType)  { showToast('error','Erreur','Type de document manquant.'); return; }
             if (!_demandeDocFile)  { showToast('error','Erreur','Importez votre pièce d\'identité.'); return; }
@@ -3591,57 +3601,66 @@
             if (!region) { showToast('error','Erreur','Veuillez sélectionner votre région.'); return; }
 
             const btn = document.getElementById('demSubmitBtn');
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Envoi en cours…';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Préparation…';
             btn.disabled = true;
 
-            // Compression des fichiers (évite fermeture connexion si photos trop grandes)
-            const docCompressed   = _demandeDocFile instanceof File ? await _compressFile(_demandeDocFile, 3) : _demandeDocFile;
-            const versoCompressed = (_demandeDocVerso instanceof File) ? await _compressFile(_demandeDocVerso, 3) : _demandeDocVerso;
-
-            const form = new FormData();
-            form.append('Region',         region);
-            form.append('Message',        document.getElementById('demandeMessage')?.value.trim() || '');
-            form.append('DocumentType',   _demandeDocType);
-            form.append('Document',       docCompressed,   docCompressed.name   || 'document.jpg');
-            form.append('Selfie',         _demandeSelfie,  'selfie.jpg');
-            form.append('TypeCompteProf', _demandeTypeCompte);
-            if (versoCompressed) form.append('DocumentVerso', versoCompressed, versoCompressed.name || 'verso.jpg');
-            const niu      = document.getElementById('demandeNIU')?.value.trim();
-            const nomAgence = document.getElementById('demandeNomAgence')?.value.trim();
-            if (niu)       form.append('NIU',       niu);
-            if (nomAgence) form.append('NomAgence', nomAgence);
-
-            // ── Ping : vérifie que le serveur répond avant l'upload ────────────────
+            // Compression si nécessaire, puis conversion base64
+            let documentB64, documentExt, versoB64 = null, versoExt = null, selfieB64;
             try {
-                await fetch(`${API}/demandesproprietaire/regions-with-admin`);
-            } catch(pingErr) {
-                console.error('Ping serveur échoué:', pingErr);
-                showToast('error','Serveur hors ligne', 'Le serveur Railway est inaccessible. Vérifiez Railway.');
+                const docCompressed   = _demandeDocFile instanceof File ? await _compressFile(_demandeDocFile, 3) : _demandeDocFile;
+                const versoCompressed = (_demandeDocVerso instanceof File) ? await _compressFile(_demandeDocVerso, 3) : _demandeDocVerso;
+
+                documentB64 = await _fileToBase64(docCompressed);
+                documentExt = (docCompressed.name || 'document.jpg').match(/\.[^.]+$/)?.[0]?.toLowerCase() || '.jpg';
+                selfieB64   = await _fileToBase64(_demandeSelfie);
+                if (versoCompressed) {
+                    versoB64 = await _fileToBase64(versoCompressed);
+                    versoExt = (versoCompressed.name || 'verso.jpg').match(/\.[^.]+$/)?.[0]?.toLowerCase() || '.jpg';
+                }
+            } catch(readErr) {
+                console.error('Lecture fichiers échouée:', readErr);
+                showToast('error','Erreur lecture', 'Impossible de lire les fichiers. Réessayez.');
                 btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:8px;"></i>Envoyer ma demande';
                 btn.disabled = false;
                 return;
             }
 
-            // ── Phase 1 : envoi multipart ───────────────────────────────────────────
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Envoi en cours…';
+
+            const niu       = document.getElementById('demandeNIU')?.value.trim();
+            const nomAgence = document.getElementById('demandeNomAgence')?.value.trim();
+
+            const payload = {
+                Region:        region,
+                Message:       document.getElementById('demandeMessage')?.value.trim() || '',
+                DocumentType:  _demandeDocType,
+                DocumentB64:   documentB64,
+                DocumentExt:   documentExt,
+                SelfieB64:     selfieB64,
+                TypeCompteProf: _demandeTypeCompte,
+            };
+            if (versoB64)   { payload.DocumentVersoB64 = versoB64; payload.DocumentVersoExt = versoExt; }
+            if (niu)         payload.NIU       = niu;
+            if (nomAgence)   payload.NomAgence = nomAgence;
+
+            // ── Envoi JSON ────────────────────────────────────────────────────────
             let _res;
             try {
                 const token = localStorage.getItem('jwtToken');
-                console.log('Envoi vers:', `${API}/demandesproprietaire`, '| token présent:', !!token);
                 _res = await fetch(`${API}/demandesproprietaire`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    body: form
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body:    JSON.stringify(payload)
                 });
-                console.log('Réponse reçue:', _res.status, _res.headers.get('content-type'));
             } catch(netErr) {
-                console.error('Fetch multipart échoué:', netErr.name, netErr.message, netErr);
-                showToast('error','Erreur upload', `Envoi bloqué (${netErr.message}). Essayez un autre navigateur ou réseau.`);
+                console.error('Fetch JSON échoué:', netErr.name, netErr.message, netErr);
+                showToast('error','Erreur réseau', `Envoi impossible (${netErr.message}). Vérifiez votre connexion.`);
                 btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:8px;"></i>Envoyer ma demande';
                 btn.disabled = false;
                 return;
             }
 
-            // ── Phase 2 : lecture réponse ───────────────────────────────────────
+            // ── Lecture réponse ────────────────────────────────────────────────
             try {
                 let data;
                 const ct = _res.headers.get('content-type') || '';

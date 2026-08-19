@@ -42,8 +42,7 @@ namespace SaidAfricaBackend.Controllers
         // ─── POST /api/demandesproprietaire ───────────────────────────────────
         [HttpPost]
         [Authorize(Roles = "Client")]
-        [RequestSizeLimit(40 * 1024 * 1024)] // 40 Mo max (recto + verso + selfie compressés)
-        public async Task<IActionResult> Create([FromForm] CreateDemandeRequest req)
+        public async Task<IActionResult> Create([FromBody] CreateDemandeRequest req)
         {
             var userId = CurrentUserId();
 
@@ -59,21 +58,34 @@ namespace SaidAfricaBackend.Controllers
                 return BadRequest(new { success = false, message = "Type de compte professionnel invalide." });
 
             // Validation pièce d'identité (recto)
-            if (req.Document == null || req.Document.Length == 0)
-                return BadRequest(new { success = false, message = "Veuillez joindre le recto de votre CNI." });
-            if (req.Document.Length > 5 * 1024 * 1024)
+            if (string.IsNullOrEmpty(req.DocumentB64))
+                return BadRequest(new { success = false, message = "Veuillez joindre le recto de votre pièce d'identité." });
+
+            byte[] docBytes;
+            try   { docBytes = Convert.FromBase64String(req.DocumentB64); }
+            catch { return BadRequest(new { success = false, message = "Fichier CNI recto invalide." }); }
+            if (docBytes.Length > 5 * 1024 * 1024)
                 return BadRequest(new { success = false, message = "La pièce d'identité ne doit pas dépasser 5 Mo." });
-            var allowedDoc = new[] { "image/jpeg", "image/jpg", "image/png", "application/pdf" };
-            if (!allowedDoc.Contains(req.Document.ContentType.ToLowerInvariant()))
+
+            var allowedDocExt = new[] { ".jpg", ".jpeg", ".png", ".pdf" };
+            var docExt = (req.DocumentExt ?? ".jpg").ToLowerInvariant();
+            if (!allowedDocExt.Contains(docExt))
                 return BadRequest(new { success = false, message = "CNI recto : format accepté JPG, PNG ou PDF." });
+
             if (req.DocumentType is not ("CNI" or "Passeport"))
                 return BadRequest(new { success = false, message = "Type de document invalide." });
 
             // Validation verso CNI (obligatoire uniquement pour CNI)
-            if (req.DocumentType == "CNI" && (req.DocumentVerso == null || req.DocumentVerso.Length == 0))
-                return BadRequest(new { success = false, message = "Veuillez joindre le verso de votre CNI." });
-            if (req.DocumentVerso != null && req.DocumentVerso.Length > 5 * 1024 * 1024)
-                return BadRequest(new { success = false, message = "Le verso de la CNI ne doit pas dépasser 5 Mo." });
+            byte[]? versoBytes = null;
+            if (req.DocumentType == "CNI")
+            {
+                if (string.IsNullOrEmpty(req.DocumentVersoB64))
+                    return BadRequest(new { success = false, message = "Veuillez joindre le verso de votre CNI." });
+                try   { versoBytes = Convert.FromBase64String(req.DocumentVersoB64); }
+                catch { return BadRequest(new { success = false, message = "Fichier verso invalide." }); }
+                if (versoBytes.Length > 5 * 1024 * 1024)
+                    return BadRequest(new { success = false, message = "Le verso de la CNI ne doit pas dépasser 5 Mo." });
+            }
 
             // Vérifier qu'au moins un admin régional existe sur la plateforme
             bool adminExiste = await _context.Users.AnyAsync(u => u.Role == "AdminRegion");
@@ -81,35 +93,32 @@ namespace SaidAfricaBackend.Controllers
                 return BadRequest(new { success = false, message = "Aucun administrateur régional disponible pour le moment. Contactez le support." });
 
             // Validation selfie
-            if (req.Selfie == null || req.Selfie.Length == 0)
+            if (string.IsNullOrEmpty(req.SelfieB64))
                 return BadRequest(new { success = false, message = "Veuillez joindre votre selfie de vérification." });
-            if (req.Selfie.Length > 5 * 1024 * 1024)
+
+            byte[] selfieBytes;
+            try   { selfieBytes = Convert.FromBase64String(req.SelfieB64); }
+            catch { return BadRequest(new { success = false, message = "Selfie invalide." }); }
+            if (selfieBytes.Length > 5 * 1024 * 1024)
                 return BadRequest(new { success = false, message = "Le selfie ne doit pas dépasser 5 Mo." });
-            var allowedSelfie = new[] { "image/jpeg", "image/jpg", "image/png" };
-            if (!allowedSelfie.Contains(req.Selfie.ContentType.ToLowerInvariant()))
-                return BadRequest(new { success = false, message = "Selfie : format accepté JPG ou PNG." });
 
             // Sauvegarde des fichiers
             var uploadDir = Path.Combine(_env.ContentRootPath, "Uploads", "Demandes");
             Directory.CreateDirectory(uploadDir);
 
-            var docExt      = Path.GetExtension(req.Document.FileName);
             var docFileName = $"{Guid.NewGuid()}{docExt}";
-            using (var s = System.IO.File.Create(Path.Combine(uploadDir, docFileName)))
-                await req.Document.CopyToAsync(s);
+            await System.IO.File.WriteAllBytesAsync(Path.Combine(uploadDir, docFileName), docBytes);
 
             string? versoFileName = null;
-            if (req.DocumentVerso != null && req.DocumentVerso.Length > 0)
+            if (versoBytes != null)
             {
-                var versoExt = Path.GetExtension(req.DocumentVerso.FileName);
+                var versoExt = (req.DocumentVersoExt ?? ".jpg").ToLowerInvariant();
                 versoFileName = $"{Guid.NewGuid()}{versoExt}";
-                using var sv = System.IO.File.Create(Path.Combine(uploadDir, versoFileName));
-                await req.DocumentVerso.CopyToAsync(sv);
+                await System.IO.File.WriteAllBytesAsync(Path.Combine(uploadDir, versoFileName), versoBytes);
             }
 
             var selfieFileName = $"{Guid.NewGuid()}.jpg";
-            using (var s = System.IO.File.Create(Path.Combine(uploadDir, selfieFileName)))
-                await req.Selfie.CopyToAsync(s);
+            await System.IO.File.WriteAllBytesAsync(Path.Combine(uploadDir, selfieFileName), selfieBytes);
 
             var typeLabel = req.TypeCompteProf switch
             {
@@ -426,15 +435,17 @@ namespace SaidAfricaBackend.Controllers
 
     public class CreateDemandeRequest
     {
-        public string     Region         { get; set; } = string.Empty;
-        public string?    Message        { get; set; }
-        public string     DocumentType   { get; set; } = string.Empty;
-        public IFormFile? Document       { get; set; }
-        public IFormFile? DocumentVerso  { get; set; }
-        public IFormFile? Selfie         { get; set; }
-        public string     TypeCompteProf { get; set; } = "Proprietaire";
-        public string?    NomAgence      { get; set; }
-        public string?    NIU            { get; set; }
+        public string  Region            { get; set; } = string.Empty;
+        public string? Message           { get; set; }
+        public string  DocumentType      { get; set; } = string.Empty;
+        public string  DocumentB64       { get; set; } = string.Empty;
+        public string  DocumentExt       { get; set; } = ".jpg";
+        public string? DocumentVersoB64  { get; set; }
+        public string? DocumentVersoExt  { get; set; }
+        public string  SelfieB64         { get; set; } = string.Empty;
+        public string  TypeCompteProf    { get; set; } = "Proprietaire";
+        public string? NomAgence         { get; set; }
+        public string? NIU               { get; set; }
     }
 
     public class RejeterDemandeRequest
