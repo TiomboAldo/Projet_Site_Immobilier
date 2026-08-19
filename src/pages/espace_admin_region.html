@@ -73,7 +73,7 @@
             border-right: 1px solid #f3f4f6; z-index: 50; transition: width 0.3s;
             display: flex; flex-direction: column; align-items: center; padding: 32px 0; overflow: hidden;
         }
-        .sidebar:hover { width: 256px; }
+        .sidebar:hover { width: 280px; }
         .sidebar-logo { margin-bottom: 40px; display: flex; align-items: center; gap: 12px; padding: 0 16px; }
         .sidebar-logo-icon {
             width: 40px; height: 40px; background: #2563eb; border-radius: 12px;
@@ -107,8 +107,8 @@
         }
 .mobile-menu-btn { display: none; }
         @media (max-width: 767px) {
-            .sidebar { transform: translateX(-100%); width: 256px !important; transition: transform 0.3s ease, width 0s; z-index: 51; }
-            .sidebar:hover { width: 256px !important; }
+            .sidebar { transform: translateX(-100%); width: 280px !important; transition: transform 0.3s ease, width 0s; z-index: 51; }
+            .sidebar:hover { width: 280px !important; }
             .sidebar.mobile-open { transform: translateX(0); }
             .sidebar.mobile-open .sidebar-logo-text,
             .sidebar.mobile-open .sidebar-item span { opacity: 1; }
@@ -281,8 +281,20 @@
                 <span>Demandes en attente</span>
             </button>
             <button onclick="switchSection('proprietaires', this)" class="sidebar-item">
-                <i class="fas fa-user-tie"></i>
+                <i class="fas fa-home"></i>
                 <span>Mes Propriétaires</span>
+            </button>
+            <button onclick="switchSection('promoteurs', this)" class="sidebar-item">
+                <i class="fas fa-building"></i>
+                <span>Mes Promoteurs</span>
+            </button>
+            <button onclick="switchSection('agences', this)" class="sidebar-item">
+                <i class="fas fa-city"></i>
+                <span>Mes Agences</span>
+            </button>
+            <button onclick="switchSection('agents', this)" class="sidebar-item">
+                <i class="fas fa-user-tie"></i>
+                <span>Mes Agents</span>
             </button>
             <button onclick="switchSection('biens', this)" class="sidebar-item">
                 <i class="fas fa-house-circle-xmark"></i>
@@ -390,8 +402,30 @@
             <!-- DEMANDES -->
             <section id="section-demandes" class="section-fade">
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:16px;">
-                    <h1 style="font-size:28px; font-weight:800; color:#111827;">Demandes de passage au statut Propriétaire</h1>
+                    <h1 style="font-size:28px; font-weight:800; color:#111827;">Demandes Compte Professionnel</h1>
                 </div>
+
+                <!-- Onglets Type de compte -->
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+                    <button class="type-tab" onclick="filterDemandesType('Proprietaire',this)"
+                        style="border:2px solid #2563eb;background:#2563eb;color:#fff;font-weight:700;font-size:12px;padding:8px 16px;border-radius:20px;cursor:pointer;transition:all 0.2s;">
+                        <i class="fas fa-home" style="margin-right:5px;"></i>Propriétaire
+                    </button>
+                    <button class="type-tab" onclick="filterDemandesType('PromoteurImmobilier',this)"
+                        style="border:2px solid #e5e7eb;background:#fff;color:#374151;font-weight:700;font-size:12px;padding:8px 16px;border-radius:20px;cursor:pointer;transition:all 0.2s;">
+                        <i class="fas fa-building" style="margin-right:5px;"></i>Promoteur
+                    </button>
+                    <button class="type-tab" onclick="filterDemandesType('AgenceImmobiliere',this)"
+                        style="border:2px solid #e5e7eb;background:#fff;color:#374151;font-weight:700;font-size:12px;padding:8px 16px;border-radius:20px;cursor:pointer;transition:all 0.2s;">
+                        <i class="fas fa-city" style="margin-right:5px;"></i>Agence
+                    </button>
+                    <button class="type-tab" onclick="filterDemandesType('AgentImmobilier',this)"
+                        style="border:2px solid #e5e7eb;background:#fff;color:#374151;font-weight:700;font-size:12px;padding:8px 16px;border-radius:20px;cursor:pointer;transition:all 0.2s;">
+                        <i class="fas fa-user-tie" style="margin-right:5px;"></i>Agent
+                    </button>
+                </div>
+
+                <!-- Recherche -->
                 <div style="position:relative;margin-bottom:16px;max-width:420px;">
                     <i class="fas fa-search" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:14px;pointer-events:none;"></i>
                     <input type="text" placeholder="Rechercher par nom ou email..."
@@ -400,6 +434,7 @@
                            onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e5e7eb'">
                 </div>
 
+                <!-- Filtres statut -->
                 <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:24px;">
                     <button class="filter-btn active" data-statut="En attente" onclick="filterDemandes('En attente', this)"
                         style="background:#fff; border:1px solid #e5e7eb; color:#374151; font-weight:700; font-size:13px; padding:10px 6px; border-radius:12px; cursor:pointer; text-align:center;">En attente</button>
@@ -425,6 +460,45 @@
                            onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e5e7eb'">
                 </div>
                 <div id="proprietairesGrid"></div>
+            </section>
+
+            <!-- MES PROMOTEURS -->
+            <section id="section-promoteurs" class="section-fade">
+                <h1 style="font-size:28px; font-weight:800; color:#111827; margin-bottom:16px;">Mes Promoteurs Immobiliers</h1>
+                <div style="position:relative;margin-bottom:20px;max-width:420px;">
+                    <i class="fas fa-search" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:14px;pointer-events:none;"></i>
+                    <input type="text" placeholder="Rechercher par nom ou email..."
+                           oninput="promoSearch=this.value.trim().toLowerCase();renderComptesProFiltered('PromoteurImmobilier')"
+                           style="width:100%;padding:11px 16px 11px 42px;border:1.5px solid #e5e7eb;border-radius:14px;font-size:14px;outline:none;background:#fff;color:#111827;"
+                           onfocus="this.style.borderColor='#7c3aed'" onblur="this.style.borderColor='#e5e7eb'">
+                </div>
+                <div id="promoteursGrid"></div>
+            </section>
+
+            <!-- MES AGENCES -->
+            <section id="section-agences" class="section-fade">
+                <h1 style="font-size:28px; font-weight:800; color:#111827; margin-bottom:16px;">Mes Agences Immobilières</h1>
+                <div style="position:relative;margin-bottom:20px;max-width:420px;">
+                    <i class="fas fa-search" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:14px;pointer-events:none;"></i>
+                    <input type="text" placeholder="Rechercher par nom ou email..."
+                           oninput="agenceSearch=this.value.trim().toLowerCase();renderComptesProFiltered('AgenceImmobiliere')"
+                           style="width:100%;padding:11px 16px 11px 42px;border:1.5px solid #e5e7eb;border-radius:14px;font-size:14px;outline:none;background:#fff;color:#111827;"
+                           onfocus="this.style.borderColor='#d97706'" onblur="this.style.borderColor='#e5e7eb'">
+                </div>
+                <div id="agencesGrid"></div>
+            </section>
+
+            <!-- MES AGENTS -->
+            <section id="section-agents" class="section-fade">
+                <h1 style="font-size:28px; font-weight:800; color:#111827; margin-bottom:16px;">Mes Agents Immobiliers</h1>
+                <div style="position:relative;margin-bottom:20px;max-width:420px;">
+                    <i class="fas fa-search" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:14px;pointer-events:none;"></i>
+                    <input type="text" placeholder="Rechercher par nom ou email..."
+                           oninput="agentSearch=this.value.trim().toLowerCase();renderComptesProFiltered('AgentImmobilier')"
+                           style="width:100%;padding:11px 16px 11px 42px;border:1.5px solid #e5e7eb;border-radius:14px;font-size:14px;outline:none;background:#fff;color:#111827;"
+                           onfocus="this.style.borderColor='#059669'" onblur="this.style.borderColor='#e5e7eb'">
+                </div>
+                <div id="agentsGrid"></div>
             </section>
 
             <!-- BIENS A MODERER -->
@@ -1015,10 +1089,15 @@
 
         let demandes = [];
         let currentFilter = 'En attente';
+        let currentTypeFilter = 'Proprietaire';
         let regionBiens = [];
         let allProprietaires = [];
+        let _allComptesPro = null;
         let demandeSearch = '';
-        let propSearch = '';
+        let propSearch    = '';
+        let promoSearch   = '';
+        let agenceSearch  = '';
+        let agentSearch   = '';
         let bienSearch = '';
         let nosBiensSearch = '';
 
@@ -1062,14 +1141,37 @@
             renderDemandes();
         }
 
+        function filterDemandesType(type, btn) {
+            currentTypeFilter = type;
+            const colors = {
+                'Proprietaire':        { bg: '#2563eb', border: '#2563eb' },
+                'PromoteurImmobilier': { bg: '#7c3aed', border: '#7c3aed' },
+                'AgenceImmobiliere':   { bg: '#d97706', border: '#d97706' },
+                'AgentImmobilier':     { bg: '#059669', border: '#059669' },
+            };
+            document.querySelectorAll('.type-tab').forEach(b => {
+                b.style.background   = '#fff';
+                b.style.color        = '#374151';
+                b.style.borderColor  = '#e5e7eb';
+            });
+            if (btn) {
+                const c = colors[type] || colors['Proprietaire'];
+                btn.style.background  = c.bg;
+                btn.style.color       = '#fff';
+                btn.style.borderColor = c.border;
+            }
+            renderDemandes();
+        }
+
         function renderDemandes() {
             const grid = document.getElementById('demandesGrid');
-            const list = demandeSearch
-                ? demandes.filter(d =>
+            // Filtre par type de compte professionnel
+            let list = demandes.filter(d => (d.typeCompteProf || 'Proprietaire') === currentTypeFilter);
+            // Filtre par recherche texte
+            if (demandeSearch) list = list.filter(d =>
                     (d.prenom || '').toLowerCase().includes(demandeSearch) ||
                     (d.nom || '').toLowerCase().includes(demandeSearch) ||
-                    (d.email || '').toLowerCase().includes(demandeSearch))
-                : demandes;
+                    (d.email || '').toLowerCase().includes(demandeSearch));
 
             if (!list.length) {
                 grid.innerHTML = `<div style="text-align:center; padding:60px 0; background:#fff; border-radius:24px; border:2px dashed #e5e7eb;">
@@ -1178,108 +1280,133 @@
         }
 
         // ═══════════════════════════════════════════════════════════════════
-        // MES PROPRIETAIRES
+        // COMPTES PROFESSIONNELS (Propriétaires, Promoteurs, Agences, Agents)
         // ═══════════════════════════════════════════════════════════════════
+
+        const _typeConfig = {
+            'Proprietaire':        { label: 'Propriétaire',         icon: 'fa-home',     grad: '#2563eb,#1d4ed8', gridId: 'proprietairesGrid', emptyMsg: 'Aucun propriétaire' },
+            'PromoteurImmobilier': { label: 'Promoteur Immobilier',  icon: 'fa-building', grad: '#7c3aed,#6d28d9', gridId: 'promoteursGrid',    emptyMsg: 'Aucun promoteur' },
+            'AgenceImmobiliere':   { label: 'Agence Immobilière',    icon: 'fa-city',     grad: '#d97706,#b45309', gridId: 'agencesGrid',       emptyMsg: 'Aucune agence' },
+            'AgentImmobilier':     { label: 'Agent Immobilier',      icon: 'fa-user-tie', grad: '#059669,#047857', gridId: 'agentsGrid',        emptyMsg: 'Aucun agent' },
+        };
+
+        function _typeSearchVar(type) {
+            return { 'Proprietaire': () => propSearch, 'PromoteurImmobilier': () => promoSearch, 'AgenceImmobiliere': () => agenceSearch, 'AgentImmobilier': () => agentSearch }[type]?.() || '';
+        }
+
+        async function _loadAllComptesPro(forceReload) {
+            if (!forceReload && _allComptesPro !== null) return;
+            const res = await apiFetch(`${API}/demandesproprietaire/proprietaires`);
+            _allComptesPro = res.success ? res.data : [];
+            allProprietaires = _allComptesPro.filter(p => (p.typeCompteProf || 'Proprietaire') === 'Proprietaire');
+        }
+
         async function renderProprietaires() {
+            _allComptesPro = null;
             const grid = document.getElementById('proprietairesGrid');
             grid.innerHTML = `<div class="flex items-center justify-center py-16"><i class="fas fa-spinner fa-spin text-blue-600 text-2xl"></i></div>`;
-
-            const res = await apiFetch(`${API}/demandesproprietaire/proprietaires`);
-            if (!res.success) {
-                grid.innerHTML = `<p class="text-center text-red-500 py-10">Impossible de charger les propriétaires.</p>`;
-                return;
-            }
-
-            allProprietaires = res.data;
+            await _loadAllComptesPro(true);
             renderProprietairesFiltered();
         }
 
         function renderProprietairesFiltered() {
-            const grid = document.getElementById('proprietairesGrid');
-            const list = propSearch
-                ? allProprietaires.filter(p =>
-                    (p.prenom || '').toLowerCase().includes(propSearch) ||
-                    (p.nom || '').toLowerCase().includes(propSearch) ||
-                    (p.email || '').toLowerCase().includes(propSearch))
-                : allProprietaires;
+            renderComptesProFiltered('Proprietaire');
+        }
+
+        async function renderComptesPro(type) {
+            const cfg  = _typeConfig[type];
+            const grid = document.getElementById(cfg.gridId);
+            grid.innerHTML = `<div class="flex items-center justify-center py-16"><i class="fas fa-spinner fa-spin text-blue-600 text-2xl"></i></div>`;
+            await _loadAllComptesPro(false);
+            renderComptesProFiltered(type);
+        }
+
+        function renderComptesProFiltered(type) {
+            const cfg    = _typeConfig[type];
+            const grid   = document.getElementById(cfg.gridId);
+            const search = _typeSearchVar(type);
+            const source = (_allComptesPro || []).filter(p => (p.typeCompteProf || 'Proprietaire') === type);
+            const list   = search
+                ? source.filter(p =>
+                    (p.prenom || '').toLowerCase().includes(search) ||
+                    (p.nom    || '').toLowerCase().includes(search) ||
+                    (p.email  || '').toLowerCase().includes(search))
+                : source;
 
             if (!list.length) {
+                grid.className = '';
                 grid.innerHTML = `
                     <div class="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
-                        <i class="fas fa-user-tie text-5xl text-gray-300 mb-3"></i>
-                        <p class="text-gray-400 font-semibold">${propSearch ? 'Aucun propriétaire ne correspond à votre recherche.' : 'Aucun propriétaire pour l\'instant.'}</p>
+                        <i class="fas ${cfg.icon} text-5xl text-gray-300 mb-3"></i>
+                        <p class="text-gray-400 font-semibold">${search ? 'Aucun résultat pour cette recherche.' : cfg.emptyMsg + ' pour l\'instant.'}</p>
                     </div>`;
                 return;
             }
 
             grid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5';
             grid.innerHTML = list.map(p => {
-                const date = p.dateValidation
+                const date     = p.dateValidation
                     ? new Date(p.dateValidation).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
                     : null;
-                const initiales = ((p.prenom || '?')[0] + (p.nom || '?')[0]).toUpperCase();
+                const initiales  = ((p.prenom || '?')[0] + (p.nom || '?')[0]).toUpperCase();
+                const bloque     = p.estBloque === true;
+                const headerGrad = bloque ? 'background:linear-gradient(135deg,#6b7280,#374151);' : `background:linear-gradient(135deg,${cfg.grad});`;
                 const avatarHtml = p.photoUrl
-                    ? `<img src="${escapeHtml(p.photoUrl)}" alt="${escapeHtml(p.prenom || '')} ${escapeHtml(p.nom || '')}"
-                            style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.6);margin:0 auto 10px;display:block;"
+                    ? `<img src="${escapeHtml(p.photoUrl)}" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.6);margin:0 auto 10px;display:block;"
                             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                        <div style="width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,0.2);border:2px solid rgba(255,255,255,0.4);display:none;align-items:center;justify-content:center;margin:0 auto 10px;font-size:20px;font-weight:900;color:#fff;">${initiales}</div>`
                     : `<div style="width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,0.2);border:2px solid rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:20px;font-weight:900;color:#fff;">${initiales}</div>`;
-                const lienBiens = `/src/pages/admin_biens_proprietaire.html?id=${p.id}&nom=${encodeURIComponent((p.prenom || '') + ' ' + (p.nom || ''))}`;
-                const bloque = p.estBloque === true;
-                const headerGrad = bloque
-                    ? 'background:linear-gradient(135deg,#6b7280,#374151);'
-                    : 'background:linear-gradient(135deg,#2563eb,#1d4ed8);';
-                const blocBadge = bloque
-                    ? `<span style="margin-top:6px;display:inline-block;background:#ef4444;color:#fff;font-size:10px;font-weight:800;padding:2px 10px;border-radius:999px;"><i class="fas fa-ban" style="margin-right:3px;"></i>Suspendu</span>`
-                    : '';
-                const blocBtn = bloque
-                    ? `<button onclick="toggleBlocProprietaire(${p.id})" data-bloque="true"
+                const lienBiens  = `/src/pages/admin_biens_proprietaire.html?id=${p.id}&nom=${encodeURIComponent((p.prenom || '') + ' ' + (p.nom || ''))}`;
+                const blocBadge  = bloque ? `<span style="margin-top:6px;display:inline-block;background:#ef4444;color:#fff;font-size:10px;font-weight:800;padding:2px 10px;border-radius:999px;"><i class="fas fa-ban" style="margin-right:3px;"></i>Suspendu</span>` : '';
+                const blocBtn    = bloque
+                    ? `<button onclick="toggleBlocProprietaire(${p.id},'${type}')" data-bloque="true"
                           style="width:100%;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:7px;padding:10px;background:#fff;color:#059669;border:2px solid #059669;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;">
-                          <i class="fas fa-circle-check"></i>Réactiver le compte
-                       </button>`
-                    : `<button onclick="toggleBlocProprietaire(${p.id})" data-bloque="false"
+                          <i class="fas fa-circle-check"></i>Réactiver le compte</button>`
+                    : `<button onclick="toggleBlocProprietaire(${p.id},'${type}')" data-bloque="false"
                           style="width:100%;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:7px;padding:10px;background:#fff;color:#ef4444;border:2px solid #ef4444;border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;">
-                          <i class="fas fa-ban"></i>Bloquer le compte
-                       </button>`;
+                          <i class="fas fa-ban"></i>Bloquer le compte</button>`;
+                const [c1] = cfg.grad.split(',');
                 return `
-                <div id="prop-card-${p.id}" data-bloque="${bloque}" class="bg-white rounded-2xl border ${bloque ? 'border-red-200' : 'border-gray-200'} overflow-hidden flex flex-col hover:-translate-y-1 hover:shadow-lg transition-all duration-300" style="${bloque ? 'opacity:0.85;' : ''}">
+                <div id="prop-card-${p.id}" data-type="${type}" data-bloque="${bloque}"
+                    class="bg-white rounded-2xl border ${bloque ? 'border-red-200' : 'border-gray-200'} overflow-hidden flex flex-col hover:-translate-y-1 hover:shadow-lg transition-all duration-300" style="${bloque ? 'opacity:0.85;' : ''}">
                     <div style="${headerGrad}padding:24px 20px 20px;text-align:center;">
                         ${avatarHtml}
                         <h4 style="font-weight:900;color:#fff;font-size:14px;line-height:1.3;margin:0;">${escapeHtml(p.prenom || '')} ${escapeHtml(p.nom || '')}</h4>
-                        <span style="margin-top:6px;display:inline-block;background:rgba(255,255,255,0.2);color:#fff;font-size:11px;font-weight:600;padding:2px 12px;border-radius:999px;">Propriétaire</span>
+                        <span style="margin-top:6px;display:inline-block;background:rgba(255,255,255,0.2);color:#fff;font-size:11px;font-weight:600;padding:2px 12px;border-radius:999px;">${cfg.label}</span>
                         ${blocBadge}
                     </div>
                     <div class="p-4 flex-1 flex flex-col gap-3">
                         <div class="flex items-center gap-2.5">
-                            <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-envelope text-blue-600 text-xs"></i>
-                            </div>
+                            <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0"><i class="fas fa-envelope text-blue-600 text-xs"></i></div>
                             <span class="text-sm text-gray-700 break-all leading-tight">${escapeHtml(p.email || '')}</span>
                         </div>
                         <div class="flex items-center gap-2.5">
-                            <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-map-marker-alt text-blue-600 text-xs"></i>
-                            </div>
-                            <span class="text-sm text-gray-700">Région <strong class="font-bold">${escapeHtml(p.region || '')}</strong></span>
+                            <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0"><i class="fas fa-map-marker-alt text-blue-600 text-xs"></i></div>
+                            <span class="text-sm text-gray-700">Région <strong>${escapeHtml(p.region || '')}</strong></span>
                         </div>
+                        ${p.nomAgence ? `
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0"><i class="fas fa-store text-purple-600 text-xs"></i></div>
+                            <span class="text-sm text-gray-700">${escapeHtml(p.nomAgence)}</span>
+                        </div>` : ''}
+                        ${p.niu ? `
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0"><i class="fas fa-fingerprint text-emerald-600 text-xs"></i></div>
+                            <span class="text-xs text-gray-500 font-mono">${escapeHtml(p.niu)}</span>
+                        </div>` : ''}
                         ${date ? `
                         <div class="flex items-center gap-2.5">
-                            <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-calendar-check text-blue-600 text-xs"></i>
-                            </div>
-                            <span class="text-xs text-gray-500">Depuis le ${date}</span>
+                            <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0"><i class="fas fa-calendar-check text-blue-600 text-xs"></i></div>
+                            <span class="text-xs text-gray-500">Validé le ${date}</span>
                         </div>` : ''}
                         <div class="flex items-center gap-2.5">
-                            <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
-                                <i class="fas fa-house text-emerald-600 text-xs"></i>
-                            </div>
+                            <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0"><i class="fas fa-house text-emerald-600 text-xs"></i></div>
                             <span class="text-sm text-gray-700 font-bold">${p.nbBiensPublies} bien${p.nbBiensPublies !== 1 ? 's' : ''} publié${p.nbBiensPublies !== 1 ? 's' : ''}</span>
                         </div>
                     </div>
                     <div class="px-4 pb-4">
-                        <a href="${lienBiens}"
-                           class="block w-full text-center text-white text-sm font-bold py-2.5 rounded-xl transition no-underline"
-                           style="background:linear-gradient(135deg,#2563eb,#1d4ed8);">
+                        <a href="${lienBiens}" class="block w-full text-center text-white text-sm font-bold py-2.5 rounded-xl transition no-underline"
+                           style="background:linear-gradient(135deg,${cfg.grad});">
                             <i class="fas fa-eye" style="margin-right:6px;"></i>Voir les biens publiés
                         </a>
                         ${blocBtn}
@@ -1288,14 +1415,15 @@
             }).join('');
         }
 
-        async function toggleBlocProprietaire(id) {
+        async function toggleBlocProprietaire(id, type) {
+            type = type || 'Proprietaire';
             const card = document.getElementById(`prop-card-${id}`);
             const estBloque = card?.dataset.bloque === 'true';
             openConfirmModal({
                 title: estBloque ? 'Réactiver ce compte ?' : 'Bloquer ce compte ?',
                 message: estBloque
-                    ? 'Le propriétaire pourra à nouveau se connecter et gérer ses biens.'
-                    : 'Le propriétaire ne pourra plus se connecter tant que son compte est suspendu.',
+                    ? 'L\'utilisateur pourra à nouveau se connecter et gérer ses biens.'
+                    : 'L\'utilisateur ne pourra plus se connecter tant que son compte est suspendu.',
                 icon: estBloque ? 'fa-circle-check' : 'fa-ban',
                 confirmLabel: estBloque ? 'Réactiver' : 'Bloquer',
                 onConfirm: async () => {
@@ -1304,7 +1432,8 @@
                         showToast(res.estBloque ? 'info' : 'success',
                             res.estBloque ? 'Compte suspendu' : 'Compte réactivé',
                             res.message || '');
-                        renderProprietaires();
+                        _allComptesPro = null;
+                        renderComptesProFiltered(type);
                     } else {
                         showToast('error', 'Erreur', res.message || 'Une erreur est survenue.');
                     }
@@ -2155,6 +2284,9 @@
             if (id === 'reservations')  loadAdminReservations();
             if (id === 'notifications') renderNotifications();
             if (id === 'proprietaires') renderProprietaires();
+            if (id === 'promoteurs')    renderComptesPro('PromoteurImmobilier');
+            if (id === 'agences')       renderComptesPro('AgenceImmobiliere');
+            if (id === 'agents')        renderComptesPro('AgentImmobilier');
             if (id === 'demandes')      loadDemandes(currentFilter || 'En attente');
             if (id === 'biens')         renderBiens();
             if (id === 'nos-biens')     renderNosBiens();
