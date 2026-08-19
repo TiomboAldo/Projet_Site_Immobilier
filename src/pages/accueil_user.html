@@ -3593,7 +3593,14 @@
                     headers: { 'Authorization': `Bearer ${token}` },
                     body: form
                 });
-                const data = await res.json();
+                let data;
+                const ct = res.headers.get('content-type') || '';
+                if (ct.includes('application/json')) {
+                    data = await res.json();
+                } else {
+                    const txt = await res.text();
+                    throw new Error(`HTTP ${res.status} — ${txt.substring(0, 300)}`);
+                }
                 if (data.success) {
                     showToast('success','Demande envoyée !', data.message);
                     _stopCamera();
@@ -3605,7 +3612,8 @@
                     btn.disabled = false;
                 }
             } catch(err) {
-                showToast('error','Erreur réseau','Impossible d\'envoyer la demande.');
+                console.error('submitDemandeProprietaire:', err);
+                showToast('error','Erreur réseau', err.message || 'Impossible d\'envoyer la demande.');
                 btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:8px;"></i>Envoyer ma demande';
                 btn.disabled = false;
             }

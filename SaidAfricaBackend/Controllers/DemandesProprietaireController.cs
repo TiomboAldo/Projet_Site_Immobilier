@@ -403,7 +403,7 @@ namespace SaidAfricaBackend.Controllers
         public int       NbBiensPublies { get; set; }
         public DateTime? DateValidation { get; set; }
         public bool      EstBloque      { get; set; }
-        public string?   TypeCompteProf { get; set; }
+        public string?   TypeCompteProf { get; set; } 
         public string?   NIU            { get; set; }
         public string?   NomAgence      { get; set; }
 

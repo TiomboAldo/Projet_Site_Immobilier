@@ -56,7 +56,8 @@ namespace SaidAfricaBackend.Migrations
                 name: "TypeCompteProf",
                 table: "DemandesProprietaire",
                 type: "longtext",
-                nullable: false)
+                nullable: false,
+                defaultValue: "Proprietaire")
                 .Annotation("MySql:CharSet", "utf8mb4");
         }
 
