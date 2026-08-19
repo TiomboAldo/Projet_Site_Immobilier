@@ -3611,18 +3611,31 @@
             if (niu)       form.append('NIU',       niu);
             if (nomAgence) form.append('NomAgence', nomAgence);
 
-            // ── Phase 1 : envoi réseau ──────────────────────────────────────────
+            // ── Ping : vérifie que le serveur répond avant l'upload ────────────────
+            try {
+                await fetch(`${API}/demandesproprietaire/regions-with-admin`);
+            } catch(pingErr) {
+                console.error('Ping serveur échoué:', pingErr);
+                showToast('error','Serveur hors ligne', 'Le serveur Railway est inaccessible. Vérifiez Railway.');
+                btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:8px;"></i>Envoyer ma demande';
+                btn.disabled = false;
+                return;
+            }
+
+            // ── Phase 1 : envoi multipart ───────────────────────────────────────────
             let _res;
             try {
                 const token = localStorage.getItem('jwtToken');
+                console.log('Envoi vers:', `${API}/demandesproprietaire`, '| token présent:', !!token);
                 _res = await fetch(`${API}/demandesproprietaire`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` },
                     body: form
                 });
+                console.log('Réponse reçue:', _res.status, _res.headers.get('content-type'));
             } catch(netErr) {
-                console.error('submitDemandeProprietaire [réseau]:', netErr);
-                showToast('error','Serveur inaccessible', 'Le serveur ne répond pas. Vérifiez votre connexion.');
+                console.error('Fetch multipart échoué:', netErr.name, netErr.message, netErr);
+                showToast('error','Erreur upload', `Envoi bloqué (${netErr.message}). Essayez un autre navigateur ou réseau.`);
                 btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:8px;"></i>Envoyer ma demande';
                 btn.disabled = false;
                 return;
