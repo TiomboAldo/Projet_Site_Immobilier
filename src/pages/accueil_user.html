@@ -3595,11 +3595,11 @@
                 });
                 let data;
                 const ct = res.headers.get('content-type') || '';
-                if (ct.includes('application/json')) {
+                if (ct.includes('json')) {
                     data = await res.json();
                 } else {
                     const txt = await res.text();
-                    throw new Error(`HTTP ${res.status} — ${txt.substring(0, 300)}`);
+                    throw new Error(`HTTP ${res.status}${txt ? ' — ' + txt.substring(0, 200) : ''}`);
                 }
                 if (data.success) {
                     showToast('success','Demande envoyée !', data.message);

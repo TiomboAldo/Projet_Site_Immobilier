@@ -101,6 +101,13 @@ builder.Services.AddControllers();
 var app = builder.Build();
 
 // --- CONFIGURATION DU PIPELINE ---
+app.UseExceptionHandler(errApp => errApp.Run(async ctx =>
+{
+    ctx.Response.StatusCode  = 500;
+    ctx.Response.ContentType = "application/json";
+    await ctx.Response.WriteAsync("{\"success\":false,\"message\":\"Erreur interne du serveur. Réessayez.\"}");
+}));
+
 app.UseRouting();
 app.UseCors("AllowFrontend");
 
