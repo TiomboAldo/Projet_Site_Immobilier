@@ -3586,20 +3586,32 @@
             if (niu)       form.append('NIU',       niu);
             if (nomAgence) form.append('NomAgence', nomAgence);
 
+            // ── Phase 1 : envoi réseau ──────────────────────────────────────────
+            let _res;
             try {
                 const token = localStorage.getItem('jwtToken');
-                const res = await fetch(`${API}/demandesproprietaire`, {
+                _res = await fetch(`${API}/demandesproprietaire`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` },
                     body: form
                 });
+            } catch(netErr) {
+                console.error('submitDemandeProprietaire [réseau]:', netErr);
+                showToast('error','Serveur inaccessible', 'Le serveur ne répond pas. Vérifiez votre connexion.');
+                btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:8px;"></i>Envoyer ma demande';
+                btn.disabled = false;
+                return;
+            }
+
+            // ── Phase 2 : lecture réponse ───────────────────────────────────────
+            try {
                 let data;
-                const ct = res.headers.get('content-type') || '';
+                const ct = _res.headers.get('content-type') || '';
                 if (ct.includes('json')) {
-                    data = await res.json();
+                    data = await _res.json();
                 } else {
-                    const txt = await res.text();
-                    throw new Error(`HTTP ${res.status}${txt ? ' — ' + txt.substring(0, 200) : ''}`);
+                    const txt = await _res.text();
+                    data = { success: false, message: `Erreur serveur (HTTP ${_res.status})${txt ? ' — ' + txt.substring(0, 150) : ''}` };
                 }
                 if (data.success) {
                     showToast('success','Demande envoyée !', data.message);
@@ -3611,9 +3623,9 @@
                     btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:8px;"></i>Envoyer ma demande';
                     btn.disabled = false;
                 }
-            } catch(err) {
-                console.error('submitDemandeProprietaire:', err);
-                showToast('error','Erreur réseau', err.message || 'Impossible d\'envoyer la demande.');
+            } catch(parseErr) {
+                console.error('submitDemandeProprietaire [lecture réponse]:', parseErr);
+                showToast('error',`Erreur HTTP ${_res.status}`, 'Réponse illisible du serveur.');
                 btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:8px;"></i>Envoyer ma demande';
                 btn.disabled = false;
             }
