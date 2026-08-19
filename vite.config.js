@@ -13,12 +13,14 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:5257',
+        target: 'https://levetimmo.com',
         changeOrigin: true,
+        secure: true,
       },
       '/uploads': {
-        target: 'http://localhost:5257',
+        target: 'https://levetimmo.com',
         changeOrigin: true,
+        secure: true,
       },
     },
   },
