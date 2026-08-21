@@ -286,6 +286,21 @@ namespace SaidAfricaBackend
         public int?      ValideParAdminId { get; set; }
         public DateTime? ValideLe         { get; set; }
 
+        // ── Documents spécifiques Terrain ────────────────────────────────────
+        public string? CertificatPropriete    { get; set; }
+        public string? StatutCivil            { get; set; }  // celibataire|marie|veuf|divorce
+        public string? RegimeMatrimonial      { get; set; }  // commun|separe (si marié)
+        public bool?   ADesEnfants            { get; set; }
+        public string? DossierTechnique       { get; set; }
+
+        // ── Documents spécifiques Immeuble ───────────────────────────────────
+        public string? PermisBatir            { get; set; }
+        public string? PlanBatiment           { get; set; }  // facultatif
+        public string? DossierCalculTechnique { get; set; }
+
+        /// <summary>Checklist documents vérifiés par admin (JSON) — affiché dans l'annonce</summary>
+        public string? DocumentsVerifies { get; set; }
+
         // Navigation
         public User?                    Proprietaire   { get; set; }
         public User?                    ValideParAdmin  { get; set; }

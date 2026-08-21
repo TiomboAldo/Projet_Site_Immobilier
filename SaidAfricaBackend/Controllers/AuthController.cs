@@ -250,6 +250,19 @@ namespace SaidAfricaBackend.Controllers
                 if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
                     return Unauthorized(new { success = false, message = "Email ou mot de passe incorrect." });
 
+                // "Rester connecté" → pas de 2FA, JWT direct
+                if (request.ResterConnecte)
+                {
+                    var token = GenerateJwt(user);
+                    return Ok(new
+                    {
+                        success           = true,
+                        requiresTwoFactor = false,
+                        token,
+                        user = new { user.Id, user.Nom, user.Prenom, user.Email, user.Role, user.EstValide, user.EstBloque }
+                    });
+                }
+
                 // OTP obligatoire à chaque connexion
                 var otp       = new Random().Next(100000, 999999).ToString();
                 var tempToken = Guid.NewGuid().ToString("N");
@@ -418,8 +431,9 @@ namespace SaidAfricaBackend.Controllers
 
     public class LoginRequest
     {
-        public required String Email { get; set; }
-        public required String Password { get; set; }
+        public required string Email          { get; set; }
+        public required string Password       { get; set; }
+        public bool            ResterConnecte { get; set; } = false;
     }
 
     public class BootstrapAdminRequest

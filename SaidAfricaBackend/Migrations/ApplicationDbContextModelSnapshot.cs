@@ -25,11 +25,26 @@ namespace SaidAfricaBackend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
+                    b.Property<bool?>("ADesEnfants")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<int>("Chambres")
                         .HasColumnType("int");
 
+                    b.Property<string>("CertificatPropriete")
+                        .HasColumnType("longtext");
+
                     b.Property<DateTime>("DateAjout")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<string>("DocumentsVerifies")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("DossierCalculTechnique")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("DossierTechnique")
+                        .HasColumnType("longtext");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -61,6 +76,18 @@ namespace SaidAfricaBackend.Migrations
                         .HasColumnType("double");
 
                     b.Property<string>("MotifsRejet")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("PermisBatir")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("PlanBatiment")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("RegimeMatrimonial")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("StatutCivil")
                         .HasColumnType("longtext");
 
                     b.Property<string>("Prix")

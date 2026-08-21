@@ -472,6 +472,46 @@ namespace SaidAfricaBackend.Controllers
             return Ok(new { success = true, filename });
         }
 
+        // ─── POST /api/biens/upload-document ─────────────────────────────────
+        // Upload générique pour CertificatPropriete, DossierTechnique, PermisBatir, etc.
+        [HttpPost("upload-document")]
+        [Authorize(Roles = "Proprietaire,UserIndep,AdminRegion,AdminPays,DirecteurProjet")]
+        [RequestSizeLimit(11 * 1024 * 1024)]
+        public async Task<IActionResult> UploadDocument(IFormFile? file, [FromQuery] string prefix = "doc")
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new { success = false, message = "Aucun fichier envoyé." });
+            if (file.Length > 10 * 1024 * 1024)
+                return BadRequest(new { success = false, message = "Fichier trop volumineux (max 10 Mo)." });
+
+            var allowed = new[] { "image/jpeg", "image/jpg", "image/png", "application/pdf" };
+            if (!allowed.Contains(file.ContentType.ToLowerInvariant()))
+                return BadRequest(new { success = false, message = "Format accepté : JPG, PNG ou PDF." });
+
+            var safePrefix = System.Text.RegularExpressions.Regex.Replace(prefix, @"[^a-zA-Z0-9_-]", "");
+            var dir = Path.Combine(_env.ContentRootPath, "Uploads", "Biens");
+            Directory.CreateDirectory(dir);
+            var ext = Path.GetExtension(file.FileName);
+            var filename = $"{safePrefix}_{Guid.NewGuid()}{ext}";
+            using var s = System.IO.File.Create(Path.Combine(dir, filename));
+            await file.CopyToAsync(s);
+
+            return Ok(new { success = true, filename });
+        }
+
+        // ─── PUT /api/biens/{id}/checklist ────────────────────────────────────
+        [HttpPut("{id:int}/checklist")]
+        [Authorize(Roles = "AdminRegion,AdminPays,DirecteurProjet")]
+        public async Task<IActionResult> SaveChecklist(int id, [FromBody] ChecklistRequest req)
+        {
+            var bien = await _context.Biens.FindAsync(id);
+            if (bien == null) return NotFound(new { success = false });
+
+            bien.DocumentsVerifies = req.DocumentsVerifies;
+            await _context.SaveChangesAsync();
+            return Ok(new { success = true });
+        }
+
         // ─── POST /api/biens ──────────────────────────────────────────────────
         [HttpPost]
         [Authorize(Roles = "Proprietaire,UserIndep,AdminRegion,AdminPays,DirecteurProjet")]
@@ -516,11 +556,19 @@ namespace SaidAfricaBackend.Controllers
                 Latitude          = req.Latitude,
                 Longitude         = req.Longitude,
                 ProprietaireId    = proprietaireId,
-                EstDisponible     = isAdmin,
-                StatutPublication = isAdmin ? "Valide" : "En attente",
-                ValideParAdminId  = isAdmin ? proprietaireId : null,
-                ValideLe          = isAdmin ? DateTime.UtcNow : null,
-                TitreFoncierPath  = req.TitreFoncierPath,
+                EstDisponible          = isAdmin,
+                StatutPublication      = isAdmin ? "Valide" : "En attente",
+                ValideParAdminId       = isAdmin ? proprietaireId : null,
+                ValideLe               = isAdmin ? DateTime.UtcNow : null,
+                TitreFoncierPath       = req.TitreFoncierPath,
+                CertificatPropriete    = req.CertificatPropriete,
+                StatutCivil            = req.StatutCivil,
+                RegimeMatrimonial      = req.RegimeMatrimonial,
+                ADesEnfants            = req.ADesEnfants,
+                DossierTechnique       = req.DossierTechnique,
+                PermisBatir            = req.PermisBatir,
+                PlanBatiment           = req.PlanBatiment,
+                DossierCalculTechnique = req.DossierCalculTechnique,
             };
 
             _context.Biens.Add(bien);
@@ -611,10 +659,22 @@ namespace SaidAfricaBackend.Controllers
         public bool     EstLikeParMoi     { get; set; }
         public int?     ProprietaireId         { get; set; }
         public string?  TelephoneProprietaire  { get; set; }
+        public bool     VendeurCertifie        { get; set; }
         public double?  Latitude               { get; set; }
         public double?  Longitude              { get; set; }
         public List<string> Galerie            { get; set; }
         public List<string> Equipements        { get; set; }
+        // Documents spécifiques Terrain
+        public string?  CertificatPropriete    { get; set; }
+        public string?  StatutCivil            { get; set; }
+        public string?  RegimeMatrimonial      { get; set; }
+        public bool?    ADesEnfants            { get; set; }
+        public string?  DossierTechnique       { get; set; }
+        // Documents spécifiques Immeuble
+        public string?  PermisBatir            { get; set; }
+        public string?  PlanBatiment           { get; set; }
+        public string?  DossierCalculTechnique { get; set; }
+        public string?  DocumentsVerifies      { get; set; }
 
         public BienDto(Bien b, int likes = 0, bool estLikeParMoi = false)
         {
@@ -640,6 +700,7 @@ namespace SaidAfricaBackend.Controllers
             EstLikeParMoi         = estLikeParMoi;
             ProprietaireId        = b.ProprietaireId;
             TelephoneProprietaire = b.Proprietaire?.Telephone;
+            VendeurCertifie       = b.Proprietaire?.KycStatut == "Approuve";
             Latitude              = b.Latitude;
             Longitude             = b.Longitude;
             Galerie           = string.IsNullOrEmpty(b.GalerieUrls)
@@ -648,6 +709,15 @@ namespace SaidAfricaBackend.Controllers
             Equipements       = string.IsNullOrEmpty(b.Equipements)
                                     ? new List<string>()
                                     : b.Equipements.Split('|').ToList();
+            CertificatPropriete    = b.CertificatPropriete;
+            StatutCivil            = b.StatutCivil;
+            RegimeMatrimonial      = b.RegimeMatrimonial;
+            ADesEnfants            = b.ADesEnfants;
+            DossierTechnique       = b.DossierTechnique;
+            PermisBatir            = b.PermisBatir;
+            PlanBatiment           = b.PlanBatiment;
+            DossierCalculTechnique = b.DossierCalculTechnique;
+            DocumentsVerifies      = b.DocumentsVerifies;
         }
     }
 
@@ -683,7 +753,17 @@ namespace SaidAfricaBackend.Controllers
         public string     Standing     { get; set; } = string.Empty;
         public double?    Latitude     { get; set; }
         public double?    Longitude    { get; set; }
-        public string?    TitreFoncierPath { get; set; }
+        public string?    TitreFoncierPath     { get; set; }
+        // Terrain
+        public string?    CertificatPropriete  { get; set; }
+        public string?    StatutCivil          { get; set; }
+        public string?    RegimeMatrimonial    { get; set; }
+        public bool?      ADesEnfants          { get; set; }
+        public string?    DossierTechnique     { get; set; }
+        // Immeuble
+        public string?    PermisBatir           { get; set; }
+        public string?    PlanBatiment          { get; set; }
+        public string?    DossierCalculTechnique{ get; set; }
     }
 
     public class UpdateBienRequest
@@ -709,5 +789,10 @@ namespace SaidAfricaBackend.Controllers
     public class RejeterBienRequest
     {
         public string? Motif { get; set; }
+    }
+
+    public class ChecklistRequest
+    {
+        public string? DocumentsVerifies { get; set; }
     }
 }
