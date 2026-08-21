@@ -65,6 +65,12 @@
                 <div class="forgot-pass">
                     <a href="#" onclick="openForgotModal();return false;">Mot de passe oublié ?</a>
                 </div>
+                <div class="remember-me">
+                    <label class="remember-label">
+                        <input type="checkbox" id="resterConnecte">
+                        Rester connecté
+                    </label>
+                </div>
                 <button type="submit" class="btn">Se connecter</button>
                 <div class="sign-link">
                     <p>Vous n'avez pas de compte ? <a href="#" class="signUp-link">S'inscrire</a></p>
@@ -431,6 +437,28 @@
             text-decoration: none;
         }
 
+        .remember-me {
+            margin: -6px 0 14px;
+        }
+
+        .remember-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: rgba(255,255,255,0.85);
+            font-size: 13px;
+            user-select: none;
+        }
+
+        .remember-label input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #2196f3;
+            flex-shrink: 0;
+        }
+
         /* Cache le modal par défaut */
         #infoModal {
             display: none;
@@ -678,13 +706,38 @@
             }
         })();
 
+        // ─── HELPER : sauvegarde session ou permanente ───────────────────────────
+        function saveAuth(result, permanent) {
+            const u = result.user;
+            const estBloque = u.estBloque === true;
+            // Toujours écrire dans localStorage (toutes les autres pages y lisent)
+            localStorage.setItem('isLoggedIn',    'true');
+            localStorage.setItem('jwtToken',      result.token);
+            localStorage.setItem('userPrenom',    u.prenom);
+            localStorage.setItem('userNom',       u.nom);
+            localStorage.setItem('userEmail',     u.email);
+            localStorage.setItem('userId',        u.id);
+            localStorage.setItem('userRole',      u.role || 'Client');
+            localStorage.setItem('userEstBloque', estBloque ? 'true' : 'false');
+            if (permanent) {
+                localStorage.removeItem('sessionOnlyLogin');
+            } else {
+                // Marqueur de session : sera absent après fermeture du navigateur
+                localStorage.setItem('sessionOnlyLogin', 'true');
+                sessionStorage.setItem('sessionActive', 'true');
+            }
+            return estBloque;
+        }
+
         // CONNEXION
         document.getElementById('formSignIn').onsubmit = async (e) => {
             e.preventDefault();
             const formData = new FormData(e.target);
+            const resterConnecte = document.getElementById('resterConnecte').checked;
             const data = {
                 Email: formData.get('Email'),
-                Password: formData.get('Password')
+                Password: formData.get('Password'),
+                ResterConnecte: resterConnecte
             };
 
             try {
@@ -698,17 +751,7 @@
                 if (result.requiresTwoFactor) {
                     openTwoFaModal(result.tempToken, result.devOtp);
                 } else if (response.ok && result.success) {
-                    localStorage.setItem('isLoggedIn', 'true');
-                    localStorage.setItem('userPrenom', result.user.prenom);
-                    localStorage.setItem('userNom', result.user.nom);
-                    localStorage.setItem('userEmail', result.user.email);
-                    localStorage.setItem('userId', result.user.id);
-                    localStorage.setItem('userRole', result.user.role || 'Client');
-                    localStorage.setItem('jwtToken', result.token);
-
-                    // Propriétaire bloqué → accès limité à l'espace client
-                    const estBloque = result.user.estBloque === true;
-                    localStorage.setItem('userEstBloque', estBloque ? 'true' : 'false');
+                    const estBloque = saveAuth(result, resterConnecte);
 
                     const msg = estBloque && result.user.role === 'Proprietaire'
                         ? `Ravi de vous revoir ${result.user.prenom}. Votre espace propriétaire est temporairement suspendu.`
@@ -716,16 +759,12 @@
                     showMessage("Succès !", msg, "success", true);
 
                     setTimeout(() => {
-                        // Un propriétaire bloqué est redirigé vers l'espace client
                         if (estBloque && result.user.role === 'Proprietaire') {
                             window.location.href = './accueil_user.html';
                             return;
                         }
-
                         const pendingAction = localStorage.getItem('redirectAfterLogin');
                         localStorage.removeItem('redirectAfterLogin');
-
-                        // Ignore la redirection générique "accueil_user.html" pour les rôles non-client
                         const isGenericRedirect = !pendingAction || pendingAction === 'accueil_user.html';
                         if (!isGenericRedirect) {
                             window.location.href = pendingAction;
@@ -735,16 +774,13 @@
                     }, 2500);
 
                 } else {
-                    showMessage("Échec", result.message || "Identifiants incorrects", "error");
+                    showMessage("Echec", result.message || "Identifiants incorrects", "error");
                 }
             } catch (error) {
-                showMessage("Erreur", "Le serveur ne répond pas.", "error");
+                showMessage("Erreur", "Le serveur ne repond pas.", "error");
             }
         };
 
-        /**
-         * Gère le routage automatique selon le profil utilisateur
-         */
         function redirectUserByRole(role) {
             switch (role) {
                 case 'Proprietaire':
@@ -762,6 +798,19 @@
                     break;
             }
         }
+
+        // Si session expirée (navigateur fermé sans "Rester connecte"), nettoyer localStorage
+        (function checkSessionExpiry() {
+            const sessionOnly = localStorage.getItem('sessionOnlyLogin') === 'true';
+            if (sessionOnly && !sessionStorage.getItem('sessionActive')) {
+                localStorage.clear();
+                return;
+            }
+            // Déjà connecté → rediriger directement
+            if (localStorage.getItem('isLoggedIn') === 'true' && localStorage.getItem('jwtToken')) {
+                redirectUserByRole(localStorage.getItem('userRole') || 'Client');
+            }
+        })();
 
         // ═══ AUTHENTIFICATION À DEUX FACTEURS ════════════════════════════════
         let _2faTempToken = null;
@@ -810,19 +859,11 @@
                     return;
                 }
 
-                // Stocker le JWT et rediriger exactement comme la connexion normale
-                localStorage.setItem('isLoggedIn', 'true');
-                localStorage.setItem('userPrenom',    data.user.prenom);
-                localStorage.setItem('userNom',       data.user.nom);
-                localStorage.setItem('userEmail',     data.user.email);
-                localStorage.setItem('userId',        data.user.id);
-                localStorage.setItem('userRole',      data.user.role || 'Client');
-                localStorage.setItem('jwtToken',      data.token);
-                const estBloque = data.user.estBloque === true;
-                localStorage.setItem('userEstBloque', estBloque ? 'true' : 'false');
+                // 2FA = toujours sans "rester connecte" → session seulement
+                const estBloque = saveAuth(data, false);
 
                 document.getElementById('twoFaModal').style.display = 'none';
-                showMessage("Succès !", `Ravi de vous revoir ${data.user.prenom}.`, "success", true);
+                showMessage("Succes !", `Ravi de vous revoir ${data.user.prenom}.`, "success", true);
                 setTimeout(() => {
                     if (estBloque && data.user.role === 'Proprietaire') {
                         window.location.href = './accueil_user.html'; return;

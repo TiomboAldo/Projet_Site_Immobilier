@@ -5,7 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Espace Client - Levetimmo</title>
-    <script>(function(){function g(){if(!localStorage.getItem('jwtToken'))window.location.replace('./login.html');}g();window.addEventListener('pageshow',function(e){if(e.persisted)g();});}());</script>
+    <script>(function(){
+        if(localStorage.getItem('sessionOnlyLogin')==='true'&&!sessionStorage.getItem('sessionActive')){localStorage.clear();window.location.replace('./login.html');return;}
+        function g(){if(!localStorage.getItem('jwtToken'))window.location.replace('./login.html');}
+        g();window.addEventListener('pageshow',function(e){if(e.persisted)g();});
+    }());</script>
     <link rel="icon" type="image/png" href="/src/assets/images/logo.jpeg">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -949,10 +953,13 @@
                                     <option value="">Tous les types</option>
                                     <option value="Villa">Villa</option>
                                     <option value="Appartement">Appartement</option>
-                                    <option value="Bureau">Bureau</option>
                                     <option value="Studio">Studio</option>
-                                    <option value="Terrain">Terrain</option>
+                                    <option value="Chambre">Chambre</option>
                                     <option value="Duplex">Duplex</option>
+                                    <option value="Immeuble">Immeuble</option>
+                                    <option value="Terrain">Terrain</option>
+                                    <option value="Bureau">Bureau</option>
+                                    <option value="Commerce">Commerce</option>
                                 </select>
                             </div>
 
@@ -1031,7 +1038,13 @@
                             <option value="">Tous les types</option>
                             <option value="villa">Villa</option>
                             <option value="appartement">Appartement</option>
+                            <option value="studio">Studio</option>
+                            <option value="chambre">Chambre</option>
+                            <option value="duplex">Duplex</option>
+                            <option value="immeuble">Immeuble</option>
                             <option value="terrain">Terrain</option>
+                            <option value="bureau">Bureau</option>
+                            <option value="commerce">Commerce</option>
                         </select>
                         <select id="carteStatutFilter" onchange="filterCarteMarkers()"
                             style="padding:8px 14px; border:1.5px solid #e5e7eb; border-radius:10px; font-size:13px; font-weight:600; color:#374151; background:#fff; cursor:pointer;">
@@ -1753,6 +1766,7 @@
                     vues: b.vues ?? 0,
                     likes: b.likes ?? 0,
                     estLikeParMoi: b.estLikeParMoi ?? false,
+                    vendeurCertifie: b.vendeurCertifie ?? false,
                 }));
             } else {
                 showToast('error', 'Erreur', 'Impossible de charger les biens.');
@@ -1821,6 +1835,7 @@
                     <img src="${p.img}" class="w-full h-full object-cover group-hover:scale-110 transition duration-500" loading="lazy">
                 </div>
                 <div class="p-6">
+                    ${p.vendeurCertifie ? `<span style="display:inline-flex;align-items:center;gap:4px;background:#dcfce7;color:#15803d;font-size:10px;font-weight:800;padding:2px 9px;border-radius:999px;margin-bottom:8px;"><i class="fas fa-shield-check"></i>Vendeur certifié</span>` : ''}
                     <div class="flex justify-between items-start mb-2">
                         <h4 class="font-extrabold text-gray-800 truncate pr-2">${p.title}</h4>
                         <span class="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-md uppercase">${p.standing}</span>
@@ -4342,7 +4357,8 @@
                 icon: 'fa-sign-out-alt',
                 confirmLabel: 'Déconnexion',
                 onConfirm: () => {
-                    ['isLoggedIn', 'userPrenom', 'userNom', 'userEmail', 'userId', 'userRole', 'userPhoto', 'userTelephone', 'userEstBloque', 'jwtToken'].forEach(k => localStorage.removeItem(k));
+                    localStorage.clear();
+                    sessionStorage.clear();
                     showToast('success', 'À bientôt !', 'Vous avez été déconnecté avec succès.', 1800);
                     setTimeout(() => { window.location.href = './login.html'; }, 1200);
                 }
@@ -4360,6 +4376,29 @@
         });
 
         // ═══════════════════════════════════════════════════════════════════════
+        // Vérifie si le rôle a changé côté serveur (validation compte professionnel)
+        async function checkRoleUpdate() {
+            try {
+                const token = localStorage.getItem('jwtToken');
+                if (!token) return;
+                const res  = await fetch('/api/auth/me', { headers: { 'Authorization': `Bearer ${token}` } });
+                if (!res.ok) return;
+                const data = await res.json();
+                if (!data.success) return;
+                const serverRole = data.data.role;
+                const localRole  = localStorage.getItem('userRole') || 'Client';
+                if (serverRole !== localRole) {
+                    localStorage.setItem('userRole', serverRole);
+                    // Rôle professionnel validé → toast félicitations + redirection espace pro
+                    const isPro = serverRole === 'Proprietaire' || serverRole === 'UserIndep';
+                    if (isPro && localRole === 'Client') {
+                        showToast('success', 'Félicitations !', 'Votre compte professionnel a été validé. Redirection vers votre espace...', 4000);
+                        setTimeout(() => { window.location.href = './espace_proprietaire.html'; }, 3500);
+                    }
+                }
+            } catch (_) { /* non critique */ }
+        }
+
         // INIT — chargement des données au démarrage
         // ═══════════════════════════════════════════════════════════════════════
         document.addEventListener('DOMContentLoaded', async () => {
@@ -4374,6 +4413,7 @@
             document.getElementById('ps')?.remove();
             refreshNotifBadge();
             setInterval(refreshNotifBadge, 30000);
+            checkRoleUpdate();
             if ('serviceWorker' in navigator) navigator.serviceWorker.register('../sw.js').catch(() => {});
         });
     </script>

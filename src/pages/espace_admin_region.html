@@ -5,7 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Espace Admin Région - Levetimmo</title>
-    <script>(function(){function g(){if(!localStorage.getItem('jwtToken'))window.location.replace('./login.html');}g();window.addEventListener('pageshow',function(e){if(e.persisted)g();});}());</script>
+    <script>(function(){
+        if(localStorage.getItem('sessionOnlyLogin')==='true'&&!sessionStorage.getItem('sessionActive')){localStorage.clear();window.location.replace('./login.html');return;}
+        function g(){if(!localStorage.getItem('jwtToken'))window.location.replace('./login.html');}
+        g();window.addEventListener('pageshow',function(e){if(e.persisted)g();});
+    }());</script>
     <link rel="icon" type="image/png" href="/src/assets/images/logo.jpeg">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.5.2/dist/maplibre-gl.css">
@@ -2105,7 +2109,8 @@
                 icon: 'fa-sign-out-alt',
                 confirmLabel: 'Déconnexion',
                 onConfirm: () => {
-                    ['isLoggedIn', 'userPrenom', 'userNom', 'userEmail', 'userId', 'userRole', 'userPhoto', 'userEstBloque', 'jwtToken'].forEach(k => localStorage.removeItem(k));
+                    localStorage.clear();
+                    sessionStorage.clear();
                     showToast('success', 'À bientôt !', 'Vous avez été déconnecté avec succès.', 1800);
                     setTimeout(() => { window.location.href = './login.html'; }, 1200);
                 }
@@ -2742,6 +2747,9 @@
             { value: 'villa',       label: 'Villa'       },
             { value: 'appartement', label: 'Appartement' },
             { value: 'studio',      label: 'Studio'      },
+            { value: 'chambre',     label: 'Chambre'     },
+            { value: 'duplex',      label: 'Duplex'      },
+            { value: 'immeuble',    label: 'Immeuble'    },
             { value: 'terrain',     label: 'Terrain'     },
             { value: 'bureau',      label: 'Bureau'      },
             { value: 'commerce',    label: 'Commerce'    },

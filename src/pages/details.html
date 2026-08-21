@@ -649,6 +649,7 @@
 
             <div class="lg:col-span-1 flex flex-col gap-6">
                 <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100">
+                    ${property.vendeurCertifie ? `<div style="display:inline-flex;align-items:center;gap:6px;background:#dcfce7;color:#15803d;font-size:12px;font-weight:800;padding:4px 12px;border-radius:999px;margin-bottom:12px;"><i class="fas fa-shield-check"></i>Vendeur certifié</div>` : ''}
                     <h1 class="text-3xl font-extrabold text-gray-900 mb-2 leading-tight">${escapeHtml(property.title)}</h1>
                     <div class="flex items-center text-blue-600 mb-6">
                         <i class="fas fa-map-marker-alt mr-2"></i>

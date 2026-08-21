@@ -4,7 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Biens du propriétaire - Levetimmo</title>
-    <script>(function(){function g(){if(!localStorage.getItem('jwtToken'))window.location.replace('./login.html');}g();window.addEventListener('pageshow',function(e){if(e.persisted)g();});}());</script>
+    <script>(function(){
+        if(localStorage.getItem('sessionOnlyLogin')==='true'&&!sessionStorage.getItem('sessionActive')){localStorage.clear();window.location.replace('./login.html');return;}
+        function g(){if(!localStorage.getItem('jwtToken'))window.location.replace('./login.html');}
+        g();window.addEventListener('pageshow',function(e){if(e.persisted)g();});
+    }());</script>
     <link rel="icon" type="image/png" href="/src/assets/images/logo.jpeg">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -79,19 +83,58 @@
         return String(str).replace(/[&<>"']/g, s => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[s]));
     }
 
-    async function apiFetch(url) {
+    async function apiFetch(url, options = {}) {
         const token = localStorage.getItem('jwtToken');
         try {
             const res = await fetch(url, {
+                ...options,
                 headers: {
                     'Content-Type': 'application/json',
-                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                    ...(options.headers || {})
                 }
             });
             return await res.json();
         } catch (err) {
             return { success: false, message: 'Erreur réseau' };
         }
+    }
+
+    function getChecklistItems(b) {
+        const type = (b.type || '').toLowerCase();
+        const items = [{ key: 'titreFoncier', label: 'Titre foncier' }];
+        if (type === 'terrain') {
+            items.push(
+                { key: 'certificatPropriete', label: 'Certificat de propriété' },
+                { key: 'statutCivil',         label: 'Statut civil vérifié'    },
+                { key: 'dossierTechnique',    label: 'Dossier technique'       }
+            );
+        } else if (type === 'immeuble') {
+            items.push(
+                { key: 'permisBatir',            label: 'Permis de bâtir'             },
+                { key: 'planBatiment',           label: 'Plan du bâtiment'            },
+                { key: 'dossierCalculTechnique', label: 'Dossier de calcul technique' }
+            );
+        }
+        return items;
+    }
+
+    async function saveChecklist(bienId) {
+        const items = document.querySelectorAll(`#checklist-${bienId} input[type=checkbox]`);
+        const state = {};
+        items.forEach(cb => { state[cb.dataset.key] = cb.checked; });
+        const btn = document.getElementById(`save-cl-${bienId}`);
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        const r = await apiFetch(`${API}/biens/${bienId}/checklist`, {
+            method: 'PUT',
+            body: JSON.stringify({ DocumentsVerifies: JSON.stringify(state) })
+        });
+        btn.disabled = false;
+        btn.innerHTML = r.success
+            ? '<i class="fas fa-check"></i> Sauvegarde OK'
+            : '<i class="fas fa-times"></i> Erreur';
+        setTimeout(() => { btn.innerHTML = '<i class="fas fa-save" style="margin-right:4px;"></i>Sauvegarder'; }, 2500);
     }
 
     function formatPrix(prix) {
@@ -182,8 +225,27 @@
                    </div>`
                 : '';
 
+            // Badge vendeur certifié
+            const certifBadge = b.vendeurCertifie
+                ? `<span style="display:inline-flex;align-items:center;gap:5px;background:#dcfce7;color:#15803d;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;margin-bottom:8px;">
+                       <i class="fas fa-shield-check"></i>Vendeur certifié
+                   </span>`
+                : `<span style="display:inline-flex;align-items:center;gap:5px;background:#f3f4f6;color:#6b7280;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;margin-bottom:8px;">
+                       <i class="fas fa-circle-question"></i>Non certifié
+                   </span>`;
+
+            // Checklist documents
+            const clState = (() => { try { return JSON.parse(b.documentsVerifies || '{}'); } catch { return {}; } })();
+            const clItems  = getChecklistItems(b);
+            const clHtml   = clItems.map(item => `
+                <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#374151;cursor:pointer;padding:4px 0;">
+                    <input type="checkbox" data-key="${item.key}" ${clState[item.key] ? 'checked' : ''}
+                           style="width:15px;height:15px;accent-color:#2563eb;cursor:pointer;flex-shrink:0;">
+                    ${escapeHtml(item.label)}
+                </label>`).join('');
+
             return `
-            <div class="group opacity-0 translate-y-10 transition-all duration-700 ease-out bg-white rounded-2xl shadow-xl overflow-hidden hover:-translate-y-2 hover:shadow-2xl">
+            <div class="group opacity-0 translate-y-10 transition-all duration-700 ease-out bg-white rounded-2xl shadow-xl overflow-hidden">
                 <div class="relative h-52 overflow-hidden">
                     ${imageBlock}
                     ${badgeStatut}
@@ -191,17 +253,29 @@
                 </div>
                 ${galerieHtml}
                 <div class="p-5">
+                    ${certifBadge}
                     <h3 class="text-base font-extrabold text-gray-900 truncate mb-1">${escapeHtml(b.titre)}</h3>
                     <p class="text-sm text-gray-500 mb-2 flex items-center gap-1">
-                        <i class="fas fa-map-marker-alt text-blue-600 text-xs flex-shrink-0"></i>
+                        <i class="fas fa-map-marker-alt text-blue-600 text-xs flex-shrink:0"></i>
                         <span class="truncate">${escapeHtml(b.localisation)}</span>
                     </p>
                     <p class="text-lg font-extrabold text-blue-600 mb-3">${formatPrix(b.prix)}</p>
-                    <div class="flex items-center justify-between text-xs text-gray-400 font-semibold border-t border-gray-100 pt-3">
+                    <div class="flex items-center justify-between text-xs text-gray-400 font-semibold border-t border-gray-100 pt-3 mb-4">
                         <span><i class="fas fa-bed mr-0.5"></i> ${b.chambres} ch.</span>
                         <span><i class="fas fa-bath mr-0.5"></i> ${b.sallesDeBain} sdb</span>
                         <span><i class="fas fa-ruler-combined mr-0.5"></i> ${b.surface} m²</span>
                         <span><i class="fas fa-eye mr-0.5"></i> ${b.vues}</span>
+                    </div>
+                    <!-- Checklist documents admin -->
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;">
+                        <p style="font-size:11px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
+                            <i class="fas fa-clipboard-check" style="color:#2563eb;margin-right:5px;"></i>Documents vérifiés
+                        </p>
+                        <div id="checklist-${b.id}">${clHtml}</div>
+                        <button id="save-cl-${b.id}" onclick="saveChecklist(${b.id})"
+                            style="margin-top:10px;width:100%;padding:7px;background:#2563eb;color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;">
+                            <i class="fas fa-save" style="margin-right:4px;"></i>Sauvegarder
+                        </button>
                     </div>
                 </div>
             </div>`;

@@ -115,7 +115,9 @@ export function normalizeBien(b) {
         lng: b.longitude ?? null,
         vues: b.vues ?? 0,
         likes: b.likes ?? 0,
-        estLikeParMoi: b.estLikeParMoi ?? false,
+        estLikeParMoi:   b.estLikeParMoi   ?? false,
+        vendeurCertifie: b.vendeurCertifie  ?? false,
+        documentsVerifies: b.documentsVerifies ?? null,
     };
 }
 

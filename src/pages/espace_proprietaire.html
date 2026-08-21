@@ -5,7 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Espace Propriétaire - Levetimmo</title>
-    <script>(function(){function g(){if(!localStorage.getItem('jwtToken'))window.location.replace('./login.html');}g();window.addEventListener('pageshow',function(e){if(e.persisted)g();});}());</script>
+    <script>(function(){
+        if(localStorage.getItem('sessionOnlyLogin')==='true'&&!sessionStorage.getItem('sessionActive')){localStorage.clear();window.location.replace('./login.html');return;}
+        function g(){if(!localStorage.getItem('jwtToken'))window.location.replace('./login.html');}
+        g();window.addEventListener('pageshow',function(e){if(e.persisted)g();});
+    }());</script>
     <link rel="icon" type="image/png" href="/src/assets/images/logo.jpeg">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.5.2/dist/maplibre-gl.css">
@@ -71,6 +75,14 @@
         .form-group textarea { resize: vertical; min-height: 70px; }
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         @media (max-width: 768px) { .form-row { grid-template-columns: 1fr; } }
+
+        .doc-zone {
+            border: 2px dashed #d1d5db; border-radius: 14px; padding: 18px;
+            text-align: center; cursor: pointer; background: #fafafa;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .doc-zone:hover { border-color: #2563eb; background: #eff6ff; }
+        .doc-selected { display: none; align-items: center; gap: 10px; justify-content: center; }
 
         .sidebar {
             position: fixed; left: 0; top: 0; height: 100%; width: 80px; background: white;
@@ -692,6 +704,154 @@
                             <span id="titreFoncierCurrentText"></span>
                             <span style="color:#9ca3af;"> — aucun nouveau fichier sélectionné</span>
                         </p>
+                    </div>
+
+                    <!-- ─── NB CONFIDENTIALITÉ ───────────────────────────────────────── -->
+                    <div id="nbConfidentialite" style="display:none; background:#fefce8; border:1px solid #fde68a; border-radius:14px; padding:14px 16px; margin-bottom:18px;">
+                        <div style="display:flex; gap:10px; align-items:flex-start;">
+                            <i class="fas fa-lock" style="color:#d97706; margin-top:2px; flex-shrink:0;"></i>
+                            <div>
+                                <p style="font-size:13px; font-weight:700; color:#92400e; margin-bottom:3px;">Documents strictement confidentiels</p>
+                                <p style="font-size:12px; color:#78350f; line-height:1.55;">Vos documents ne seront <strong>jamais affichés en ligne</strong>. Ils servent uniquement à vérifier la fiabilité de votre bien avant sa mise en ligne. Ces informations restent confidentielles entre vous et <strong>Levetimmo</strong>.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ─── SECTION TERRAIN ──────────────────────────────────────────── -->
+                    <div id="sectionTerrain" style="display:none;">
+                        <p style="font-size:12px; font-weight:800; color:#374151; margin-bottom:14px; border-bottom:2px solid #e5e7eb; padding-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">
+                            <i class="fas fa-map-marked-alt" style="color:#2563eb; margin-right:6px;"></i>Documents Terrain
+                        </p>
+                        <div class="form-group">
+                            <label>Certificat de propriété <span style="color:#ef4444;font-size:11px;text-transform:none;">(requis)</span></label>
+                            <div class="doc-zone" id="certPropZone" onclick="triggerDocFile('certPropFile')"
+                                 ondragover="event.preventDefault(); this.style.borderColor='#2563eb';"
+                                 ondragleave="this.style.borderColor='#d1d5db';"
+                                 ondrop="event.preventDefault(); this.style.borderColor='#d1d5db'; selectDoc('certProp', event.dataTransfer.files[0]);">
+                                <div id="certPropPlaceholder">
+                                    <i class="fas fa-file-shield" style="font-size:22px; color:#9ca3af;"></i>
+                                    <p style="font-size:13px; color:#4b5563; font-weight:600; margin-top:6px;">Cliquer ou glisser le fichier</p>
+                                    <p style="font-size:11px; color:#9ca3af;">PDF, JPG ou PNG</p>
+                                </div>
+                                <div class="doc-selected" id="certPropSelected">
+                                    <i class="fas fa-file-check" style="color:#059669; font-size:18px;"></i>
+                                    <span id="certPropName" style="font-size:13px; color:#059669; font-weight:700;"></span>
+                                    <button type="button" onclick="event.stopPropagation(); clearDoc('certProp')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:12px;font-weight:700;"><i class="fas fa-times"></i></button>
+                                </div>
+                            </div>
+                            <input type="file" id="certPropFile" accept=".pdf,image/*" style="display:none;" onchange="selectDoc('certProp', this.files[0])">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Statut civil du propriétaire</label>
+                                <select id="pfStatutCivil" onchange="onStatutCivilChange()">
+                                    <option value="">Choisir…</option>
+                                    <option value="celibataire">Célibataire</option>
+                                    <option value="marie">Marié(e)</option>
+                                    <option value="veuf">Veuf / Veuve</option>
+                                    <option value="divorce">Divorcé(e)</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="regimeGroup" style="display:none;">
+                                <label>Régime matrimonial</label>
+                                <select id="pfRegimeMatrimonial">
+                                    <option value="">Choisir…</option>
+                                    <option value="commun">Communauté de biens</option>
+                                    <option value="separe">Séparation de biens</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Le propriétaire a-t-il des enfants ?</label>
+                            <select id="pfADesEnfants">
+                                <option value="">Choisir…</option>
+                                <option value="true">Oui</option>
+                                <option value="false">Non</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Dossier technique</label>
+                            <div class="doc-zone" id="dossierTechZone" onclick="triggerDocFile('dossierTechFile')"
+                                 ondragover="event.preventDefault(); this.style.borderColor='#2563eb';"
+                                 ondragleave="this.style.borderColor='#d1d5db';"
+                                 ondrop="event.preventDefault(); this.style.borderColor='#d1d5db'; selectDoc('dossierTech', event.dataTransfer.files[0]);">
+                                <div id="dossierTechPlaceholder">
+                                    <i class="fas fa-folder-open" style="font-size:22px; color:#9ca3af;"></i>
+                                    <p style="font-size:13px; color:#4b5563; font-weight:600; margin-top:6px;">Cliquer ou glisser le fichier</p>
+                                    <p style="font-size:11px; color:#9ca3af;">PDF, JPG ou PNG</p>
+                                </div>
+                                <div class="doc-selected" id="dossierTechSelected">
+                                    <i class="fas fa-file-check" style="color:#059669; font-size:18px;"></i>
+                                    <span id="dossierTechName" style="font-size:13px; color:#059669; font-weight:700;"></span>
+                                    <button type="button" onclick="event.stopPropagation(); clearDoc('dossierTech')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:12px;font-weight:700;"><i class="fas fa-times"></i></button>
+                                </div>
+                            </div>
+                            <input type="file" id="dossierTechFile" accept=".pdf,image/*" style="display:none;" onchange="selectDoc('dossierTech', this.files[0])">
+                        </div>
+                    </div>
+
+                    <!-- ─── SECTION IMMEUBLE ─────────────────────────────────────────── -->
+                    <div id="sectionImmeuble" style="display:none;">
+                        <p style="font-size:12px; font-weight:800; color:#374151; margin-bottom:14px; border-bottom:2px solid #e5e7eb; padding-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">
+                            <i class="fas fa-building" style="color:#2563eb; margin-right:6px;"></i>Documents Immeuble
+                        </p>
+                        <div class="form-group">
+                            <label>Permis de bâtir <span style="color:#ef4444;font-size:11px;text-transform:none;">(requis)</span></label>
+                            <div class="doc-zone" id="permisZone" onclick="triggerDocFile('permisFile')"
+                                 ondragover="event.preventDefault(); this.style.borderColor='#2563eb';"
+                                 ondragleave="this.style.borderColor='#d1d5db';"
+                                 ondrop="event.preventDefault(); this.style.borderColor='#d1d5db'; selectDoc('permis', event.dataTransfer.files[0]);">
+                                <div id="permisPlaceholder">
+                                    <i class="fas fa-file-circle-check" style="font-size:22px; color:#9ca3af;"></i>
+                                    <p style="font-size:13px; color:#4b5563; font-weight:600; margin-top:6px;">Cliquer ou glisser le fichier</p>
+                                    <p style="font-size:11px; color:#9ca3af;">PDF, JPG ou PNG</p>
+                                </div>
+                                <div class="doc-selected" id="permisSelected">
+                                    <i class="fas fa-file-check" style="color:#059669; font-size:18px;"></i>
+                                    <span id="permisName" style="font-size:13px; color:#059669; font-weight:700;"></span>
+                                    <button type="button" onclick="event.stopPropagation(); clearDoc('permis')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:12px;font-weight:700;"><i class="fas fa-times"></i></button>
+                                </div>
+                            </div>
+                            <input type="file" id="permisFile" accept=".pdf,image/*" style="display:none;" onchange="selectDoc('permis', this.files[0])">
+                        </div>
+                        <div class="form-group">
+                            <label>Plan du bâtiment <span style="color:#9ca3af;font-size:11px;text-transform:none;">(facultatif)</span></label>
+                            <div class="doc-zone" id="planZone" onclick="triggerDocFile('planFile')"
+                                 ondragover="event.preventDefault(); this.style.borderColor='#2563eb';"
+                                 ondragleave="this.style.borderColor='#d1d5db';"
+                                 ondrop="event.preventDefault(); this.style.borderColor='#d1d5db'; selectDoc('plan', event.dataTransfer.files[0]);">
+                                <div id="planPlaceholder">
+                                    <i class="fas fa-drafting-compass" style="font-size:22px; color:#9ca3af;"></i>
+                                    <p style="font-size:13px; color:#4b5563; font-weight:600; margin-top:6px;">Cliquer ou glisser le fichier</p>
+                                    <p style="font-size:11px; color:#9ca3af;">PDF, JPG ou PNG</p>
+                                </div>
+                                <div class="doc-selected" id="planSelected">
+                                    <i class="fas fa-file-check" style="color:#059669; font-size:18px;"></i>
+                                    <span id="planName" style="font-size:13px; color:#059669; font-weight:700;"></span>
+                                    <button type="button" onclick="event.stopPropagation(); clearDoc('plan')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:12px;font-weight:700;"><i class="fas fa-times"></i></button>
+                                </div>
+                            </div>
+                            <input type="file" id="planFile" accept=".pdf,image/*" style="display:none;" onchange="selectDoc('plan', this.files[0])">
+                        </div>
+                        <div class="form-group">
+                            <label>Dossier de calcul technique <span style="color:#ef4444;font-size:11px;text-transform:none;">(requis)</span></label>
+                            <div class="doc-zone" id="calcTechZone" onclick="triggerDocFile('calcTechFile')"
+                                 ondragover="event.preventDefault(); this.style.borderColor='#2563eb';"
+                                 ondragleave="this.style.borderColor='#d1d5db';"
+                                 ondrop="event.preventDefault(); this.style.borderColor='#d1d5db'; selectDoc('calcTech', event.dataTransfer.files[0]);">
+                                <div id="calcTechPlaceholder">
+                                    <i class="fas fa-calculator" style="font-size:22px; color:#9ca3af;"></i>
+                                    <p style="font-size:13px; color:#4b5563; font-weight:600; margin-top:6px;">Cliquer ou glisser le fichier</p>
+                                    <p style="font-size:11px; color:#9ca3af;">PDF, JPG ou PNG</p>
+                                </div>
+                                <div class="doc-selected" id="calcTechSelected">
+                                    <i class="fas fa-file-check" style="color:#059669; font-size:18px;"></i>
+                                    <span id="calcTechName" style="font-size:13px; color:#059669; font-weight:700;"></span>
+                                    <button type="button" onclick="event.stopPropagation(); clearDoc('calcTech')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:12px;font-weight:700;"><i class="fas fa-times"></i></button>
+                                </div>
+                            </div>
+                            <input type="file" id="calcTechFile" accept=".pdf,image/*" style="display:none;" onchange="selectDoc('calcTech', this.files[0])">
+                        </div>
                     </div>
 
                     <button type="submit" class="hover-lift"
@@ -1505,22 +1665,34 @@
             const form = document.getElementById('propertyForm');
             form.reset();
 
+            // Réinitialiser les sections Terrain/Immeuble
+            Object.keys(DOC_SLOTS).forEach(k => clearDoc(k));
+            onTypeChange('');
+
             if (bienId) {
                 const b = mesBiens.find(x => x.id === bienId);
                 if (!b) return;
                 document.getElementById('propertyFormTitle').textContent = 'Modifier l\'annonce';
-                document.getElementById('pfTitre').value = b.titre;
-                document.getElementById('pfStanding').value = b.standing;
-                document.getElementById('pfType').value = b.type;
-                document.getElementById('pfStatut').value = b.statut;
-                document.getElementById('pfPrix').value = b.prix;
+                document.getElementById('pfTitre').value       = b.titre;
+                document.getElementById('pfStanding').value    = b.standing;
+                document.getElementById('pfType').value        = b.type;
+                document.getElementById('pfStatut').value      = b.statut;
+                document.getElementById('pfPrix').value        = b.prix;
                 document.getElementById('pfLocalisation').value = b.localisation;
-                document.getElementById('pfChambres').value = b.chambres;
+                document.getElementById('pfChambres').value    = b.chambres;
                 document.getElementById('pfSallesDeBain').value = b.sallesDeBain;
-                document.getElementById('pfSurface').value = b.surface;
+                document.getElementById('pfSurface').value     = b.surface;
                 document.getElementById('pfDescription').value = b.description;
                 document.getElementById('pfEquipements').value = (b.equipements || []).join('|');
                 prefillImageFields(b);
+                onTypeChange(b.type);
+                if (b.type === 'terrain') {
+                    if (b.statutCivil) document.getElementById('pfStatutCivil').value = b.statutCivil;
+                    if (b.regimeMatrimonial) document.getElementById('pfRegimeMatrimonial').value = b.regimeMatrimonial;
+                    onStatutCivilChange();
+                    if (b.aDesEnfants !== null && b.aDesEnfants !== undefined)
+                        document.getElementById('pfADesEnfants').value = b.aDesEnfants ? 'true' : 'false';
+                }
             } else {
                 document.getElementById('propertyFormTitle').textContent = 'Publier une annonce';
                 resetImageFields();
@@ -1538,6 +1710,8 @@
             editingBienId = null;
             resetImageFields();
             clearTitreFoncier();
+            Object.keys(DOC_SLOTS).forEach(k => clearDoc(k));
+            onTypeChange('');
             document.getElementById('titreFoncierCurrentInfo').style.display = 'none';
         }
 
@@ -1546,6 +1720,59 @@
             const req = document.getElementById('titreFoncierReq');
             req.textContent = this.value === 'vente' ? '(obligatoire pour la vente)' : '(optionnel pour la location)';
         });
+
+        // ─── DOCS TERRAIN / IMMEUBLE ─────────────────────────────────────────
+        const DOC_SLOTS = { certProp: null, dossierTech: null, permis: null, plan: null, calcTech: null };
+
+        function triggerDocFile(inputId) { document.getElementById(inputId)?.click(); }
+
+        function selectDoc(key, file) {
+            if (!file) return;
+            DOC_SLOTS[key] = file;
+            document.getElementById(key + 'Placeholder').style.display = 'none';
+            const sel = document.getElementById(key + 'Selected');
+            sel.style.display = 'flex';
+            document.getElementById(key + 'Name').textContent = file.name;
+        }
+
+        function clearDoc(key) {
+            DOC_SLOTS[key] = null;
+            const fi = document.getElementById(key + 'File');
+            if (fi) fi.value = '';
+            document.getElementById(key + 'Placeholder').style.display = '';
+            document.getElementById(key + 'Selected').style.display = 'none';
+        }
+
+        function onStatutCivilChange() {
+            const v = document.getElementById('pfStatutCivil').value;
+            document.getElementById('regimeGroup').style.display = v === 'marie' ? 'block' : 'none';
+        }
+
+        function onTypeChange(val) {
+            const isTerrain  = val === 'terrain';
+            const isImmeuble = val === 'immeuble';
+            document.getElementById('sectionTerrain').style.display    = isTerrain  ? 'block' : 'none';
+            document.getElementById('sectionImmeuble').style.display   = isImmeuble ? 'block' : 'none';
+            document.getElementById('nbConfidentialite').style.display = (isTerrain || isImmeuble) ? 'block' : 'none';
+        }
+
+        document.getElementById('pfType').addEventListener('change', function () { onTypeChange(this.value); });
+
+        async function uploadDoc(key, prefix) {
+            const file = DOC_SLOTS[key];
+            if (!file) return null;
+            const fd    = new FormData();
+            fd.append('file', file);
+            const token = localStorage.getItem('jwtToken');
+            const resp  = await fetch(`${API}/biens/upload-document?prefix=${prefix}`, {
+                method:  'POST',
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+                body:    fd
+            });
+            const r = await resp.json();
+            if (!r.success) throw new Error(r.message || 'Erreur upload ' + key);
+            return r.filename;
+        }
 
         let _titreFoncierFile = null;
         function selectTitreFoncier(file) {
@@ -1575,28 +1802,31 @@
 
             let result;
             if (editingBienId) {
-                // Modification : JSON (pas de changement de titre foncier via edit)
+                const editType = document.getElementById('pfType').value;
                 const payload = {
-                    Titre: document.getElementById('pfTitre').value,
-                    Type: document.getElementById('pfType').value,
-                    Statut: statut,
-                    Prix: document.getElementById('pfPrix').value,
-                    Chambres: parseInt(document.getElementById('pfChambres').value) || 0,
+                    Titre:        document.getElementById('pfTitre').value,
+                    Type:         editType,
+                    Statut:       statut,
+                    Prix:         document.getElementById('pfPrix').value,
+                    Chambres:     parseInt(document.getElementById('pfChambres').value)     || 0,
                     SallesDeBain: parseInt(document.getElementById('pfSallesDeBain').value) || 0,
-                    Surface: parseInt(document.getElementById('pfSurface').value) || 0,
+                    Surface:      parseInt(document.getElementById('pfSurface').value)      || 0,
                     Localisation: document.getElementById('pfLocalisation').value,
-                    Description: document.getElementById('pfDescription').value,
-                    ImageUrl: document.getElementById('pfImageUrl').value,
-                    GalerieUrls: document.getElementById('pfGalerieUrls').value,
-                    Equipements: document.getElementById('pfEquipements').value,
-                    Standing: document.getElementById('pfStanding').value,
-                    Latitude:  document.getElementById('pfLatitude').value  ? parseFloat(document.getElementById('pfLatitude').value)  : null,
-                    Longitude: document.getElementById('pfLongitude').value ? parseFloat(document.getElementById('pfLongitude').value) : null,
+                    Description:  document.getElementById('pfDescription').value,
+                    ImageUrl:     document.getElementById('pfImageUrl').value,
+                    GalerieUrls:  document.getElementById('pfGalerieUrls').value,
+                    Equipements:  document.getElementById('pfEquipements').value,
+                    Standing:     document.getElementById('pfStanding').value,
+                    Latitude:     document.getElementById('pfLatitude').value  ? parseFloat(document.getElementById('pfLatitude').value)  : null,
+                    Longitude:    document.getElementById('pfLongitude').value ? parseFloat(document.getElementById('pfLongitude').value) : null,
                     EstDisponible: mesBiens.find(b => b.id === editingBienId)?.estDisponible ?? true,
+                    StatutCivil:       editType === 'terrain' ? (document.getElementById('pfStatutCivil').value || null) : null,
+                    RegimeMatrimonial: editType === 'terrain' ? (document.getElementById('pfRegimeMatrimonial').value || null) : null,
+                    ADesEnfants:       editType === 'terrain' && document.getElementById('pfADesEnfants').value !== '' ? document.getElementById('pfADesEnfants').value === 'true' : null,
                 };
                 result = await apiFetch(`${API}/biens/${editingBienId}`, { method: 'PUT', body: JSON.stringify(payload) });
             } else {
-                // Création étape 1 : upload titre foncier si sélectionné
+                // Création étape 1 : uploads (titre foncier + docs terrain/immeuble)
                 let titreFoncierPath = null;
                 if (_titreFoncierFile) {
                     const fdUpload = new FormData();
@@ -1619,17 +1849,33 @@
                     } catch (e) {
                         btn.innerHTML = original;
                         btn.disabled = false;
-                        showToast('error', 'Erreur', 'Erreur réseau lors de l\'upload du titre foncier.');
+                        showToast('error', 'Erreur', 'Erreur lors du titre foncier.');
                         return;
                     }
                 }
+
+                let certPropPath = null, dossierTechPath = null, permisPath = null, planPath = null, calcTechPath = null;
+                try {
+                    certPropPath    = await uploadDoc('certProp',    'cert-prop');
+                    dossierTechPath = await uploadDoc('dossierTech', 'dossier-tech');
+                    permisPath      = await uploadDoc('permis',      'permis-batir');
+                    planPath        = await uploadDoc('plan',        'plan-batiment');
+                    calcTechPath    = await uploadDoc('calcTech',    'calc-tech');
+                } catch (e) {
+                    btn.innerHTML = original;
+                    btn.disabled = false;
+                    showToast('error', 'Erreur', e.message);
+                    return;
+                }
+
+                const type = document.getElementById('pfType').value;
 
                 // Création étape 2 : soumettre le bien en JSON
                 result = await apiFetch(`${API}/biens`, {
                     method: 'POST',
                     body: JSON.stringify({
                         Titre:        document.getElementById('pfTitre').value,
-                        Type:         document.getElementById('pfType').value,
+                        Type:         type,
                         Statut:       statut,
                         Prix:         document.getElementById('pfPrix').value,
                         Chambres:     parseInt(document.getElementById('pfChambres').value)     || 0,
@@ -1644,6 +1890,16 @@
                         Latitude:     document.getElementById('pfLatitude').value  ? parseFloat(document.getElementById('pfLatitude').value)  : null,
                         Longitude:    document.getElementById('pfLongitude').value ? parseFloat(document.getElementById('pfLongitude').value) : null,
                         TitreFoncierPath: titreFoncierPath,
+                        // Terrain
+                        CertificatPropriete:   certPropPath,
+                        StatutCivil:           type === 'terrain' ? (document.getElementById('pfStatutCivil').value || null) : null,
+                        RegimeMatrimonial:     type === 'terrain' ? (document.getElementById('pfRegimeMatrimonial').value || null) : null,
+                        ADesEnfants:           type === 'terrain' && document.getElementById('pfADesEnfants').value !== '' ? document.getElementById('pfADesEnfants').value === 'true' : null,
+                        DossierTechnique:      dossierTechPath,
+                        // Immeuble
+                        PermisBatir:           permisPath,
+                        PlanBatiment:          planPath,
+                        DossierCalculTechnique: calcTechPath,
                     })
                 });
             }
@@ -1947,7 +2203,8 @@ moderation:     { icon: 'fa-shield-halved', bg: '#fef3c7', color: '#92400e' },
                 icon: 'fa-sign-out-alt',
                 confirmLabel: 'Déconnexion',
                 onConfirm: () => {
-                    ['isLoggedIn', 'userPrenom', 'userNom', 'userEmail', 'userId', 'userRole', 'userPhoto', 'userEstBloque', 'jwtToken'].forEach(k => localStorage.removeItem(k));
+                    localStorage.clear();
+                    sessionStorage.clear();
                     showToast('success', 'À bientôt !', 'Vous avez été déconnecté avec succès.', 1800);
                     setTimeout(() => { window.location.href = './login.html'; }, 1200);
                 }
@@ -2495,6 +2752,9 @@ moderation:     { icon: 'fa-shield-halved', bg: '#fef3c7', color: '#92400e' },
             { value: 'villa',       label: 'Villa'       },
             { value: 'appartement', label: 'Appartement' },
             { value: 'studio',      label: 'Studio'      },
+            { value: 'chambre',     label: 'Chambre'     },
+            { value: 'duplex',      label: 'Duplex'      },
+            { value: 'immeuble',    label: 'Immeuble'    },
             { value: 'terrain',     label: 'Terrain'     },
             { value: 'bureau',      label: 'Bureau'      },
             { value: 'commerce',    label: 'Commerce'    },

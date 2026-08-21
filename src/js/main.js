@@ -705,6 +705,10 @@ function createScrollTopButton() {
  * INITIALISATION
  * ------------------------------------------- */
 function updateNavForLogin() {
+    // Session expirée (navigateur fermé sans "Rester connecté") → forcer déconnexion
+    if (localStorage.getItem('sessionOnlyLogin') === 'true' && !sessionStorage.getItem('sessionActive')) {
+        localStorage.clear();
+    }
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     if (!isLoggedIn) return;
 
