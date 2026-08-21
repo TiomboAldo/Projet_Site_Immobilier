@@ -1125,12 +1125,11 @@
         // ═══════════════════════════════════════════════════════════════════
         // CHARGEMENT & RENDU DES DEMANDES
         // ═══════════════════════════════════════════════════════════════════
-        async function loadDemandes(statut) {
+        async function loadDemandes() {
             const grid = document.getElementById('demandesGrid');
             grid.innerHTML = `<div style="text-align:center; padding:60px 0; color:#9ca3af;"><i class="fas fa-spinner fa-spin" style="font-size:32px;"></i></div>`;
 
-            const query = statut ? `?statut=${encodeURIComponent(statut)}` : '';
-            const res = await apiFetch(`${API}/demandesproprietaire${query}`);
+            const res = await apiFetch(`${API}/demandesproprietaire`);
 
             if (!res.success) {
                 grid.innerHTML = `<div style="text-align:center; padding:60px 0; color:#ef4444;">${escapeHtml(res.message || 'Impossible de charger les demandes.')}</div>`;
@@ -1165,8 +1164,10 @@
 
         function renderDemandes() {
             const grid = document.getElementById('demandesGrid');
+            // Filtre par statut (client-side)
+            let list = currentFilter ? demandes.filter(d => d.statut === currentFilter) : demandes;
             // Filtre par type de compte professionnel
-            let list = demandes.filter(d => (d.typeCompteProf || 'Proprietaire') === currentTypeFilter);
+            list = list.filter(d => (d.typeCompteProf || 'Proprietaire') === currentTypeFilter);
             // Filtre par recherche texte
             if (demandeSearch) list = list.filter(d =>
                     (d.prenom || '').toLowerCase().includes(demandeSearch) ||
@@ -1273,7 +1274,7 @@
             if (res.success) {
                 fermerMotifRefus();
                 showToast('info','Demande refusée','Le client a été notifié du motif.');
-                await loadDemandes(currentFilter);
+                await loadDemandes();
             } else {
                 showToast('error','Erreur', res.message || 'Une erreur est survenue.');
             }
@@ -2050,7 +2051,7 @@
             currentFilter = statut;
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            loadDemandes(statut);
+            renderDemandes();
         }
 
         function confirmTraiter(id, action) {
@@ -2066,7 +2067,7 @@
                     const result = await apiFetch(`${API}/demandesproprietaire/${id}/${action}`, { method: 'PUT' });
                     if (result.success) {
                         showToast(isValider ? 'success' : 'info', isValider ? 'Demande validée' : 'Demande refusée', result.message || '');
-                        await loadDemandes(currentFilter);
+                        await loadDemandes();
                     } else {
                         showToast('error', 'Erreur', result.message || 'Une erreur est survenue.');
                     }
@@ -2287,7 +2288,7 @@
             if (id === 'promoteurs')    renderComptesPro('PromoteurImmobilier');
             if (id === 'agences')       renderComptesPro('AgenceImmobiliere');
             if (id === 'agents')        renderComptesPro('AgentImmobilier');
-            if (id === 'demandes')      loadDemandes(currentFilter || 'En attente');
+            if (id === 'demandes')      loadDemandes();
             if (id === 'biens')         renderBiens();
             if (id === 'nos-biens')     renderNosBiens();
             if (id === 'publier')       openAdminBienModal();
