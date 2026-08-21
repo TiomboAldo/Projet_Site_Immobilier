@@ -214,7 +214,15 @@ namespace SaidAfricaBackend.Controllers
             if (CurrentRole() == "AdminRegion")
             {
                 var moi = await _context.Users.FindAsync(CurrentUserId());
-                query = query.Where(d => d.Region == moi!.Region);
+                var myRegion = moi!.Region;
+                // Régions couvertes par un autre admin (pas moi)
+                var autresRegionsCouvertes = await _context.Users
+                    .Where(u => u.Role == "AdminRegion" && u.Id != CurrentUserId() && u.Region != null)
+                    .Select(u => u.Region!)
+                    .Distinct()
+                    .ToListAsync();
+                // Voir : ma région + toutes les régions sans admin assigné
+                query = query.Where(d => d.Region == myRegion || !autresRegionsCouvertes.Contains(d.Region));
             }
 
             if (!string.IsNullOrWhiteSpace(statut))
@@ -238,7 +246,13 @@ namespace SaidAfricaBackend.Controllers
             if (CurrentRole() == "AdminRegion")
             {
                 var moi = await _context.Users.FindAsync(CurrentUserId());
-                query = query.Where(u => u.Region == moi!.Region);
+                var myRegion = moi!.Region;
+                var autresRegionsCouvertes = await _context.Users
+                    .Where(u => u.Role == "AdminRegion" && u.Id != CurrentUserId() && u.Region != null)
+                    .Select(u => u.Region!)
+                    .Distinct()
+                    .ToListAsync();
+                query = query.Where(u => u.Region == myRegion || !autresRegionsCouvertes.Contains(u.Region));
             }
 
             var proprietaires = await query.OrderBy(u => u.Nom).ToListAsync();
@@ -275,7 +289,13 @@ namespace SaidAfricaBackend.Controllers
             if (CurrentRole() == "AdminRegion")
             {
                 var moi = await _context.Users.FindAsync(CurrentUserId());
-                if (demande.Region != moi!.Region) return Forbid();
+                var autresRegionsCouvertes = await _context.Users
+                    .Where(u => u.Role == "AdminRegion" && u.Id != CurrentUserId() && u.Region != null)
+                    .Select(u => u.Region!)
+                    .Distinct()
+                    .ToListAsync();
+                bool peutTraiter = demande.Region == moi!.Region || !autresRegionsCouvertes.Contains(demande.Region);
+                if (!peutTraiter) return Forbid();
             }
 
             var typeLabel = demande.TypeCompteProf switch
@@ -332,7 +352,13 @@ namespace SaidAfricaBackend.Controllers
             if (CurrentRole() == "AdminRegion")
             {
                 var moi = await _context.Users.FindAsync(CurrentUserId());
-                if (demande.Region != moi!.Region) return Forbid();
+                var autresRegionsCouvertes = await _context.Users
+                    .Where(u => u.Role == "AdminRegion" && u.Id != CurrentUserId() && u.Region != null)
+                    .Select(u => u.Region!)
+                    .Distinct()
+                    .ToListAsync();
+                bool peutTraiter = demande.Region == moi!.Region || !autresRegionsCouvertes.Contains(demande.Region);
+                if (!peutTraiter) return Forbid();
             }
 
             demande.Statut           = "Refusée";
