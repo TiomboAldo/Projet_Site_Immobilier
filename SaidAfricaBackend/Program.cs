@@ -138,7 +138,34 @@ app.MapControllers();
 // ─── Migrations + Seed ────────────────────────────────────────────────────────
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var db     = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    // Ajout idempotent des colonnes Biens via ADO.NET brut.
+    // Bypass les migrations pour garantir que les colonnes existent même si la migration
+    // échoue (IF NOT EXISTS non supporté sur MySQL pur, CREATE PROCEDURE = commit implicite).
+    try
+    {
+        var colDefs = new (string col, string def)[]
+        {
+            ("CertificatPropriete",   "LONGTEXT CHARACTER SET utf8mb4 NULL"),
+            ("StatutCivil",            "LONGTEXT CHARACTER SET utf8mb4 NULL"),
+            ("RegimeMatrimonial",      "LONGTEXT CHARACTER SET utf8mb4 NULL"),
+            ("ADesEnfants",            "TINYINT(1) NULL"),
+            ("DossierTechnique",       "LONGTEXT CHARACTER SET utf8mb4 NULL"),
+            ("PermisBatir",            "LONGTEXT CHARACTER SET utf8mb4 NULL"),
+            ("PlanBatiment",           "LONGTEXT CHARACTER SET utf8mb4 NULL"),
+            ("DossierCalculTechnique", "LONGTEXT CHARACTER SET utf8mb4 NULL"),
+            ("DocumentsVerifies",      "LONGTEXT CHARACTER SET utf8mb4 NULL"),
+        };
+        foreach (var (col, def) in colDefs)
+        {
+            try { db.Database.ExecuteSqlRaw($"ALTER TABLE `Biens` ADD COLUMN `{col}` {def}"); }
+            catch { } // 1060 = colonne existante → ok
+        }
+    }
+    catch { } // table Biens pas encore créée → Migrate() la crée juste après
+
     try
     {
         db.Database.Migrate();
@@ -146,7 +173,6 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
         logger.LogError(ex, "Erreur lors de la migration MySQL au démarrage.");
     }
 }
