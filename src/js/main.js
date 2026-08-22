@@ -92,9 +92,11 @@ async function loadProperties() {
     if (res.success) {
         properties = res.data.map(normalizeBien);
     } else {
+        const errMsg = res.message || 'Vérifiez que le serveur API est démarré.';
+        console.error('[getBiens] Erreur API:', res);
         if (container) {
             container.innerHTML = `<div class="col-span-full text-center py-12 text-red-500">
-                Impossible de charger les biens. Vérifiez que le serveur API est démarré.
+                Impossible de charger les biens.<br><small style="font-size:0.8em;opacity:0.7">${errMsg}</small>
             </div>`;
         }
         return;

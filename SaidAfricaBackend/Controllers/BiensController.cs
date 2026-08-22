@@ -41,6 +41,7 @@ namespace SaidAfricaBackend.Controllers
             [FromQuery] string? standing,
             [FromQuery] string? q)
         {
+          try {
             var query = _context.Biens
                 .Where(b => b.EstDisponible && b.StatutPublication == "Valide")
                 .AsQueryable();
@@ -82,6 +83,11 @@ namespace SaidAfricaBackend.Controllers
                 likedByMe.Contains(b.Id))).ToList();
 
             return Ok(new { success = true, data = biens });
+          }
+          catch (Exception ex)
+          {
+              return StatusCode(500, new { success = false, message = ex.Message, detail = ex.InnerException?.Message ?? "" });
+          }
         }
 
         // ─── GET /api/biens/debug ─────────────────────────────────────────────
