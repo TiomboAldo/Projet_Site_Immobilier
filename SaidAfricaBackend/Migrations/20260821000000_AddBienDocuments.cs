@@ -8,69 +8,19 @@ namespace SaidAfricaBackend.Migrations
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // Documents spécifiques Terrain
-            migrationBuilder.AddColumn<string>(
-                name: "CertificatPropriete",
-                table: "Biens",
-                type: "longtext",
-                nullable: true)
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.AddColumn<string>(
-                name: "StatutCivil",
-                table: "Biens",
-                type: "longtext",
-                nullable: true)
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.AddColumn<string>(
-                name: "RegimeMatrimonial",
-                table: "Biens",
-                type: "longtext",
-                nullable: true)
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.AddColumn<bool?>(
-                name: "ADesEnfants",
-                table: "Biens",
-                type: "tinyint(1)",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "DossierTechnique",
-                table: "Biens",
-                type: "longtext",
-                nullable: true)
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            // Documents spécifiques Immeuble
-            migrationBuilder.AddColumn<string>(
-                name: "PermisBatir",
-                table: "Biens",
-                type: "longtext",
-                nullable: true)
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.AddColumn<string>(
-                name: "PlanBatiment",
-                table: "Biens",
-                type: "longtext",
-                nullable: true)
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.AddColumn<string>(
-                name: "DossierCalculTechnique",
-                table: "Biens",
-                type: "longtext",
-                nullable: true)
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.AddColumn<string>(
-                name: "DocumentsVerifies",
-                table: "Biens",
-                type: "longtext",
-                nullable: true)
-                .Annotation("MySql:CharSet", "utf8mb4");
+            // ADD COLUMN IF NOT EXISTS — idempotent même si un déploiement précédent a échoué à mi-chemin
+            migrationBuilder.Sql(@"
+                ALTER TABLE `Biens`
+                    ADD COLUMN IF NOT EXISTS `CertificatPropriete`    LONGTEXT CHARACTER SET utf8mb4 NULL,
+                    ADD COLUMN IF NOT EXISTS `StatutCivil`             LONGTEXT CHARACTER SET utf8mb4 NULL,
+                    ADD COLUMN IF NOT EXISTS `RegimeMatrimonial`       LONGTEXT CHARACTER SET utf8mb4 NULL,
+                    ADD COLUMN IF NOT EXISTS `ADesEnfants`             TINYINT(1) NULL,
+                    ADD COLUMN IF NOT EXISTS `DossierTechnique`        LONGTEXT CHARACTER SET utf8mb4 NULL,
+                    ADD COLUMN IF NOT EXISTS `PermisBatir`             LONGTEXT CHARACTER SET utf8mb4 NULL,
+                    ADD COLUMN IF NOT EXISTS `PlanBatiment`            LONGTEXT CHARACTER SET utf8mb4 NULL,
+                    ADD COLUMN IF NOT EXISTS `DossierCalculTechnique`  LONGTEXT CHARACTER SET utf8mb4 NULL,
+                    ADD COLUMN IF NOT EXISTS `DocumentsVerifies`       LONGTEXT CHARACTER SET utf8mb4 NULL;
+            ");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
