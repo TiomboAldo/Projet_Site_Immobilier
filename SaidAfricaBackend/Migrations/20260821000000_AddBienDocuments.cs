@@ -8,19 +8,24 @@ namespace SaidAfricaBackend.Migrations
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // ADD COLUMN IF NOT EXISTS — idempotent même si un déploiement précédent a échoué à mi-chemin
+            // CONTINUE HANDLER FOR 1060 = ignore "duplicate column" si déjà créée (idempotent, MySQL pur)
+            migrationBuilder.Sql("DROP PROCEDURE IF EXISTS `_lev_add_bien_cols`;");
             migrationBuilder.Sql(@"
-                ALTER TABLE `Biens`
-                    ADD COLUMN IF NOT EXISTS `CertificatPropriete`    LONGTEXT CHARACTER SET utf8mb4 NULL,
-                    ADD COLUMN IF NOT EXISTS `StatutCivil`             LONGTEXT CHARACTER SET utf8mb4 NULL,
-                    ADD COLUMN IF NOT EXISTS `RegimeMatrimonial`       LONGTEXT CHARACTER SET utf8mb4 NULL,
-                    ADD COLUMN IF NOT EXISTS `ADesEnfants`             TINYINT(1) NULL,
-                    ADD COLUMN IF NOT EXISTS `DossierTechnique`        LONGTEXT CHARACTER SET utf8mb4 NULL,
-                    ADD COLUMN IF NOT EXISTS `PermisBatir`             LONGTEXT CHARACTER SET utf8mb4 NULL,
-                    ADD COLUMN IF NOT EXISTS `PlanBatiment`            LONGTEXT CHARACTER SET utf8mb4 NULL,
-                    ADD COLUMN IF NOT EXISTS `DossierCalculTechnique`  LONGTEXT CHARACTER SET utf8mb4 NULL,
-                    ADD COLUMN IF NOT EXISTS `DocumentsVerifies`       LONGTEXT CHARACTER SET utf8mb4 NULL;
-            ");
+CREATE PROCEDURE `_lev_add_bien_cols`()
+BEGIN
+    DECLARE CONTINUE HANDLER FOR 1060 BEGIN END;
+    ALTER TABLE `Biens` ADD COLUMN `CertificatPropriete`   LONGTEXT CHARACTER SET utf8mb4 NULL;
+    ALTER TABLE `Biens` ADD COLUMN `StatutCivil`            LONGTEXT CHARACTER SET utf8mb4 NULL;
+    ALTER TABLE `Biens` ADD COLUMN `RegimeMatrimonial`      LONGTEXT CHARACTER SET utf8mb4 NULL;
+    ALTER TABLE `Biens` ADD COLUMN `ADesEnfants`            TINYINT(1) NULL;
+    ALTER TABLE `Biens` ADD COLUMN `DossierTechnique`       LONGTEXT CHARACTER SET utf8mb4 NULL;
+    ALTER TABLE `Biens` ADD COLUMN `PermisBatir`            LONGTEXT CHARACTER SET utf8mb4 NULL;
+    ALTER TABLE `Biens` ADD COLUMN `PlanBatiment`           LONGTEXT CHARACTER SET utf8mb4 NULL;
+    ALTER TABLE `Biens` ADD COLUMN `DossierCalculTechnique` LONGTEXT CHARACTER SET utf8mb4 NULL;
+    ALTER TABLE `Biens` ADD COLUMN `DocumentsVerifies`      LONGTEXT CHARACTER SET utf8mb4 NULL;
+END");
+            migrationBuilder.Sql("CALL `_lev_add_bien_cols`();");
+            migrationBuilder.Sql("DROP PROCEDURE IF EXISTS `_lev_add_bien_cols`;");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
