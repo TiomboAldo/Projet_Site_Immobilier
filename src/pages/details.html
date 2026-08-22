@@ -716,7 +716,64 @@
                 </ul>
             </div>
         </div>
+
+        ${buildDocsVerifiesSection(property)}
     `;
+
+    function buildDocsVerifiesSection(p) {
+        const type = (p.type || '').toLowerCase();
+        const allDocs = [
+            { key: 'titreFoncier', label: 'Titre foncier', icon: 'fa-file-contract' }
+        ];
+        if (type === 'terrain') {
+            allDocs.push(
+                { key: 'certificatPropriete', label: 'Certificat de propriété',  icon: 'fa-file-shield'   },
+                { key: 'statutCivil',         label: 'Statut civil',             icon: 'fa-user-check'    },
+                { key: 'dossierTechnique',    label: 'Dossier technique',        icon: 'fa-drafting-compass' }
+            );
+        } else if (type === 'immeuble') {
+            allDocs.push(
+                { key: 'permisBatir',            label: 'Permis de bâtir',        icon: 'fa-hammer'          },
+                { key: 'planBatiment',           label: 'Plan du bâtiment',       icon: 'fa-map-location-dot'},
+                { key: 'dossierCalculTechnique', label: 'Dossier de calcul technique', icon: 'fa-calculator' }
+            );
+        }
+
+        const state = (() => { try { return JSON.parse(p.documentsVerifies || '{}'); } catch { return {}; } })();
+        if (!Object.keys(state).length) return '';
+
+        const nb    = allDocs.filter(d => state[d.key]).length;
+        const total = allDocs.length;
+        const allOk = nb === total;
+
+        const rows = allDocs.map(d => {
+            const ok = !!state[d.key];
+            return `
+            <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:14px;background:${ok ? '#f0fdf4' : '#fafafa'};border:1px solid ${ok ? '#bbf7d0' : '#e5e7eb'};">
+                <div style="width:40px;height:40px;border-radius:50%;background:${ok ? '#dcfce7' : '#f3f4f6'};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="fas ${d.icon}" style="font-size:16px;color:${ok ? '#16a34a' : '#9ca3af'};"></i>
+                </div>
+                <span style="flex:1;font-size:14px;font-weight:600;color:${ok ? '#15803d' : '#6b7280'};">${d.label}</span>
+                <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;background:${ok ? '#16a34a' : '#e5e7eb'};color:${ok ? '#fff' : '#9ca3af'};">
+                    <i class="fas fa-${ok ? 'check' : 'times'}"></i>${ok ? 'Vérifié' : 'Non vérifié'}
+                </span>
+            </div>`;
+        }).join('');
+
+        return `
+        <div class="mt-16">
+            <h3 class="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                <span class="w-8 h-1 bg-blue-600 mr-3 rounded"></span>
+                Documents techniques
+                <span style="margin-left:12px;font-size:13px;font-weight:700;padding:3px 12px;border-radius:999px;background:${allOk ? '#dcfce7' : '#fef3c7'};color:${allOk ? '#15803d' : '#92400e'};">
+                    ${nb}/${total} vérifiés
+                </span>
+            </h3>
+            <div style="display:flex;flex-direction:column;gap:10px;max-width:600px;">
+                ${rows}
+            </div>
+        </div>`;
+    }
 
             window.currentPropertyLocation = { lat: property.lat, lng: property.lng };
         }
