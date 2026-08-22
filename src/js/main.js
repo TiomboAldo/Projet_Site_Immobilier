@@ -300,6 +300,43 @@ window.toggleFavorite = async function (id) {
 };
 
 /* -------------------------------------------
+ * DOCUMENTS VÉRIFIÉS PAR L'ADMIN
+ * ------------------------------------------- */
+function buildDocsVerifiesHtml(p) {
+    const type = (p.type || '').toLowerCase();
+    const items = [{ key: 'titreFoncier', label: 'Titre foncier' }];
+    if (type === 'terrain') {
+        items.push(
+            { key: 'certificatPropriete', label: 'Certificat de propriété' },
+            { key: 'statutCivil',         label: 'Statut civil'            },
+            { key: 'dossierTechnique',    label: 'Dossier technique'       }
+        );
+    } else if (type === 'immeuble') {
+        items.push(
+            { key: 'permisBatir',            label: 'Permis de bâtir'      },
+            { key: 'planBatiment',           label: 'Plan bâtiment'        },
+            { key: 'dossierCalculTechnique', label: 'Dossier de calcul'    }
+        );
+    }
+    const state = (() => { try { return JSON.parse(p.documentsVerifies || '{}'); } catch { return {}; } })();
+    if (!Object.keys(state).length) return '';
+
+    const rows = items.map(i => `
+        <span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;margin:2px;${state[i.key] ? 'background:#dcfce7;color:#15803d;' : 'background:#f1f5f9;color:#94a3b8;'}">
+            <i class="fas fa-${state[i.key] ? 'check' : 'times'}"></i>${i.label}
+        </span>`).join('');
+
+    const nb = items.filter(i => state[i.key]).length;
+    return `
+        <div style="border-top:1px solid #e5e7eb;padding-top:8px;margin-top:8px;">
+            <p style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">
+                <i class="fas fa-clipboard-check" style="color:#2563eb;margin-right:3px;"></i>Documents (${nb}/${items.length})
+            </p>
+            <div style="display:flex;flex-wrap:wrap;">${rows}</div>
+        </div>`;
+}
+
+/* -------------------------------------------
  * LOGIQUE DE RECHERCHE, FILTRAGE & TRI
  * ------------------------------------------- */
 const container = document.getElementById('property-grid');
@@ -444,7 +481,8 @@ function renderPage(page = 1, list = currentList) {
                         </button>
                     </div>
                 </div>
-                <div class="flex items-center justify-between space-x-3">
+                ${buildDocsVerifiesHtml(p)}
+                <div class="flex items-center justify-between space-x-3" style="margin-top:12px;">
                     <button onclick="viewDetails(${p.id})" class="flex-1 text-center px-4 py-2 border border-blue-600 text-blue-600 text-sm font-semibold rounded-lg hover:bg-blue-50 transition flex items-center justify-center">
                         Détails <i class="fas fa-info-circle ml-2"></i>
                     </button>
