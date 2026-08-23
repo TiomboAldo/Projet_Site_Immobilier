@@ -1590,13 +1590,12 @@
                                onfocus="this.style.borderColor='#f59e0b'" onblur="this.style.borderColor='#e5e7eb'">
                     </div>
                     <p id="payErr1" style="color:#ef4444;font-size:12px;margin:6px 0 0;display:none;"></p>
+                    <p style="font-size:12px;color:#6b7280;text-align:center;margin:12px 0 0;background:#f3f4f6;border-radius:8px;padding:8px 10px;">
+                        🧪 Phase de test — 5 XAF symboliques seront demandés (sandbox CamPay)
+                    </p>
                     <button id="payConfirmBtn" onclick="submitMoMoPayment()"
-                            style="width:100%;margin-top:16px;padding:13px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;">
+                            style="width:100%;margin-top:12px;padding:13px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;">
                         <i class="fas fa-lock" style="margin-right:6px;"></i>Payer maintenant
-                    </button>
-                    <button onclick="skipPaymentForNow()"
-                            style="width:100%;margin-top:8px;padding:10px;background:transparent;color:#6b7280;border:1.5px solid #e5e7eb;border-radius:12px;font-size:13px;cursor:pointer;">
-                        Payer plus tard
                     </button>
                 </div>
 
@@ -1642,7 +1641,7 @@
                         <i class="fas fa-circle-xmark" style="color:#ef4444;font-size:28px;"></i>
                     </div>
                     <h4 style="font-size:16px;font-weight:800;color:#111827;margin:0 0 8px;">Paiement échoué</h4>
-                    <p id="payFailMsg" style="font-size:13px;color:#6b7280;margin:0 0 20px;line-height:1.5;">Le paiement n'a pas abouti. Votre réservation reste enregistrée — vous pourrez payer plus tard.</p>
+                    <p id="payFailMsg" style="font-size:13px;color:#6b7280;margin:0 0 20px;line-height:1.5;">Le paiement n'a pas abouti. Votre demande ne sera confirmée qu'après un paiement réussi.</p>
                     <button onclick="retryPayment()"
                             style="width:100%;margin-bottom:8px;padding:12px;background:#f59e0b;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;">
                         <i class="fas fa-rotate-right" style="margin-right:6px;"></i>Réessayer
@@ -1769,6 +1768,7 @@
                     estLikeParMoi: b.estLikeParMoi ?? false,
                     vendeurCertifie:  b.vendeurCertifie  ?? false,
                     documentsVerifies: b.documentsVerifies ?? null,
+                    fraisVisite: b.fraisVisite ?? 0,
                 }));
             } else {
                 showToast('error', 'Erreur', 'Impossible de charger les biens.');
@@ -2527,11 +2527,6 @@
             document.getElementById('payStep1').style.display = 'block';
         }
 
-        function skipPaymentForNow() {
-            closePaymentModal();
-            showToast('info', 'Réservation enregistrée', 'Vous pourrez effectuer le paiement plus tard depuis vos réservations.');
-        }
-
         function detectNetwork(phone) {
             const digits = phone.replace(/\D/g, '').replace(/^237/, '');
             const p = digits.substring(0, 3);
@@ -2735,17 +2730,19 @@
             if (result.success) {
                 closeVisitForm();
                 closeModal();
-                // Recharger les réservations en mémoire
                 const resaRes = await apiFetch(`${API}/reservations/user/${userId}`);
                 if (resaRes.success) reservations = resaRes.data;
-                // Ouvrir le modal de paiement
-                const reservationId = result.data?.id ?? null;
-                openPaymentModal(
-                    reservationId,
-                    currentPropertyId,
-                    FRAIS_VISITE,
-                    `Frais de visite — ${p?.title || 'bien'}`
-                );
+                const frais = p?.fraisVisite || 0;
+                if (frais > 0) {
+                    openPaymentModal(
+                        result.data?.id ?? null,
+                        currentPropertyId,
+                        frais,
+                        `Frais de visite — ${p?.title || 'bien'}`
+                    );
+                } else {
+                    showToast('success', 'Demande envoyée !', 'Votre demande de visite a bien été enregistrée.');
+                }
             } else {
                 showToast('error', 'Erreur', result.message || 'Une erreur est survenue.');
             }
