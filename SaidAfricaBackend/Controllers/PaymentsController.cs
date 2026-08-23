@@ -55,7 +55,14 @@ namespace SaidAfricaBackend.Controllers
             await _context.SaveChangesAsync();
 
             if (!_campay.IsConfigured)
+            {
+                // Environnement sans CamPay : simuler succès immédiat
+                payment.Statut = "Reussi";
+                await _context.SaveChangesAsync();
+                if (payment.ReservationId.HasValue)
+                    _ = ConfirmerReservationAsync(payment);
                 return Ok(new { success = true, paymentId = payment.Id, unconfigured = true });
+            }
 
             var description = req.TypePaiement switch
             {
@@ -100,6 +107,7 @@ namespace SaidAfricaBackend.Controllers
 
             if (_campay.IsConfigured && !string.IsNullOrEmpty(payment.ReferenceId))
             {
+                var wasEnAttente = payment.Statut == "EnAttente";
                 var campayStatus = await _campay.GetStatusAsync(payment.ReferenceId);
 
                 payment.Statut = campayStatus switch
@@ -113,6 +121,10 @@ namespace SaidAfricaBackend.Controllers
                     payment.UpdatedAt = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
+
+                // Confirmer la réservation dès que le paiement passe de EnAttente → Reussi
+                if (wasEnAttente && payment.Statut == "Reussi" && payment.ReservationId.HasValue)
+                    _ = ConfirmerReservationAsync(payment);
             }
 
             return Ok(new { success = true, statut = payment.Statut });
@@ -139,14 +151,14 @@ namespace SaidAfricaBackend.Controllers
 
             await _context.SaveChangesAsync();
 
-            // Notifier le propriétaire uniquement lors du premier succès
+            // Confirmer la réservation uniquement lors du premier succès
             if (wasEnAttente && payment.Statut == "Reussi" && payment.ReservationId.HasValue)
-                _ = NotifierProprietaireAsync(payment);
+                _ = ConfirmerReservationAsync(payment);
 
             return Ok();
         }
 
-        private async Task NotifierProprietaireAsync(Payment payment)
+        private async Task ConfirmerReservationAsync(Payment payment)
         {
             try
             {
@@ -155,18 +167,34 @@ namespace SaidAfricaBackend.Controllers
                         .ThenInclude(b => b!.Proprietaire)
                     .FirstOrDefaultAsync(r => r.Id == payment.ReservationId);
 
-                if (reservation?.Bien?.Proprietaire == null) return;
+                if (reservation == null) return;
+
+                // Débloquer la réservation maintenant que le paiement est confirmé
+                if (reservation.Statut == "En attente de paiement")
+                {
+                    reservation.Statut = "En attente";
+                    await _context.SaveChangesAsync();
+                }
+
+                if (reservation.Bien?.Proprietaire == null) return;
 
                 var proprio = reservation.Bien.Proprietaire;
                 var dateStr = reservation.DateVisite.ToString("dd/MM/yyyy");
 
-                await _email.SendPaiementConfirmeProprietaireAsync(
+                // Notification in-app pour le publieur
+                NotificationHelper.Creer(_context, proprio.Id,
+                    "NouvelleReservation", "Nouvelle réservation reçue",
+                    $"{reservation.Prenom} {reservation.Nom} a réservé une visite pour « {reservation.Bien.Titre} » (paiement confirmé).",
+                    "reservations");
+                await _context.SaveChangesAsync();
+
+                // Email au publieur
+                await _email.SendNouvelleReservationAsync(
                     proprio.Email, proprio.Prenom,
                     reservation.Bien.Titre,
-                    reservation.Prenom, reservation.Nom,
-                    payment.Montant, dateStr);
+                    reservation.Prenom, reservation.Nom, dateStr);
             }
-            catch { /* email non bloquant */ }
+            catch { /* non bloquant */ }
         }
 
         // ─── GET /api/payments/mes-paiements ─────────────────────────────────

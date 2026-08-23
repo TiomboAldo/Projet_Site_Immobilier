@@ -248,8 +248,12 @@ namespace SaidAfricaBackend.Controllers
             bien.GalerieUrls  = req.GalerieUrls;
             bien.Equipements  = req.Equipements;
             bien.Standing     = req.Standing;
-            bien.Latitude     = req.Latitude;
-            bien.Longitude    = req.Longitude;
+            bien.Latitude          = req.Latitude;
+            bien.Longitude         = req.Longitude;
+            bien.FraisVisite       = req.FraisVisite;
+            bien.StatutCivil       = req.StatutCivil;
+            bien.RegimeMatrimonial = req.RegimeMatrimonial;
+            bien.ADesEnfants       = req.ADesEnfants;
 
             string message;
             if (IsAdmin())
@@ -575,6 +579,7 @@ namespace SaidAfricaBackend.Controllers
                 PermisBatir            = req.PermisBatir,
                 PlanBatiment           = req.PlanBatiment,
                 DossierCalculTechnique = req.DossierCalculTechnique,
+                FraisVisite            = req.FraisVisite,
             };
 
             _context.Biens.Add(bien);
@@ -681,6 +686,7 @@ namespace SaidAfricaBackend.Controllers
         public string?  PlanBatiment           { get; set; }
         public string?  DossierCalculTechnique { get; set; }
         public string?  DocumentsVerifies      { get; set; }
+        public int?     FraisVisite            { get; set; }
 
         public BienDto(Bien b, int likes = 0, bool estLikeParMoi = false)
         {
@@ -724,6 +730,7 @@ namespace SaidAfricaBackend.Controllers
             PlanBatiment           = b.PlanBatiment;
             DossierCalculTechnique = b.DossierCalculTechnique;
             DocumentsVerifies      = b.DocumentsVerifies;
+            FraisVisite            = b.FraisVisite;
         }
     }
 
@@ -770,6 +777,7 @@ namespace SaidAfricaBackend.Controllers
         public string?    PermisBatir           { get; set; }
         public string?    PlanBatiment          { get; set; }
         public string?    DossierCalculTechnique{ get; set; }
+        public int?       FraisVisite           { get; set; }
     }
 
     public class UpdateBienRequest
@@ -790,6 +798,10 @@ namespace SaidAfricaBackend.Controllers
         public bool    EstDisponible  { get; set; } = true;
         public double? Latitude      { get; set; }
         public double? Longitude     { get; set; }
+        public int?    FraisVisite   { get; set; }
+        public string?  StatutCivil        { get; set; }
+        public string?  RegimeMatrimonial  { get; set; }
+        public bool?    ADesEnfants        { get; set; }
     }
 
     public class RejeterBienRequest

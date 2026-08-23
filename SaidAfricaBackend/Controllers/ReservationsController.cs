@@ -45,6 +45,9 @@ namespace SaidAfricaBackend.Controllers
             if (user == null)
                 return NotFound(new { success = false, message = "Utilisateur introuvable." });
 
+            // Visite payante → la réservation est bloquée jusqu'au paiement
+            bool paiementRequis = bien.FraisVisite.HasValue && bien.FraisVisite > 0;
+
             var reservation = new Reservation
             {
                 UserId     = userId,
@@ -56,12 +59,14 @@ namespace SaidAfricaBackend.Controllers
                 Lieu       = req.Lieu,
                 DateVisite = req.DateVisite,
                 Message    = req.Message ?? string.Empty,
-                Statut     = "En attente"
+                Statut     = paiementRequis ? "En attente de paiement" : "En attente"
             };
 
             _context.Reservations.Add(reservation);
 
-            if (bien.ProprietaireId.HasValue)
+            // Notifier le publieur uniquement pour les visites gratuites.
+            // Pour les visites payantes, la notification se fait après confirmation du paiement.
+            if (!paiementRequis && bien.ProprietaireId.HasValue)
             {
                 NotificationHelper.Creer(_context, bien.ProprietaireId.Value,
                     "NouvelleReservation", "Nouvelle réservation reçue",
@@ -116,7 +121,8 @@ namespace SaidAfricaBackend.Controllers
 
             var reservations = await _context.Reservations
                 .Include(r => r.Bien)
-                .Where(r => r.Bien != null && r.Bien.ProprietaireId == userId)
+                .Where(r => r.Bien != null && r.Bien.ProprietaireId == userId
+                         && r.Statut != "En attente de paiement")
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
 

@@ -124,6 +124,7 @@ export function normalizeBien(b) {
         estLikeParMoi:   b.estLikeParMoi   ?? false,
         vendeurCertifie: b.vendeurCertifie  ?? false,
         documentsVerifies: b.documentsVerifies ?? null,
+        fraisVisite: b.fraisVisite ?? 0,
     };
 }
 

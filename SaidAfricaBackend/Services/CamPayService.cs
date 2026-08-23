@@ -66,7 +66,8 @@ namespace SaidAfricaBackend.Services
             client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Token", token);
 
-            var amountToSend = IsSandbox ? 5 : (int)Math.Ceiling(amount);
+            // Sandbox : 100 XAF (minimum Orange Money) — MTN accepte aussi 100 XAF
+            var amountToSend = IsSandbox ? 100 : (int)Math.Ceiling(amount);
 
             var payload = JsonSerializer.Serialize(new
             {

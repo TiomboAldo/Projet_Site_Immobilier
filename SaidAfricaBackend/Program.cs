@@ -157,6 +157,7 @@ using (var scope = app.Services.CreateScope())
             ("PlanBatiment",           "LONGTEXT CHARACTER SET utf8mb4 NULL"),
             ("DossierCalculTechnique", "LONGTEXT CHARACTER SET utf8mb4 NULL"),
             ("DocumentsVerifies",      "LONGTEXT CHARACTER SET utf8mb4 NULL"),
+            ("FraisVisite",            "INT NULL"),
         };
         foreach (var (col, def) in colDefs)
         {

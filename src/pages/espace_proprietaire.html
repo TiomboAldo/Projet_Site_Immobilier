@@ -676,6 +676,25 @@
                     </div>
                     <div class="form-group"><label>Équipements (séparés par |)</label><textarea id="pfEquipements" placeholder="Piscine|Jardin|Climatisation"></textarea></div>
 
+                    <!-- FRAIS DE VISITE -->
+                    <div class="form-group">
+                        <label>Frais de visite <span style="font-weight:400;color:#9ca3af;font-size:12px;">(laissez Gratuit si la visite est sans frais)</span></label>
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+                            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;padding:8px 14px;border:1.5px solid #d1d5db;border-radius:10px;background:#f9fafb;">
+                                <input type="radio" name="pfFraisVisite" value="0" checked style="accent-color:#2563eb;"> Gratuit
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;padding:8px 14px;border:1.5px solid #d1d5db;border-radius:10px;background:#f9fafb;">
+                                <input type="radio" name="pfFraisVisite" value="2000" style="accent-color:#2563eb;"> 2 000 XAF
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;padding:8px 14px;border:1.5px solid #d1d5db;border-radius:10px;background:#f9fafb;">
+                                <input type="radio" name="pfFraisVisite" value="3000" style="accent-color:#2563eb;"> 3 000 XAF
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;padding:8px 14px;border:1.5px solid #d1d5db;border-radius:10px;background:#f9fafb;">
+                                <input type="radio" name="pfFraisVisite" value="5000" style="accent-color:#2563eb;"> 5 000 XAF
+                            </label>
+                        </div>
+                    </div>
+
                     <!-- TITRE FONCIER -->
                     <div class="form-group" id="titreFoncierGroup">
                         <label id="titreFoncierLabel">Titre foncier <span id="titreFoncierReq" style="color:#ef4444;font-size:12px;">(obligatoire pour la vente)</span></label>
@@ -1687,6 +1706,10 @@
                 document.getElementById('pfEquipements').value = (b.equipements || []).join('|');
                 prefillImageFields(b);
                 onTypeChange(b.type);
+                // Pré-remplir FraisVisite
+                document.querySelectorAll('input[name="pfFraisVisite"]').forEach(r => {
+                    r.checked = r.value === String(b.fraisVisite || 0);
+                });
                 if (b.type === 'terrain') {
                     if (b.statutCivil) document.getElementById('pfStatutCivil').value = b.statutCivil;
                     if (b.regimeMatrimonial) document.getElementById('pfRegimeMatrimonial').value = b.regimeMatrimonial;
@@ -1824,6 +1847,7 @@
                     StatutCivil:       editType === 'terrain' ? (document.getElementById('pfStatutCivil').value || null) : null,
                     RegimeMatrimonial: editType === 'terrain' ? (document.getElementById('pfRegimeMatrimonial').value || null) : null,
                     ADesEnfants:       editType === 'terrain' && document.getElementById('pfADesEnfants').value !== '' ? document.getElementById('pfADesEnfants').value === 'true' : null,
+                    FraisVisite:       parseInt(document.querySelector('input[name="pfFraisVisite"]:checked')?.value || '0'),
                 };
                 result = await apiFetch(`${API}/biens/${editingBienId}`, { method: 'PUT', body: JSON.stringify(payload) });
             } else {
@@ -1901,6 +1925,7 @@
                         PermisBatir:           permisPath,
                         PlanBatiment:          planPath,
                         DossierCalculTechnique: calcTechPath,
+                        FraisVisite: parseInt(document.querySelector('input[name="pfFraisVisite"]:checked')?.value || '0'),
                     })
                 });
             }

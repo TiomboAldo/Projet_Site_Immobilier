@@ -301,6 +301,9 @@ namespace SaidAfricaBackend
         /// <summary>Checklist documents vérifiés par admin (JSON) — affiché dans l'annonce</summary>
         public string? DocumentsVerifies { get; set; }
 
+        /// <summary>Frais de visite choisis par le publieur : null ou 0 = gratuit ; 2000/3000/5000 XAF = payant</summary>
+        public int? FraisVisite { get; set; }
+
         // Navigation
         public User?                    Proprietaire   { get; set; }
         public User?                    ValideParAdmin  { get; set; }
