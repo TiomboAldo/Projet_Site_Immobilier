@@ -710,6 +710,15 @@ function updateNavForLogin() {
     // Session expirée (navigateur fermé sans "Rester connecté") → forcer déconnexion
     if (localStorage.getItem('sessionOnlyLogin') === 'true' && !sessionStorage.getItem('sessionActive')) {
         localStorage.clear();
+    } else {
+        // Vérifier si le JWT est expiré (couvre aussi les users "Rester connecté" dont le token a expiré)
+        const t = localStorage.getItem('jwtToken');
+        if (t) {
+            try {
+                const payload = JSON.parse(atob(t.split('.')[1]));
+                if (Date.now() / 1000 > payload.exp) localStorage.clear();
+            } catch { localStorage.clear(); }
+        }
     }
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     if (!isLoggedIn) return;

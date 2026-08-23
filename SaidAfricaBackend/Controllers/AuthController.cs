@@ -25,7 +25,7 @@ namespace SaidAfricaBackend.Controllers
             _email = email;
         }
 
-        private string GenerateJwt(User user)
+        private string GenerateJwt(User user, bool rememberMe = false)
         {
             var claims = new[]
             {
@@ -36,7 +36,11 @@ namespace SaidAfricaBackend.Controllers
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-            var expires = DateTime.UtcNow.AddMinutes(double.Parse(_config["Jwt:ExpiresMinutes"] ?? "120"));
+            // "Rester connecté" → token valide 30 jours (révocable uniquement via Déconnexion)
+            // Session normale → token valide 8 heures (forced re-login si inactif ou navigateur fermé)
+            var expires = rememberMe
+                ? DateTime.UtcNow.AddDays(30)
+                : DateTime.UtcNow.AddHours(8);
 
             var token = new JwtSecurityToken(
                 issuer: _config["Jwt:Issuer"],
@@ -250,10 +254,10 @@ namespace SaidAfricaBackend.Controllers
                 if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
                     return Unauthorized(new { success = false, message = "Email ou mot de passe incorrect." });
 
-                // "Rester connecté" → pas de 2FA, JWT direct
+                // "Rester connecté" → pas de 2FA, JWT direct (30 jours)
                 if (request.ResterConnecte)
                 {
-                    var token = GenerateJwt(user);
+                    var token = GenerateJwt(user, rememberMe: true);
                     return Ok(new
                     {
                         success           = true,

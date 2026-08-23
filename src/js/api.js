@@ -11,6 +11,12 @@ async function apiFetch(url, options = {}) {
             },
             ...options,
         });
+        if (res.status === 401 && token) {
+            // Token expiré ou invalide — nettoyer la session et renvoyer vers login
+            localStorage.clear();
+            window.location.replace('/src/pages/login.html');
+            return { success: false };
+        }
         return await res.json();
     } catch (err) {
         console.error('API error:', url, err);

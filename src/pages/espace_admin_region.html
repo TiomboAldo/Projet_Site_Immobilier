@@ -7,7 +7,8 @@
     <title>Espace Admin Région - Levetimmo</title>
     <script>(function(){
         if(localStorage.getItem('sessionOnlyLogin')==='true'&&!sessionStorage.getItem('sessionActive')){localStorage.clear();window.location.replace('./login.html');return;}
-        function g(){if(!localStorage.getItem('jwtToken'))window.location.replace('./login.html');}
+        function exp(t){try{return Date.now()/1000>JSON.parse(atob(t.split('.')[1])).exp;}catch(e){return true;}}
+        function g(){var t=localStorage.getItem('jwtToken');if(!t||exp(t)){localStorage.clear();window.location.replace('./login.html');}}
         g();window.addEventListener('pageshow',function(e){if(e.persisted)g();});
     }());</script>
     <link rel="icon" type="image/png" href="/src/assets/images/logo.jpeg">
