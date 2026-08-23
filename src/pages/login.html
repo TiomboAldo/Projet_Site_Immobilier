@@ -86,7 +86,8 @@
                 <i class="fas fa-shield-halved" style="color:#2563eb;font-size:22px;"></i>
             </div>
             <h3 style="font-size:17px;font-weight:800;color:#111827;text-align:center;margin:0 0 6px;">Vérification en deux étapes</h3>
-            <p style="font-size:13px;color:#6b7280;text-align:center;margin:0 0 12px;line-height:1.5;">Un code à 6 chiffres a été envoyé à votre adresse email. Il expire dans 10 minutes.</p>
+            <p style="font-size:13px;color:#6b7280;text-align:center;margin:0 0 8px;line-height:1.5;">Un code à 6 chiffres a été envoyé à l'adresse&nbsp;:</p>
+            <p id="twoFaEmailHint" style="font-size:13px;color:#2563eb;text-align:center;font-weight:600;background:#eff6ff;border-radius:10px;padding:8px 12px;margin:0 0 12px;word-break:break-all;"></p>
             <p id="twoFaDevHint" style="display:none;background:#fef9c3;border:1px solid #fde68a;border-radius:10px;padding:8px 12px;font-size:12px;color:#92400e;text-align:center;margin-bottom:12px;"></p>
             <input type="text" id="twoFaCode" maxlength="6" placeholder="_ _ _ _ _ _"
                    style="width:100%;padding:14px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:24px;font-weight:700;text-align:center;letter-spacing:10px;outline:none;margin-bottom:6px;box-sizing:border-box;"
@@ -749,7 +750,7 @@
                 const result = await response.json();
 
                 if (result.requiresTwoFactor) {
-                    openTwoFaModal(result.tempToken, result.devOtp);
+                    openTwoFaModal(result.tempToken, result.devOtp, result.email, resterConnecte);
                 } else if (response.ok && result.success) {
                     const estBloque = saveAuth(result, resterConnecte);
 
@@ -813,20 +814,24 @@
         })();
 
         // ═══ AUTHENTIFICATION À DEUX FACTEURS ════════════════════════════════
-        let _2faTempToken = null;
+        let _2faTempToken      = null;
+        let _2faResterConnecte = false;
 
-        function openTwoFaModal(tempToken, devOtp) {
-            _2faTempToken = tempToken;
+        function openTwoFaModal(tempToken, devOtp, email, resterConnecte) {
+            _2faTempToken      = tempToken;
+            _2faResterConnecte = !!resterConnecte;
             document.getElementById('twoFaCode').value = '';
             document.getElementById('twoFaError').style.display = 'none';
             document.getElementById('twoFaDevHint').style.display = 'none';
+            document.getElementById('twoFaEmailHint').textContent = email || '';
             document.getElementById('twoFaModal').style.display = 'flex';
             setTimeout(() => document.getElementById('twoFaCode').focus(), 100);
         }
 
         function closeTwoFaModal() {
             document.getElementById('twoFaModal').style.display = 'none';
-            _2faTempToken = null;
+            _2faTempToken      = null;
+            _2faResterConnecte = false;
         }
 
         async function submitTwoFa() {
@@ -847,7 +852,7 @@
                 const res  = await fetch('/api/auth/verify-2fa', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ TempToken: _2faTempToken, Code: code })
+                    body: JSON.stringify({ TempToken: _2faTempToken, Code: code, ResterConnecte: _2faResterConnecte })
                 });
                 const data = await res.json();
 
@@ -859,8 +864,7 @@
                     return;
                 }
 
-                // 2FA = toujours sans "rester connecte" → session seulement
-                const estBloque = saveAuth(data, false);
+                const estBloque = saveAuth(data, _2faResterConnecte);
 
                 document.getElementById('twoFaModal').style.display = 'none';
                 showMessage("Succes !", `Ravi de vous revoir ${data.user.prenom}.`, "success", true);

@@ -254,20 +254,7 @@ namespace SaidAfricaBackend.Controllers
                 if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
                     return Unauthorized(new { success = false, message = "Email ou mot de passe incorrect." });
 
-                // "Rester connecté" → pas de 2FA, JWT direct (30 jours)
-                if (request.ResterConnecte)
-                {
-                    var token = GenerateJwt(user, rememberMe: true);
-                    return Ok(new
-                    {
-                        success           = true,
-                        requiresTwoFactor = false,
-                        token,
-                        user = new { user.Id, user.Nom, user.Prenom, user.Email, user.Role, user.EstValide, user.EstBloque }
-                    });
-                }
-
-                // OTP obligatoire à chaque connexion
+                // OTP obligatoire à chaque connexion (même avec "Rester connecté")
                 var otp       = new Random().Next(100000, 999999).ToString();
                 var tempToken = Guid.NewGuid().ToString("N");
 
@@ -290,6 +277,7 @@ namespace SaidAfricaBackend.Controllers
                     success           = true,
                     requiresTwoFactor = true,
                     tempToken,
+                    email  = user.Email,
                     devOtp = emailSent ? null : otp
                 });
             }
@@ -319,7 +307,7 @@ namespace SaidAfricaBackend.Controllers
             user.TwoFactorTempToken = null;
             await _context.SaveChangesAsync();
 
-            var token = GenerateJwt(user);
+            var token = GenerateJwt(user, rememberMe: req.ResterConnecte);
             return Ok(new
             {
                 success = true,
@@ -476,8 +464,9 @@ namespace SaidAfricaBackend.Controllers
 
     public class VerifyTwoFactorRequest
     {
-        public string TempToken { get; set; } = string.Empty;
-        public string Code      { get; set; } = string.Empty;
+        public string TempToken      { get; set; } = string.Empty;
+        public string Code           { get; set; } = string.Empty;
+        public bool   ResterConnecte { get; set; } = false;
     }
 
     public class ConfirmTwoFactorRequest
