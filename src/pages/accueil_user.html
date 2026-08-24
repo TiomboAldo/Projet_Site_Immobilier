@@ -1591,7 +1591,7 @@
                     </div>
                     <p id="payErr1" style="color:#ef4444;font-size:12px;margin:6px 0 0;display:none;"></p>
                     <p style="font-size:12px;color:#6b7280;text-align:center;margin:12px 0 0;background:#f3f4f6;border-radius:8px;padding:8px 10px;">
-                        🧪 Phase de test — 5 XAF symboliques seront demandés (sandbox CamPay)
+                        🧪 Phase de test — 10 XAF symboliques seront demandés (sandbox CamPay)
                     </p>
                     <button id="payConfirmBtn" onclick="submitMoMoPayment()"
                             style="width:100%;margin-top:12px;padding:13px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;">
@@ -1768,7 +1768,7 @@
                     estLikeParMoi: b.estLikeParMoi ?? false,
                     vendeurCertifie:  b.vendeurCertifie  ?? false,
                     documentsVerifies: b.documentsVerifies ?? null,
-                    fraisVisite: b.fraisVisite ?? 0,
+                    fraisVisite: b.fraisVisite ?? null,
                 }));
             } else {
                 showToast('error', 'Erreur', 'Impossible de charger les biens.');
@@ -2732,7 +2732,7 @@
                 closeModal();
                 const resaRes = await apiFetch(`${API}/reservations/user/${userId}`);
                 if (resaRes.success) reservations = resaRes.data;
-                const frais = p?.fraisVisite || 0;
+                const frais = p?.fraisVisite ?? 2000;
                 if (frais > 0) {
                     openPaymentModal(
                         result.data?.id ?? null,
