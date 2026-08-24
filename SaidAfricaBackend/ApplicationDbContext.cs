@@ -427,7 +427,7 @@ namespace SaidAfricaBackend
         public User? Destinataire { get; set; }
     }
 
-    // ─── NOTIFICATION ──────────────────────────────────────────────────────────
+    // ─── NOTIFICATION ─────────────────────────────────────────────────────────
     public class Notification
     {
         public int     Id            { get; set; }
