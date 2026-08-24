@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 
 <head>
@@ -57,7 +57,7 @@
                 <h2>Se connecter</h2>
                 <div class="input-group">
                     <input type="text" name="Identifiant" id="signInId" required autocomplete="username">
-                    <label>Email ou téléphone</label>
+                    <label>Email</label>
                 </div>
                 <div class="input-group">
                     <input type="password" name="Password" id="pwdSignIn" required>
@@ -826,20 +826,24 @@
             _2faResterConnecte = !!resterConnecte;
             document.getElementById('twoFaCode').value = '';
             document.getElementById('twoFaError').style.display = 'none';
-            document.getElementById('twoFaDevHint').style.display = 'none';
 
-            const isSms  = destinationType === 'sms';
-            const desc   = document.getElementById('twoFaDesc');
-            const hint   = document.getElementById('twoFaDestHint');
-            desc.textContent = isSms
-                ? 'Un code à 6 chiffres a été envoyé au numéro :'
-                : 'Un code à 6 chiffres a été envoyé à l\'adresse :';
-            hint.textContent = destination || '';
+            const isSms = destinationType === 'sms';
+            document.getElementById('twoFaDesc').textContent = isSms
+                ? 'Un code a 6 chiffres a ete envoye au numero :'
+                : "Un code a 6 chiffres a ete envoye a l'adresse :";
+
+            const hint = document.getElementById('twoFaDestHint');
             hint.style.background = isSms ? '#f0fdf4' : '#eff6ff';
             hint.style.color      = isSms ? '#059669'  : '#2563eb';
-            hint.innerHTML = isSms
-                ? `📱 ${destination}`
-                : `✉️ ${destination}`;
+            hint.innerHTML        = isSms ? `📱 ${destination}` : `✉️ ${destination}`;
+
+            const devHint = document.getElementById('twoFaDevHint');
+            if (devOtp) {
+                devHint.textContent   = `Code (non livre) : ${devOtp}`;
+                devHint.style.display = 'block';
+            } else {
+                devHint.style.display = 'none';
+            }
 
             document.getElementById('twoFaModal').style.display = 'flex';
             setTimeout(() => document.getElementById('twoFaCode').focus(), 100);
