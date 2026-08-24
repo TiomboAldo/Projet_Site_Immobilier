@@ -52,8 +52,8 @@
             <form id="formSignIn">
                 <h2>Se connecter</h2>
                 <div class="input-group">
-                    <input type="text" name="Email" required>
-                    <label>E-mail</label>
+                    <input type="text" name="Identifiant" id="signInId" required autocomplete="username">
+                    <label>Email ou téléphone</label>
                 </div>
                 <div class="input-group">
                     <input type="password" name="Password" id="pwdSignIn" required>
@@ -64,10 +64,6 @@
                 </div>
                 <div class="forgot-pass">
                     <a href="#" onclick="openForgotModal();return false;">Mot de passe oublié ?</a>
-                </div>
-                <div class="input-group">
-                    <input type="tel" name="Telephone" id="signInTel" placeholder=" " autocomplete="tel">
-                    <label>Téléphone(Optionnel Recevoir le code par SMS)</label>
                 </div>
                 <div class="remember-me">
                     <label class="remember-label">
@@ -90,9 +86,8 @@
                 <i class="fas fa-shield-halved" style="color:#2563eb;font-size:22px;"></i>
             </div>
             <h3 style="font-size:17px;font-weight:800;color:#111827;text-align:center;margin:0 0 6px;">Vérification en deux étapes</h3>
-            <p style="font-size:13px;color:#6b7280;text-align:center;margin:0 0 8px;line-height:1.5;">Un code à 6 chiffres a été envoyé à l'adresse&nbsp;:</p>
-            <p id="twoFaEmailHint" style="font-size:13px;color:#2563eb;text-align:center;font-weight:600;background:#eff6ff;border-radius:10px;padding:8px 12px;margin:0 0 6px;word-break:break-all;"></p>
-            <p id="twoFaSmsHint" style="display:none;font-size:12px;color:#059669;text-align:center;background:#f0fdf4;border-radius:10px;padding:6px 12px;margin:0 0 10px;">📱 Aussi envoyé par SMS au <strong id="twoFaSmsPhone"></strong></p>
+            <p id="twoFaDesc" style="font-size:13px;color:#6b7280;text-align:center;margin:0 0 8px;line-height:1.5;">Un code à 6 chiffres a été envoyé à l'adresse&nbsp;:</p>
+            <p id="twoFaDestHint" style="font-size:13px;font-weight:600;text-align:center;border-radius:10px;padding:8px 12px;margin:0 0 12px;word-break:break-all;"></p>
             <p id="twoFaDevHint" style="display:none;background:#fef9c3;border:1px solid #fde68a;border-radius:10px;padding:8px 12px;font-size:12px;color:#92400e;text-align:center;margin-bottom:12px;"></p>
             <input type="text" id="twoFaCode" maxlength="6" placeholder="_ _ _ _ _ _"
                    style="width:100%;padding:14px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:24px;font-weight:700;text-align:center;letter-spacing:10px;outline:none;margin-bottom:6px;box-sizing:border-box;"
@@ -740,12 +735,10 @@
             e.preventDefault();
             const formData = new FormData(e.target);
             const resterConnecte = document.getElementById('resterConnecte').checked;
-            const telephone = (formData.get('Telephone') || '').trim();
             const data = {
-                Email:          formData.get('Email'),
+                Identifiant:    formData.get('Identifiant'),
                 Password:       formData.get('Password'),
                 ResterConnecte: resterConnecte,
-                ...(telephone ? { Telephone: telephone } : {}),
             };
 
             try {
@@ -757,7 +750,7 @@
                 const result = await response.json();
 
                 if (result.requiresTwoFactor) {
-                    openTwoFaModal(result.tempToken, result.devOtp, result.email, resterConnecte, result.smsEnvoye, result.telephonePartiel);
+                    openTwoFaModal(result.tempToken, result.devOtp, result.destination, result.destinationType, resterConnecte);
                 } else if (response.ok && result.success) {
                     const estBloque = saveAuth(result, resterConnecte);
 
@@ -824,21 +817,26 @@
         let _2faTempToken      = null;
         let _2faResterConnecte = false;
 
-        function openTwoFaModal(tempToken, devOtp, email, resterConnecte, smsEnvoye, telephonePartiel) {
+        function openTwoFaModal(tempToken, devOtp, destination, destinationType, resterConnecte) {
             _2faTempToken      = tempToken;
             _2faResterConnecte = !!resterConnecte;
             document.getElementById('twoFaCode').value = '';
             document.getElementById('twoFaError').style.display = 'none';
             document.getElementById('twoFaDevHint').style.display = 'none';
-            document.getElementById('twoFaEmailHint').textContent = email || '';
-            // Hint SMS (si le user a un téléphone et que Brevo SMS est configuré)
-            const smsHint = document.getElementById('twoFaSmsHint');
-            if (smsEnvoye && telephonePartiel) {
-                document.getElementById('twoFaSmsPhone').textContent = telephonePartiel;
-                smsHint.style.display = 'block';
-            } else {
-                smsHint.style.display = 'none';
-            }
+
+            const isSms  = destinationType === 'sms';
+            const desc   = document.getElementById('twoFaDesc');
+            const hint   = document.getElementById('twoFaDestHint');
+            desc.textContent = isSms
+                ? 'Un code à 6 chiffres a été envoyé au numéro :'
+                : 'Un code à 6 chiffres a été envoyé à l\'adresse :';
+            hint.textContent = destination || '';
+            hint.style.background = isSms ? '#f0fdf4' : '#eff6ff';
+            hint.style.color      = isSms ? '#059669'  : '#2563eb';
+            hint.innerHTML = isSms
+                ? `📱 ${destination}`
+                : `✉️ ${destination}`;
+
             document.getElementById('twoFaModal').style.display = 'flex';
             setTimeout(() => document.getElementById('twoFaCode').focus(), 100);
         }

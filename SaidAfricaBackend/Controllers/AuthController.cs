@@ -260,16 +260,27 @@ namespace SaidAfricaBackend.Controllers
         {
             try
             {
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+                var id   = request.Identifiant.Trim();
+                bool par = id.Contains('@'); // true = email, false = téléphone
+
+                User? user;
+                if (par)
+                {
+                    user = await _context.Users.FirstOrDefaultAsync(u => u.Email == id);
+                }
+                else
+                {
+                    // Normaliser : garder seulement les chiffres pour comparer
+                    var digits = new string(id.Where(char.IsDigit).ToArray());
+                    user = await _context.Users.FirstOrDefaultAsync(u =>
+                        u.Telephone != null &&
+                        u.Telephone.Replace("+", "").Replace(" ", "") == digits);
+                }
 
                 if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
-                    return Unauthorized(new { success = false, message = "Email ou mot de passe incorrect." });
+                    return Unauthorized(new { success = false, message = "Identifiant ou mot de passe incorrect." });
 
-                // Sauvegarder le téléphone si le user vient de le renseigner
-                if (!string.IsNullOrWhiteSpace(request.Telephone))
-                    user.Telephone = request.Telephone.Trim();
-
-                // OTP obligatoire à chaque connexion (même avec "Rester connecté")
+                // OTP obligatoire à chaque connexion
                 var otp       = new Random().Next(100000, 999999).ToString();
                 var tempToken = Guid.NewGuid().ToString("N");
 
@@ -278,23 +289,33 @@ namespace SaidAfricaBackend.Controllers
                 user.TwoFactorTempToken = tempToken;
                 await _context.SaveChangesAsync();
 
-                bool emailSent = false;
-                try
-                {
-                    var sendTask = _email.SendTwoFactorOtpAsync(user.Email, user.Prenom, otp);
-                    var winner   = await Task.WhenAny(sendTask, Task.Delay(9000));
-                    if (winner == sendTask && !sendTask.IsFaulted) emailSent = true;
-                }
-                catch { /* email non critique */ }
+                string destination;
+                string destinationType;
+                bool   otpEnvoye = false;
 
-                // SMS OTP si le user a renseigné son téléphone (optionnel)
-                bool smsSent = false;
-                string? telephonePartiel = null;
-                if (!string.IsNullOrWhiteSpace(user.Telephone) && _sms.IsConfigured)
+                if (par)
                 {
-                    try { smsSent = await _sms.SendOtpAsync(user.Telephone, otp); }
+                    // Connexion par email → OTP par email
+                    destinationType = "email";
+                    destination     = user.Email;
+                    try
+                    {
+                        var sendTask = _email.SendTwoFactorOtpAsync(user.Email, user.Prenom, otp);
+                        var winner   = await Task.WhenAny(sendTask, Task.Delay(9000));
+                        if (winner == sendTask && !sendTask.IsFaulted) otpEnvoye = true;
+                    }
                     catch { /* non critique */ }
-                    if (smsSent) telephonePartiel = MasquerTelephone(user.Telephone);
+                }
+                else
+                {
+                    // Connexion par téléphone → OTP par SMS
+                    destinationType = "sms";
+                    destination     = MasquerTelephone(user.Telephone!);
+                    if (_sms.IsConfigured)
+                    {
+                        try { otpEnvoye = await _sms.SendOtpAsync(user.Telephone!, otp); }
+                        catch { /* non critique */ }
+                    }
                 }
 
                 return Ok(new
@@ -302,10 +323,9 @@ namespace SaidAfricaBackend.Controllers
                     success           = true,
                     requiresTwoFactor = true,
                     tempToken,
-                    email             = user.Email,
-                    smsEnvoye         = smsSent,
-                    telephonePartiel,
-                    devOtp            = emailSent ? null : otp
+                    destination,
+                    destinationType,
+                    devOtp            = otpEnvoye ? null : otp
                 });
             }
             catch (Exception ex)
@@ -451,10 +471,9 @@ namespace SaidAfricaBackend.Controllers
 
     public class LoginRequest
     {
-        public required string Email          { get; set; }
+        public required string Identifiant    { get; set; } // email ou numéro de téléphone
         public required string Password       { get; set; }
         public bool            ResterConnecte { get; set; } = false;
-        public string?         Telephone      { get; set; }
     }
 
     public class BootstrapAdminRequest
