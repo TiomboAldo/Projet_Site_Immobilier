@@ -17,12 +17,22 @@ namespace SaidAfricaBackend.Controllers
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _config;
         private readonly IEmailService _email;
+        private readonly ISmsService _sms;
 
-        public AuthController(ApplicationDbContext context, IConfiguration config, IEmailService email)
+        public AuthController(ApplicationDbContext context, IConfiguration config, IEmailService email, ISmsService sms)
         {
             _context = context;
-            _config = config;
-            _email = email;
+            _config  = config;
+            _email   = email;
+            _sms     = sms;
+        }
+
+        private static string MasquerTelephone(string tel)
+        {
+            var digits = new string(tel.Where(char.IsDigit).ToArray());
+            if (digits.Length < 3) return "+237 ••••••";
+            var visible = digits.Length >= 2 ? digits[^2..] : digits;
+            return $"+237 6XX XXX X{visible}";
         }
 
         private string GenerateJwt(User user, bool rememberMe = false)
@@ -272,13 +282,25 @@ namespace SaidAfricaBackend.Controllers
                 }
                 catch { /* email non critique */ }
 
+                // SMS OTP si le user a renseigné son téléphone (optionnel)
+                bool smsSent = false;
+                string? telephonePartiel = null;
+                if (!string.IsNullOrWhiteSpace(user.Telephone) && _sms.IsConfigured)
+                {
+                    try { smsSent = await _sms.SendOtpAsync(user.Telephone, otp); }
+                    catch { /* non critique */ }
+                    if (smsSent) telephonePartiel = MasquerTelephone(user.Telephone);
+                }
+
                 return Ok(new
                 {
                     success           = true,
                     requiresTwoFactor = true,
                     tempToken,
-                    email  = user.Email,
-                    devOtp = emailSent ? null : otp
+                    email             = user.Email,
+                    smsEnvoye         = smsSent,
+                    telephonePartiel,
+                    devOtp            = emailSent ? null : otp
                 });
             }
             catch (Exception ex)

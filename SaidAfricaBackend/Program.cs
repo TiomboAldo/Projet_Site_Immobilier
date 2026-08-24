@@ -99,6 +99,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddSingleton<IEmailService, EmailService>();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<ICamPayService, CamPayService>();
+builder.Services.AddSingleton<ISmsService, BrevoSmsService>();
 
 builder.Services.AddControllers();
 
