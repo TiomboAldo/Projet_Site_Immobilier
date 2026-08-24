@@ -35,6 +35,14 @@ namespace SaidAfricaBackend.Controllers
             return $"+237 6XX XXX X{visible}";
         }
 
+        private static string MasquerEmail(string email)
+        {
+            var at  = email.IndexOf('@');
+            if (at <= 0) return "••••@••••";
+            var visible = email.Length > 2 ? email[..2] : email[..1];
+            return $"{visible}••••{email[at..]}";
+        }
+
         private string GenerateJwt(User user, bool rememberMe = false)
         {
             var claims = new[]
@@ -309,16 +317,20 @@ namespace SaidAfricaBackend.Controllers
                 }
                 else
                 {
-                    // Connexion par téléphone → OTP par SMS
-                    destinationType = "sms";
-                    destination     = MasquerTelephone(user.Telephone!);
-                    if (_sms.IsConfigured)
+                    // Connexion par téléphone → OTP envoyé à l'email du compte
+                    destinationType = "email";
+                    destination     = MasquerEmail(user.Email);
+                    try
                     {
-                        try { otpEnvoye = await _sms.SendOtpAsync(user.Telephone!, otp); }
-                        catch { /* non critique */ }
+                        var sendTask = _email.SendTwoFactorOtpAsync(user.Email, user.Prenom, otp);
+                        var winner   = await Task.WhenAny(sendTask, Task.Delay(9000));
+                        if (winner == sendTask && !sendTask.IsFaulted) otpEnvoye = true;
                     }
+                    catch { /* non critique */ }
                 }
 
+                // devOtp visible tant que la livraison SMS/email n'est pas confirmée en prod
+                bool showDevOtp = !string.Equals(_config["App:HideDevOtp"], "true", StringComparison.OrdinalIgnoreCase);
                 return Ok(new
                 {
                     success           = true,
@@ -326,7 +338,7 @@ namespace SaidAfricaBackend.Controllers
                     tempToken,
                     destination,
                     destinationType,
-                    devOtp            = otpEnvoye ? null : otp
+                    devOtp            = showDevOtp ? otp : (otpEnvoye ? null : otp)
                 });
             }
             catch (Exception ex)
