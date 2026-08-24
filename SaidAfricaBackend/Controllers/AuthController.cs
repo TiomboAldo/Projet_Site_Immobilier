@@ -270,11 +270,12 @@ namespace SaidAfricaBackend.Controllers
                 }
                 else
                 {
-                    // Normaliser : garder seulement les chiffres pour comparer
-                    var digits = new string(id.Where(char.IsDigit).ToArray());
+                    // Normaliser : garder les 9 derniers chiffres (numéro local camerounais)
+                    var digits      = new string(id.Where(char.IsDigit).ToArray());
+                    var localDigits = digits.Length > 9 ? digits.Substring(digits.Length - 9) : digits;
                     user = await _context.Users.FirstOrDefaultAsync(u =>
-                        u.Telephone != null &&
-                        u.Telephone.Replace("+", "").Replace(" ", "") == digits);
+                        u.Telephone != null && u.Telephone != "" &&
+                        u.Telephone.EndsWith(localDigits));
                 }
 
                 if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))

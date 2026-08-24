@@ -46,16 +46,18 @@ namespace SaidAfricaBackend.Services
 
             try
             {
-                var res = await client.PostAsync(
+                var res  = await client.PostAsync(
                     "https://api.brevo.com/v3/transactionalSMS/sms",
                     new StringContent(payload, Encoding.UTF8, "application/json"));
+                var body = await res.Content.ReadAsStringAsync();
 
                 if (!res.IsSuccessStatusCode)
                 {
-                    var body = await res.Content.ReadAsStringAsync();
                     _logger.LogWarning("Brevo SMS echec: {Status} {Body}", res.StatusCode, body);
                     return false;
                 }
+
+                _logger.LogInformation("Brevo SMS envoye a {Phone}: {Body}", phone, body);
                 return true;
             }
             catch (Exception ex)
