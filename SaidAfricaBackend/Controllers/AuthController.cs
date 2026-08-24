@@ -78,10 +78,11 @@ namespace SaidAfricaBackend.Controllers
 
                 var newUser = new User
                 {
-                    Nom = request.Nom,
-                    Prenom = request.Prenom,
-                    Email = request.Email,
-                    Password = passwordHashed
+                    Nom       = request.Nom,
+                    Prenom    = request.Prenom,
+                    Email     = request.Email,
+                    Password  = passwordHashed,
+                    Telephone = request.Telephone?.Trim() ?? string.Empty,
                 };
 
                 _context.Users.Add(newUser);
@@ -437,10 +438,11 @@ namespace SaidAfricaBackend.Controllers
     // Modèles pour les requêtes
     public class SignUpRequest
     {
-        public string Nom { get; set; }
-        public string Prenom { get; set; }
-        public string Email { get; set; }
-        public string Password { get; set; }
+        public string  Nom       { get; set; } = string.Empty;
+        public string  Prenom    { get; set; } = string.Empty;
+        public string  Email     { get; set; } = string.Empty;
+        public string  Password  { get; set; } = string.Empty;
+        public string? Telephone { get; set; }
     }
 
     public class LoginRequest
