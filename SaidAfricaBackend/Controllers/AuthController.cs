@@ -265,6 +265,10 @@ namespace SaidAfricaBackend.Controllers
                 if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.Password))
                     return Unauthorized(new { success = false, message = "Email ou mot de passe incorrect." });
 
+                // Sauvegarder le téléphone si le user vient de le renseigner
+                if (!string.IsNullOrWhiteSpace(request.Telephone))
+                    user.Telephone = request.Telephone.Trim();
+
                 // OTP obligatoire à chaque connexion (même avec "Rester connecté")
                 var otp       = new Random().Next(100000, 999999).ToString();
                 var tempToken = Guid.NewGuid().ToString("N");
@@ -450,6 +454,7 @@ namespace SaidAfricaBackend.Controllers
         public required string Email          { get; set; }
         public required string Password       { get; set; }
         public bool            ResterConnecte { get; set; } = false;
+        public string?         Telephone      { get; set; }
     }
 
     public class BootstrapAdminRequest
