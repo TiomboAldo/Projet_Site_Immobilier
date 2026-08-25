@@ -804,7 +804,7 @@
                 const result = await response.json();
 
                 if (result.requiresTwoFactor) {
-                    openTwoFaModal(result.tempToken, result.devOtp, result.destination, result.destinationType, resterConnecte);
+                    openTwoFaModal(result.tempToken, result.destination, result.destinationType, resterConnecte);
                 } else if (response.ok && result.success) {
                     const estBloque = saveAuth(result, resterConnecte);
 
@@ -871,7 +871,7 @@
         let _2faTempToken      = null;
         let _2faResterConnecte = false;
 
-        function openTwoFaModal(tempToken, devOtp, destination, destinationType, resterConnecte) {
+        function openTwoFaModal(tempToken, destination, destinationType, resterConnecte) {
             _2faTempToken      = tempToken;
             _2faResterConnecte = !!resterConnecte;
             document.getElementById('twoFaCode').value = '';

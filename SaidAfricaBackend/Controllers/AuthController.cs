@@ -330,8 +330,6 @@ namespace SaidAfricaBackend.Controllers
                     catch { /* non critique */ }
                 }
 
-                // devOtp visible tant que la livraison SMS/email n'est pas confirmée en prod
-                bool showDevOtp = !string.Equals(_config["App:HideDevOtp"], "true", StringComparison.OrdinalIgnoreCase);
                 return Ok(new
                 {
                     success           = true,
@@ -339,7 +337,6 @@ namespace SaidAfricaBackend.Controllers
                     tempToken,
                     destination,
                     destinationType,
-                    devOtp            = showDevOtp ? otp : (otpEnvoye ? null : otp)
                 });
             }
             catch (Exception ex)
