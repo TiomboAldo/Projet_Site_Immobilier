@@ -8,6 +8,7 @@
     <title>Login - Levetimmo</title>
     <link rel="icon" type="image/png" href="/src/assets/images/logo.jpeg">
     <link rel="stylesheet" href="../assets/icones/fontawesome/css/all.min.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- <script src="https://cdn.tailwindcss.com"></script> -->
 
 </head>
@@ -76,6 +77,18 @@
                     </label>
                 </div>
                 <button type="submit" class="btn">Se connecter</button>
+                <div class="google-separator">
+                    <span>ou connectez-vous avec</span>
+                </div>
+                <button type="button" class="btn-google" id="btnGoogle" onclick="signInWithGoogle()">
+                    <svg width="18" height="18" viewBox="0 0 48 48" style="margin-right:10px;flex-shrink:0;">
+                        <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.8 2.5 30.3 0 24 0 14.7 0 6.8 5.5 3 13.5l7.8 6C12.7 13.3 17.9 9.5 24 9.5z"/>
+                        <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17z"/>
+                        <path fill="#FBBC05" d="M10.8 28.5A14.6 14.6 0 0 1 9.5 24c0-1.6.3-3.1.8-4.5L2.5 13.5A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.5 10.8l8.3-6.3z"/>
+                        <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.8 2.3-8.4 2.3-6.1 0-11.3-4.1-13.2-9.7l-7.8 6C6.9 42.5 14.8 48 24 48z"/>
+                    </svg>
+                    Se connecter avec Google
+                </button>
                 <div class="sign-link">
                     <p>Vous n'avez pas de compte ? <a href="#" class="signUp-link">S'inscrire</a></p>
                 </div>
@@ -416,6 +429,44 @@
         .btn:hover {
             background: #1976d2;
             transform: translateY(-2px);
+        }
+
+        .google-separator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 14px 0 10px;
+            color: rgba(255,255,255,0.5);
+            font-size: 13px;
+        }
+        .google-separator::before,
+        .google-separator::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(255,255,255,0.2);
+        }
+
+        .btn-google {
+            width: 100%;
+            height: 45px;
+            background: #fff;
+            color: #3c4043;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.3s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .btn-google:hover {
+            background: #f1f3f4;
+            transform: translateY(-2px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.25);
         }
 
         .sign-link {
@@ -911,6 +962,56 @@
         document.getElementById('twoFaCode').addEventListener('keydown', e => {
             if (e.key === 'Enter') submitTwoFa();
         });
+
+        // ═══ CONNEXION GOOGLE ════════════════════════════════════════════════
+        const GOOGLE_CLIENT_ID = '144395603164-bq813jsmcfdpkbc46hgj4u80369esb0a.apps.googleusercontent.com';
+
+        function signInWithGoogle() {
+            if (!GOOGLE_CLIENT_ID) {
+                showMessage('Configuration', 'Google Sign-In non encore configuré.', 'error');
+                return;
+            }
+            google.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                callback:  handleGoogleCredential,
+                auto_select: false,
+            });
+            google.accounts.id.prompt((notification) => {
+                if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                    // Fallback : popup si One Tap bloqué
+                    google.accounts.id.renderButton(
+                        document.getElementById('btnGoogle'),
+                        { theme: 'outline', size: 'large', width: 300, text: 'signin_with' }
+                    );
+                }
+            });
+        }
+
+        async function handleGoogleCredential(response) {
+            const btn = document.getElementById('btnGoogle');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Connexion...';
+            try {
+                const res  = await fetch('/api/auth/google', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ Credential: response.credential }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    saveAuth(data, false);
+                    showMessage('Bienvenue !', data.message, 'success', true);
+                    setTimeout(() => redirectUserByRole(data.user.role), 1200);
+                } else {
+                    showMessage('Erreur', data.message || 'Connexion Google échouée.', 'error');
+                }
+            } catch {
+                showMessage('Erreur', 'Serveur injoignable.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 48 48" style="margin-right:10px;flex-shrink:0;"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.8 2.5 30.3 0 24 0 14.7 0 6.8 5.5 3 13.5l7.8 6C12.7 13.3 17.9 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17z"/><path fill="#FBBC05" d="M10.8 28.5A14.6 14.6 0 0 1 9.5 24c0-1.6.3-3.1.8-4.5L2.5 13.5A23.9 23.9 0 0 0 0 24c0 3.9.9 7.5 2.5 10.8l8.3-6.3z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.8 2.3-8.4 2.3-6.1 0-11.3-4.1-13.2-9.7l-7.8 6C6.9 42.5 14.8 48 24 48z"/></svg>Se connecter avec Google`;
+            }
+        }
 
         // INSCRIPTION
         document.getElementById('formSignUp').onsubmit = async (e) => {
