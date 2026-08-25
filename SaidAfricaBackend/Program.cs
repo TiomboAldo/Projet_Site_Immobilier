@@ -165,6 +165,19 @@ using (var scope = app.Services.CreateScope())
             try { db.Database.ExecuteSqlRaw($"ALTER TABLE `Biens` ADD COLUMN `{col}` {def}"); }
             catch { } // 1060 = colonne existante → ok
         }
+
+        // Créer la table NewsletterSubscribers si elle n'existe pas encore
+        try
+        {
+            db.Database.ExecuteSqlRaw(@"
+                CREATE TABLE IF NOT EXISTS `NewsletterSubscribers` (
+                    `Id`        INT NOT NULL AUTO_INCREMENT,
+                    `Email`     LONGTEXT CHARACTER SET utf8mb4 NOT NULL,
+                    `CreatedAt` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                    PRIMARY KEY (`Id`)
+                ) CHARACTER SET=utf8mb4;");
+        }
+        catch { }
     }
     catch { } // table Biens pas encore créée → Migrate() la crée juste après
 

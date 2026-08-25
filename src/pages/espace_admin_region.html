@@ -324,6 +324,10 @@
                 <i class="fas fa-bell"></i>
                 <span>Notifications</span>
             </button>
+            <button onclick="switchSection('newsletter', this)" class="sidebar-item">
+                <i class="fas fa-envelope-open-text"></i>
+                <span>Newsletter</span>
+            </button>
             <button onclick="switchSection('parametres', this)" class="sidebar-item">
                 <i class="fas fa-sliders"></i>
                 <span>Paramètres</span>
@@ -627,6 +631,48 @@
             <section id="section-notifications" class="section-fade">
                 <h1 style="font-size:28px; font-weight:800; color:#111827; margin-bottom:24px;">Notifications</h1>
                 <div id="notificationsGrid" style="display:flex; flex-direction:column; gap:12px;"></div>
+            </section>
+
+            <!-- NEWSLETTER -->
+            <section id="section-newsletter" class="section-fade">
+                <h1 style="font-size:28px;font-weight:800;color:#111827;margin-bottom:24px;">Newsletter</h1>
+
+                <!-- Stats + liste abonnés -->
+                <div style="background:#fff;border-radius:20px;padding:24px;margin-bottom:24px;box-shadow:0 1px 4px rgba(0,0,0,.07);">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+                        <h2 style="font-size:16px;font-weight:700;color:#111827;margin:0;">
+                            <i class="fas fa-users" style="color:#2563eb;margin-right:8px;"></i>
+                            Abonnés — <span id="nlCount">…</span>
+                        </h2>
+                        <button onclick="loadNewsletterSubscribers()"
+                            style="background:#eff6ff;color:#2563eb;border:none;border-radius:10px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;">
+                            <i class="fas fa-rotate-right" style="margin-right:6px;"></i>Actualiser
+                        </button>
+                    </div>
+                    <div id="nlSubscribersList" style="max-height:260px;overflow-y:auto;font-size:13px;color:#374151;">
+                        <p style="text-align:center;color:#9ca3af;padding:20px 0;">Chargement…</p>
+                    </div>
+                </div>
+
+                <!-- Rédiger une newsletter -->
+                <div style="background:#fff;border-radius:20px;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,.07);">
+                    <h2 style="font-size:16px;font-weight:700;color:#111827;margin:0 0 20px;">
+                        <i class="fas fa-paper-plane" style="color:#2563eb;margin-right:8px;"></i>Envoyer une newsletter
+                    </h2>
+                    <div class="form-group">
+                        <label>Sujet de l'email</label>
+                        <input type="text" id="nlSujet" placeholder="Ex : Nouvelles opportunités immobilières…">
+                    </div>
+                    <div class="form-group">
+                        <label>Contenu (HTML autorisé)</label>
+                        <textarea id="nlCorps" rows="10" placeholder="&lt;h2&gt;Bonjour,&lt;/h2&gt;&lt;p&gt;Voici nos dernières annonces…&lt;/p&gt;" style="font-family:monospace;font-size:13px;"></textarea>
+                    </div>
+                    <p id="nlSendStatus" style="font-size:13px;color:#6b7280;margin-bottom:12px;display:none;"></p>
+                    <button onclick="sendNewsletter()"
+                        style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:12px;padding:12px 28px;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .2s;">
+                        <i class="fas fa-paper-plane" style="margin-right:8px;"></i>Envoyer à tous les abonnés
+                    </button>
+                </div>
             </section>
 
             <!-- PARAMÈTRES -->
@@ -2298,6 +2344,7 @@
             if (id === 'nos-biens')     renderNosBiens();
             if (id === 'publier')       openAdminBienModal();
             if (id === 'parametres')    aLoadProfile();
+            if (id === 'newsletter')    loadNewsletterSubscribers();
             window.scrollTo(0, 0);
         }
 
@@ -3257,6 +3304,100 @@
         }
     </script>
     <script type="module" src="/src/js/main.js"></script>
+
+    <script>
+        // ═══════════════════════════════════════════════════════════════════
+        // NEWSLETTER (admin)
+        // ═══════════════════════════════════════════════════════════════════
+        async function loadNewsletterSubscribers() {
+            const token = localStorage.getItem('jwtToken');
+            const listEl = document.getElementById('nlSubscribersList');
+            const countEl = document.getElementById('nlCount');
+            if (!listEl) return;
+
+            listEl.innerHTML = '<p style="text-align:center;color:#9ca3af;padding:20px 0;">Chargement…</p>';
+
+            try {
+                const res  = await fetch('/api/newsletter/subscribers', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await res.json();
+                if (!data.success) { listEl.innerHTML = '<p style="color:#ef4444;text-align:center;">Erreur.</p>'; return; }
+
+                if (countEl) countEl.textContent = data.count;
+
+                if (data.subscribers.length === 0) {
+                    listEl.innerHTML = '<p style="text-align:center;color:#9ca3af;padding:20px 0;">Aucun abonné pour l\'instant.</p>';
+                    return;
+                }
+
+                listEl.innerHTML = data.subscribers.map(s => `
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:10px;background:#f9fafb;margin-bottom:6px;">
+                        <div>
+                            <span style="font-weight:600;color:#111827;">${s.email}</span>
+                            <span style="font-size:11px;color:#9ca3af;margin-left:10px;">${new Date(s.createdAt).toLocaleDateString('fr-FR')}</span>
+                        </div>
+                        <button onclick="deleteSubscriber(${s.id}, this)"
+                            style="background:#fee2e2;color:#dc2626;border:none;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;">
+                            <i class="fas fa-trash-can"></i>
+                        </button>
+                    </div>`).join('');
+            } catch {
+                listEl.innerHTML = '<p style="color:#ef4444;text-align:center;">Serveur injoignable.</p>';
+            }
+        }
+
+        async function deleteSubscriber(id, btn) {
+            if (!confirm('Supprimer cet abonné ?')) return;
+            const token = localStorage.getItem('jwtToken');
+            btn.disabled = true;
+            try {
+                const res = await fetch(`/api/newsletter/subscribers/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (res.ok) loadNewsletterSubscribers();
+            } catch { btn.disabled = false; }
+        }
+
+        async function sendNewsletter() {
+            const token  = localStorage.getItem('jwtToken');
+            const sujet  = document.getElementById('nlSujet').value.trim();
+            const corps  = document.getElementById('nlCorps').value.trim();
+            const status = document.getElementById('nlSendStatus');
+            const btn    = event.currentTarget;
+
+            if (!sujet || !corps) { alert('Veuillez renseigner le sujet et le contenu.'); return; }
+            if (!confirm(`Envoyer cette newsletter à tous les abonnés ?`)) return;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i>Envoi en cours…';
+            status.style.display = 'none';
+
+            try {
+                const res  = await fetch('/api/newsletter/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ Sujet: sujet, Corps: corps }),
+                });
+                const data = await res.json();
+                status.textContent    = data.message;
+                status.style.color    = data.success ? '#16a34a' : '#ef4444';
+                status.style.display  = 'block';
+                if (data.success) {
+                    document.getElementById('nlSujet').value = '';
+                    document.getElementById('nlCorps').value = '';
+                }
+            } catch {
+                status.textContent   = 'Serveur injoignable.';
+                status.style.color   = '#ef4444';
+                status.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:8px;"></i>Envoyer à tous les abonnés';
+            }
+        }
+    </script>
 </body>
 
 </html>

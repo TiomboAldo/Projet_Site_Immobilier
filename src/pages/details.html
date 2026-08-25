@@ -131,11 +131,11 @@
                 <h3 class="text-lg font-bold text-white mb-4">Newsletter</h3>
                 <p class="text-sm text-gray-400 mb-6">Restez informé de nos nouvelles opportunités de luxe.</p>
 
-                <form class="relative w-full max-w-md">
-                    <input type="email" placeholder="Votre adresse email"
+                <form id="newsletterFormDetails" class="relative w-full max-w-md">
+                    <input id="newsletterEmailDetails" type="email" placeholder="Votre adresse email"
                         class="w-full bg-white px-6 py-4 pr-[140px] rounded-full focus:outline-none text-gray-800 text-sm shadow-inner"
                         required>
-                    <button type="submit"
+                    <button type="submit" id="newsletterBtnDetails"
                         class="absolute top-0 right-0 h-full bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 rounded-full transition duration-300 shadow-[0_0_0px_0_rgba(59,130,246,0.5)] hover:shadow-[0_0_15px_3px_rgba(59,130,246,0.5)]">
                         S'abonner
                     </button>
@@ -145,7 +145,7 @@
         </div>
 
         <div class="py-8 text-center text-sm text-gray-500">
-            © 2025 Levetimmo. Tous droits réservés.
+            © 2026 Levetimmo. Tous droits réservés.
         </div>
     </footer>
 
@@ -1371,6 +1371,38 @@
 
 
     <script type="module" src="/src/js/main.js"></script>
+
+    <script>
+        // Newsletter
+        document.getElementById('newsletterFormDetails')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const input = document.getElementById('newsletterEmailDetails');
+            const btn   = document.getElementById('newsletterBtnDetails');
+            const email = input.value.trim();
+            if (!email) return;
+            btn.disabled = true;
+            btn.textContent = '...';
+            try {
+                const res  = await fetch('/api/newsletter/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ Email: email }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    input.value = '';
+                    window.showMessage && showMessage('Abonnement confirmé !', data.message, 'success');
+                } else {
+                    alert(data.message || 'Erreur.');
+                }
+            } catch {
+                alert('Serveur injoignable.');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "S'abonner";
+            }
+        });
+    </script>
 
     <!-- ═══ MODAL PAIEMENT MOBILE MONEY ════════════════════════════════════ -->
     <div id="paymentModal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,0.65);backdrop-filter:blur(5px);">

@@ -19,6 +19,7 @@ namespace SaidAfricaBackend
         public DbSet<BienLike>            BienLikes           { get; set; }
         public DbSet<BienVue>             BienVues            { get; set; }
         public DbSet<Payment>             Payments            { get; set; }
+        public DbSet<NewsletterSubscriber> NewsletterSubscribers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -506,6 +507,14 @@ namespace SaidAfricaBackend
         // Navigation
         public Bien? Bien { get; set; }
         public User? User { get; set; }
+    }
+
+    // ─── ABONNÉ NEWSLETTER ────────────────────────────────────────────────────
+    public class NewsletterSubscriber
+    {
+        public int      Id        { get; set; }
+        public string   Email     { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 
     // ─── PAIEMENT MTN MOBILE MONEY ────────────────────────────────────────────

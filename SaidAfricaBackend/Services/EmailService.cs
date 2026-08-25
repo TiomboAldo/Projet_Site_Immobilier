@@ -16,6 +16,7 @@ namespace SaidAfricaBackend.Services
         Task SendBienvenueAsync(string email, string prenom);
         Task SendPasswordResetAsync(string email, string prenom, string resetToken);
         Task SendTwoFactorOtpAsync(string email, string prenom, string otp);
+        Task SendContactAsync(string fromNom, string fromEmail, string message);
     }
 
     public class EmailService : IEmailService
@@ -182,6 +183,18 @@ namespace SaidAfricaBackend.Services
                    <a href='{link}' style='display:inline-block;background:#2563eb;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;margin:20px 0;font-size:15px;'>Réinitialiser mon mot de passe</a>
                    <p style='font-size:13px;color:#6b7280;margin-top:16px;'>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email — votre mot de passe ne sera pas modifié.</p>");
         }
+
+        public Task SendContactAsync(string fromNom, string fromEmail, string message)
+            => SendAsync("tiomboaldo@gmail.com", "Levetimmo Admin",
+                $"📩 Nouveau message de contact — {fromNom}",
+                $@"<h2>Nouveau message via le formulaire de contact</h2>
+                   <div style='background:#eff6ff;border-left:4px solid #2563eb;padding:16px;border-radius:8px;margin:20px 0;'>
+                       <p style='margin:0;'><strong>Nom :</strong> {fromNom}</p>
+                       <p style='margin:8px 0 0;'><strong>Email :</strong> <a href='mailto:{fromEmail}'>{fromEmail}</a></p>
+                   </div>
+                   <p><strong>Message :</strong></p>
+                   <p style='background:#f9fafb;border-radius:8px;padding:16px;white-space:pre-wrap;'>{message}</p>
+                   <p style='font-size:12px;color:#9ca3af;margin-top:24px;'>Pour répondre, écrivez à <a href='mailto:{fromEmail}'>{fromEmail}</a></p>");
 
         // ─── Template HTML commun ─────────────────────────────────────────────
         private static string WrapTemplate(string subject, string content) => $@"
