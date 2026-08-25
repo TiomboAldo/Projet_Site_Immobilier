@@ -7,6 +7,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using SaidAfricaBackend.Services;
+using Google.Apis.Auth;
 
 namespace SaidAfricaBackend.Controllers
 {
@@ -347,6 +348,62 @@ namespace SaidAfricaBackend.Controllers
             }
         }
 
+        // --- CONNEXION GOOGLE ---
+        [HttpPost("google")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GoogleSignIn([FromBody] GoogleSignInRequest req)
+        {
+            if (string.IsNullOrWhiteSpace(req.Credential))
+                return BadRequest(new { success = false, message = "Token Google manquant." });
+
+            Google.Apis.Auth.GoogleJsonWebSignature.Payload payload;
+            try
+            {
+                var settings = new Google.Apis.Auth.GoogleJsonWebSignature.ValidationSettings
+                {
+                    Audience = new[] { _config["Google:ClientId"] }
+                };
+                payload = await Google.Apis.Auth.GoogleJsonWebSignature.ValidateAsync(req.Credential, settings);
+            }
+            catch
+            {
+                return Unauthorized(new { success = false, message = "Token Google invalide." });
+            }
+
+            var email = payload.Email;
+            var user  = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+
+            if (user == null)
+            {
+                // Créer le compte automatiquement
+                user = new User
+                {
+                    Email    = email,
+                    Prenom   = payload.GivenName  ?? email.Split('@')[0],
+                    Nom      = payload.FamilyName  ?? "",
+                    Password = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()),
+                    PhotoUrl = payload.Picture,
+                    EstValide = true,
+                };
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+                _ = _email.SendBienvenueAsync(user.Email, user.Prenom);
+            }
+
+            if (user.EstBloque)
+                return Unauthorized(new { success = false, message = "Compte suspendu." });
+
+            // Google a déjà authentifié l'utilisateur → pas de 2FA requis
+            var token = GenerateJwt(user);
+            return Ok(new
+            {
+                success = true,
+                message = $"Ravi de vous revoir, {user.Prenom} !",
+                token,
+                user = new { user.Id, user.Nom, user.Prenom, user.Email, user.Role, user.EstValide, user.EstBloque }
+            });
+        }
+
         // --- VÉRIFIER LE CODE OTP (étape 2 de la connexion) ---
         [HttpPost("verify-2fa")]
         [AllowAnonymous]
@@ -473,6 +530,11 @@ namespace SaidAfricaBackend.Controllers
     }
 
     // Modèles pour les requêtes
+    public class GoogleSignInRequest
+    {
+        public string Credential { get; set; } = string.Empty;
+    }
+
     public class SignUpRequest
     {
         public string  Nom       { get; set; } = string.Empty;
