@@ -2434,6 +2434,8 @@
             document.getElementById('visitPrenom').value = localStorage.getItem('userPrenom') || '';
             document.getElementById('visitNom').value = localStorage.getItem('userNom') || '';
             document.getElementById('visitEmail').value = localStorage.getItem('userEmail') || '';
+            // Bloquer les dates passées
+            document.getElementById('visitDate').min = new Date().toISOString().split('T')[0];
             const modal = document.getElementById('visitModal');
             modal.classList.remove('modal-hidden');
             modal.classList.add('modal-visible');
@@ -2701,6 +2703,14 @@
             e.preventDefault();
             const p = properties.find(item => item.id === currentPropertyId);
             const userId = getUserId();
+
+            // Validation date : refuser les dates passées
+            const dateVal = document.getElementById('visitDate').value;
+            const today   = new Date().toISOString().split('T')[0];
+            if (!dateVal || dateVal < today) {
+                alert('Veuillez choisir une date à partir d\'aujourd\'hui.');
+                return;
+            }
 
             const btn = this.querySelector('button[type="submit"]');
             const originalText = btn.innerHTML;

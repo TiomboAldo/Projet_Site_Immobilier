@@ -243,7 +243,8 @@
                         <label for="visitDate" class="block text-sm font-medium text-gray-700 mb-1">Date de
                             Visite Souhaitée</label>
                         <input type="date" id="visitDate" required
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                            min="">
                     </div>
                     <div>
                         <label for="visitMessage" class="block text-sm font-medium text-gray-700 mb-1">Message (optionnel)</label>
@@ -1064,12 +1065,23 @@
             document.getElementById('ps')?.remove();
             if ('serviceWorker' in navigator) navigator.serviceWorker.register('../sw.js').catch(() => {});
 
+            // Bloquer les dates passées
+            const today = new Date().toISOString().split('T')[0];
+            const visitDateInput = document.getElementById('visitDate');
+            if (visitDateInput) visitDateInput.min = today;
+
             const visitForm = document.getElementById('visitForm');
             if (visitForm) {
                 visitForm.addEventListener('submit', async function (e) {
                     e.preventDefault();
                     const userId = parseInt(localStorage.getItem('userId') || '0', 10);
                     const propertyId = parseInt(this.dataset.propertyId, 10);
+
+                    const dateVal = document.getElementById('visitDate').value;
+                    if (!dateVal || dateVal < today) {
+                        alert('Veuillez choisir une date à partir d\'aujourd\'hui.');
+                        return;
+                    }
 
                     const btn = this.querySelector('button[type="submit"]');
                     const originalText = btn.innerHTML;
