@@ -317,6 +317,10 @@ namespace SaidAfricaBackend.Controllers
             demande.User.NIU            = demande.NIU;
             demande.User.NomAgence      = demande.NomAgence;
 
+            // Démarrer le compteur de période gratuite (1 an) pour AgentImmobilier
+            if (demande.TypeCompteProf == "AgentImmobilier" && demande.User.DateDevenirPro == null)
+                demande.User.DateDevenirPro = DateTime.UtcNow;
+
             // Marquer le KYC comme approuvé
             demande.User.KycStatut       = "Approuve";
             demande.User.KycDocumentType = demande.DocumentType;

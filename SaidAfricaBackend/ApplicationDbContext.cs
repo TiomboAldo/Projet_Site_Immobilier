@@ -20,6 +20,7 @@ namespace SaidAfricaBackend
         public DbSet<BienVue>             BienVues            { get; set; }
         public DbSet<Payment>             Payments            { get; set; }
         public DbSet<NewsletterSubscriber> NewsletterSubscribers { get; set; }
+        public DbSet<CommissionTransaction> CommissionTransactions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -171,6 +172,31 @@ namespace SaidAfricaBackend
             modelBuilder.Entity<Payment>()
                 .Property(p => p.Montant)
                 .HasPrecision(12, 2);
+
+            modelBuilder.Entity<CommissionTransaction>()
+                .HasOne(c => c.Bien)
+                .WithMany()
+                .HasForeignKey(c => c.BienId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<CommissionTransaction>()
+                .HasOne(c => c.Agent)
+                .WithMany()
+                .HasForeignKey(c => c.AgentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<CommissionTransaction>()
+                .Property(c => c.MontantBrut).HasPrecision(14, 2);
+            modelBuilder.Entity<CommissionTransaction>()
+                .Property(c => c.TauxTaxePct).HasPrecision(5, 2);
+            modelBuilder.Entity<CommissionTransaction>()
+                .Property(c => c.MontantTaxe).HasPrecision(14, 2);
+            modelBuilder.Entity<CommissionTransaction>()
+                .Property(c => c.MontantNetApresImpots).HasPrecision(14, 2);
+            modelBuilder.Entity<CommissionTransaction>()
+                .Property(c => c.CommissionLevetimmo).HasPrecision(14, 2);
+            modelBuilder.Entity<CommissionTransaction>()
+                .Property(c => c.CommissionAgent).HasPrecision(14, 2);
         }
     }
 
@@ -227,6 +253,13 @@ namespace SaidAfricaBackend
 
         /// <summary>Nom de l'agence déclarée (pour AgentImmobilier)</summary>
         public string? NomAgence { get; set; }
+
+        // ── Abonnement AgentImmobilier ────────────────────────────────────────
+        /// <summary>Date à laquelle le compte professionnel a été validé (début de la période gratuite d'1 an)</summary>
+        public DateTime? DateDevenirPro { get; set; }
+
+        /// <summary>Date d'expiration de l'abonnement annuel payant (null = jamais payé ou en période gratuite)</summary>
+        public DateTime? AbonnementExpireLe { get; set; }
 
         // Navigation
         public ICollection<Reservation> Reservations { get; set; } = new List<Reservation>();
@@ -515,6 +548,41 @@ namespace SaidAfricaBackend
         public int      Id        { get; set; }
         public string   Email     { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    }
+
+    // ─── TRANSACTION AVEC COMMISSION ─────────────────────────────────────────
+    public class CommissionTransaction
+    {
+        public int     Id            { get; set; }
+        public int?    BienId        { get; set; }
+        public int     AgentId       { get; set; }   // UserId de l'agent/propriétaire
+
+        /// <summary>vente | location</summary>
+        public string  TypeTransaction { get; set; } = string.Empty;
+
+        public decimal MontantBrut           { get; set; }  // prix de la transaction
+        public decimal TauxTaxePct           { get; set; }  // % de taxe appliqué
+        public decimal MontantTaxe           { get; set; }  // = MontantBrut × TauxTaxePct / 100
+        public decimal MontantNetApresImpots { get; set; }  // = MontantBrut − MontantTaxe
+
+        /// <summary>50 % du net (pour Levetimmo)</summary>
+        public decimal CommissionLevetimmo { get; set; }
+
+        /// <summary>50 % du net (pour l'agent)</summary>
+        public decimal CommissionAgent     { get; set; }
+
+        /// <summary>true = Levetimmo gère ; false = agent gère directement</summary>
+        public bool    GereParLevetimmo { get; set; } = true;
+
+        /// <summary>En cours | Complète | Annulée</summary>
+        public string  Statut    { get; set; } = "En cours";
+        public string? Notes     { get; set; }
+
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        // Navigation
+        public Bien? Bien  { get; set; }
+        public User? Agent { get; set; }
     }
 
     // ─── PAIEMENT MTN MOBILE MONEY ────────────────────────────────────────────

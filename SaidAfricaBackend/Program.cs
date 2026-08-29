@@ -101,6 +101,11 @@ builder.Services.AddHttpClient();
 builder.Services.AddSingleton<ICamPayService, CamPayService>();
 builder.Services.AddSingleton<ISmsService, BrevoSmsService>();
 
+// Taxe & commission (taux configurables via appsettings si besoin)
+builder.Services.AddSingleton(new SaidAfricaBackend.Services.TauxTaxeConfig());
+builder.Services.AddSingleton<SaidAfricaBackend.Services.ITaxCommissionService,
+                               SaidAfricaBackend.Services.TaxCommissionService>();
+
 builder.Services.AddControllers();
 
 var app = builder.Build();
@@ -175,6 +180,47 @@ using (var scope = app.Services.CreateScope())
                     `Email`     LONGTEXT CHARACTER SET utf8mb4 NOT NULL,
                     `CreatedAt` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
                     PRIMARY KEY (`Id`)
+                ) CHARACTER SET=utf8mb4;");
+        }
+        catch { }
+
+        // Colonnes abonnement AgentImmobilier sur Users (idempotent)
+        foreach (var (col, def) in new (string, string)[]
+        {
+            ("DateDevenirPro",     "DATETIME(6) NULL"),
+            ("AbonnementExpireLe", "DATETIME(6) NULL"),
+        })
+        {
+            try { db.Database.ExecuteSqlRaw($"ALTER TABLE `Users` ADD COLUMN `{col}` {def}"); }
+            catch { }
+        }
+
+        // Table CommissionTransactions (idempotent)
+        try
+        {
+            db.Database.ExecuteSqlRaw(@"
+                CREATE TABLE IF NOT EXISTS `CommissionTransactions` (
+                    `Id`                    INT NOT NULL AUTO_INCREMENT,
+                    `BienId`                INT NULL,
+                    `AgentId`               INT NOT NULL,
+                    `TypeTransaction`       LONGTEXT CHARACTER SET utf8mb4 NOT NULL,
+                    `MontantBrut`           DECIMAL(14,2) NOT NULL,
+                    `TauxTaxePct`           DECIMAL(5,2)  NOT NULL,
+                    `MontantTaxe`           DECIMAL(14,2) NOT NULL,
+                    `MontantNetApresImpots` DECIMAL(14,2) NOT NULL,
+                    `CommissionLevetimmo`   DECIMAL(14,2) NOT NULL,
+                    `CommissionAgent`       DECIMAL(14,2) NOT NULL,
+                    `GereParLevetimmo`      TINYINT(1)    NOT NULL DEFAULT 1,
+                    `Statut`                LONGTEXT CHARACTER SET utf8mb4 NOT NULL,
+                    `Notes`                 LONGTEXT CHARACTER SET utf8mb4 NULL,
+                    `CreatedAt`             DATETIME(6)   NOT NULL,
+                    PRIMARY KEY (`Id`),
+                    INDEX `IX_CommissionTransactions_AgentId` (`AgentId`),
+                    INDEX `IX_CommissionTransactions_BienId`  (`BienId`),
+                    CONSTRAINT `FK_CommTx_Biens`
+                        FOREIGN KEY (`BienId`)  REFERENCES `Biens`(`Id`) ON DELETE SET NULL,
+                    CONSTRAINT `FK_CommTx_Users`
+                        FOREIGN KEY (`AgentId`) REFERENCES `Users`(`Id`) ON DELETE CASCADE
                 ) CHARACTER SET=utf8mb4;");
         }
         catch { }

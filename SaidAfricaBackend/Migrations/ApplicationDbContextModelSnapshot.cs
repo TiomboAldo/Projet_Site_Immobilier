@@ -557,6 +557,68 @@ namespace SaidAfricaBackend.Migrations
                     b.ToTable("Reservations");
                 });
 
+            modelBuilder.Entity("SaidAfricaBackend.CommissionTransaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    b.Property<int?>("BienId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("AgentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TypeTransaction")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<decimal>("MontantBrut")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("decimal(14,2)");
+
+                    b.Property<decimal>("TauxTaxePct")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<decimal>("MontantTaxe")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("decimal(14,2)");
+
+                    b.Property<decimal>("MontantNetApresImpots")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("decimal(14,2)");
+
+                    b.Property<decimal>("CommissionLevetimmo")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("decimal(14,2)");
+
+                    b.Property<decimal>("CommissionAgent")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("decimal(14,2)");
+
+                    b.Property<bool>("GereParLevetimmo")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Statut")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BienId");
+
+                    b.HasIndex("AgentId");
+
+                    b.ToTable("CommissionTransactions");
+                });
+
             modelBuilder.Entity("SaidAfricaBackend.User", b =>
                 {
                     b.Property<int>("Id")
@@ -644,9 +706,33 @@ namespace SaidAfricaBackend.Migrations
                     b.Property<string>("TypeCompteProf")
                         .HasColumnType("longtext");
 
+                    b.Property<DateTime?>("DateDevenirPro")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("AbonnementExpireLe")
+                        .HasColumnType("datetime(6)");
+
                     b.HasKey("Id");
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("SaidAfricaBackend.CommissionTransaction", b =>
+                {
+                    b.HasOne("SaidAfricaBackend.Bien", "Bien")
+                        .WithMany()
+                        .HasForeignKey("BienId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SaidAfricaBackend.User", "Agent")
+                        .WithMany()
+                        .HasForeignKey("AgentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Bien");
+
+                    b.Navigation("Agent");
                 });
 
             modelBuilder.Entity("SaidAfricaBackend.Bien", b =>
