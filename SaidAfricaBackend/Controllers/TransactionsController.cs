@@ -157,7 +157,7 @@ namespace SaidAfricaBackend.Controllers
         // Mettre à jour le statut d'une transaction (admin)
         [HttpPatch("{id}/statut")]
         [Authorize(Roles = "AdminRegion,AdminPays,DirecteurProjet")]
-        public async Task<IActionResult> UpdateStatut(int id, [FromBody] UpdateStatutRequest req)
+        public async Task<IActionResult> UpdateStatut(int id, [FromBody] UpdateTransactionStatutRequest req)
         {
             var tx = await _context.CommissionTransactions.FindAsync(id);
             if (tx == null) return NotFound(new { success = false });
@@ -201,7 +201,7 @@ namespace SaidAfricaBackend.Controllers
         public string? Notes            { get; set; }
     }
 
-    public class UpdateStatutRequest
+    public class UpdateTransactionStatutRequest
     {
         public string Statut { get; set; } = string.Empty;  // "En cours" | "Complète" | "Annulée"
     }
