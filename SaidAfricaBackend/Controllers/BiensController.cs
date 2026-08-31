@@ -162,13 +162,8 @@ namespace SaidAfricaBackend.Controllers
         [Authorize(Roles = "AdminRegion,AdminPays,DirecteurProjet")]
         public async Task<IActionResult> GetRegion()
         {
+            // Pas de filtre de région : un seul admin gère toutes les régions pour l'instant
             var query = _context.Biens.Include(b => b.Proprietaire).AsQueryable();
-
-            if (CurrentRole() == "AdminRegion")
-            {
-                var admin = await _context.Users.FindAsync(CurrentUserId());
-                query = query.Where(b => b.Proprietaire != null && b.Proprietaire.Region == admin!.Region);
-            }
 
             var biensList = await query.OrderByDescending(b => b.DateAjout).ToListAsync();
             var bienIds   = biensList.Select(b => b.Id).ToList();
