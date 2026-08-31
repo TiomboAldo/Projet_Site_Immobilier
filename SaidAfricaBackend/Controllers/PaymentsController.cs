@@ -292,7 +292,7 @@ namespace SaidAfricaBackend.Controllers
                     .FirstOrDefaultAsync(b => b.Id == payment.BienId);
                 if (bien?.Proprietaire == null) return;
 
-                NotificationHelper.Creer(_context, bien.ProprietaireId,
+                NotificationHelper.Creer(_context, bien.ProprietaireId ?? 0,
                     "TransactionConfirmee", "Transaction confirmée via Levetimmo",
                     $"Paiement reçu pour « {bien.Titre} ». Votre part : {commTx.CommissionAgent:N0} XAF.",
                     "transactions");
