@@ -11,18 +11,20 @@ namespace SaidAfricaBackend.Controllers
     [Authorize]
     public class PaymentsController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
-        private readonly ICamPayService _campay;
-        private readonly IEmailService _email;
+        private readonly ApplicationDbContext  _context;
+        private readonly ICamPayService        _campay;
+        private readonly IEmailService         _email;
+        private readonly ITaxCommissionService _taxSvc;
 
         private int    CurrentUserId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
         private string CurrentRole()   => User.FindFirstValue(ClaimTypes.Role) ?? "";
 
-        public PaymentsController(ApplicationDbContext context, ICamPayService campay, IEmailService email)
+        public PaymentsController(ApplicationDbContext context, ICamPayService campay, IEmailService email, ITaxCommissionService taxSvc)
         {
             _context = context;
             _campay  = campay;
             _email   = email;
+            _taxSvc  = taxSvc;
         }
 
         // ─── POST /api/payments/initier ───────────────────────────────────────
@@ -92,6 +94,118 @@ namespace SaidAfricaBackend.Controllers
             return Ok(new { success = true, paymentId = payment.Id, reference });
         }
 
+        // ─── GET /api/payments/calculer/{bienId} ─────────────────────────────
+        [HttpGet("calculer/{bienId:int}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Calculer(int bienId)
+        {
+            var bien = await _context.Biens
+                .Include(b => b.Proprietaire)
+                .FirstOrDefaultAsync(b => b.Id == bienId);
+
+            if (bien == null) return NotFound(new { success = false });
+
+            var prixStr = System.Text.RegularExpressions.Regex.Replace(bien.Prix ?? "0", @"[^\d]", "");
+            decimal.TryParse(prixStr, out var montantBrut);
+
+            var typeTransaction    = (bien.Statut ?? "vente").ToLower();
+            var typeCompte         = bien.Proprietaire?.TypeCompteProf ?? "";
+            var agenceVendTerrain  = typeCompte == "AgenceImmobiliere" && (bien.Type ?? "").ToLower().Contains("terrain");
+
+            var calc = _taxSvc.Calculer(montantBrut, typeTransaction, typeCompte, agenceVendTerrain);
+
+            return Ok(new { success = true, calcul = calc, titre = bien.Titre, statut = typeTransaction, montantBrut });
+        }
+
+        // ─── POST /api/payments/acheter ───────────────────────────────────────
+        [HttpPost("acheter")]
+        public async Task<IActionResult> Acheter([FromBody] AcheterRequest req)
+        {
+            if (string.IsNullOrWhiteSpace(req.NumeroPayeur))
+                return BadRequest(new { success = false, message = "Numéro de téléphone requis." });
+
+            var userId = CurrentUserId();
+
+            var bien = await _context.Biens
+                .Include(b => b.Proprietaire)
+                .FirstOrDefaultAsync(b => b.Id == req.BienId && b.EstDisponible && b.StatutPublication == "Valide");
+
+            if (bien == null)
+                return NotFound(new { success = false, message = "Bien introuvable ou indisponible." });
+            if (bien.ProprietaireId == userId)
+                return BadRequest(new { success = false, message = "Vous ne pouvez pas acheter votre propre bien." });
+
+            var prixStr = System.Text.RegularExpressions.Regex.Replace(bien.Prix ?? "0", @"[^\d]", "");
+            decimal.TryParse(prixStr, out var montantBrut);
+
+            var typeTransaction   = (bien.Statut ?? "vente").ToLower();
+            var typeCompte        = bien.Proprietaire?.TypeCompteProf ?? "";
+            var agenceVendTerrain = typeCompte == "AgenceImmobiliere" && (bien.Type ?? "").ToLower().Contains("terrain");
+
+            var calc = _taxSvc.Calculer(montantBrut, typeTransaction, typeCompte, agenceVendTerrain);
+
+            if (!calc.GereParLevetimmo)
+                return BadRequest(new { success = false, message = "Ce bien se traite en contact direct avec le vendeur." });
+
+            var commTx = new CommissionTransaction
+            {
+                BienId                = req.BienId,
+                AgentId               = bien.ProprietaireId ?? 0,
+                TypeTransaction       = typeTransaction,
+                MontantBrut           = calc.MontantBrut,
+                TauxTaxePct           = calc.TauxTaxePct,
+                MontantTaxe           = calc.MontantTaxe,
+                MontantNetApresImpots = calc.MontantNetApresImpots,
+                CommissionLevetimmo   = calc.CommissionLevetimmo,
+                CommissionAgent       = calc.CommissionAgent,
+                GereParLevetimmo      = true,
+                Statut                = "En cours",
+                Notes                 = $"Acheteur:{userId} | Tel:{req.NumeroPayeur}",
+            };
+            _context.CommissionTransactions.Add(commTx);
+            await _context.SaveChangesAsync();
+
+            var payment = new Payment
+            {
+                TypePaiement  = "Achat",
+                Montant       = calc.MontantBrut,
+                NumeroPayeur  = req.NumeroPayeur.Trim(),
+                UserId        = userId,
+                BienId        = req.BienId,
+                ReservationId = commTx.Id,
+                Statut        = "EnAttente",
+            };
+            _context.Payments.Add(payment);
+            await _context.SaveChangesAsync();
+
+            if (!_campay.IsConfigured)
+            {
+                payment.Statut = "Reussi";
+                await _context.SaveChangesAsync();
+                _ = ConfirmerAchatAsync(payment);
+                return Ok(new { success = true, paymentId = payment.Id, unconfigured = true,
+                    reference = $"TXN-LVT-{payment.Id:D5}", calcul = calc });
+            }
+
+            var label = typeTransaction == "location" ? "Location via Levetimmo" : "Achat via Levetimmo";
+            var (ok, reference, error) = await _campay.CollectAsync(
+                req.NumeroPayeur.Trim(), calc.MontantBrut, label, payment.Id.ToString());
+
+            if (!ok)
+            {
+                payment.Statut     = "Echoue";
+                payment.MotifEchec = error;
+                commTx.Statut      = "Annulée";
+                await _context.SaveChangesAsync();
+                return BadRequest(new { success = false, message = error ?? "Erreur lors du paiement." });
+            }
+
+            payment.ReferenceId = reference;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, paymentId = payment.Id, reference, calcul = calc });
+        }
+
         // ─── GET /api/payments/status/{paymentId} ─────────────────────────────
         [HttpGet("status/{paymentId:int}")]
         public async Task<IActionResult> GetStatus(int paymentId)
@@ -122,16 +236,19 @@ namespace SaidAfricaBackend.Controllers
 
                 await _context.SaveChangesAsync();
 
-                // Confirmer la réservation dès que le paiement passe de EnAttente → Reussi
-                if (wasEnAttente && payment.Statut == "Reussi" && payment.ReservationId.HasValue)
-                    _ = ConfirmerReservationAsync(payment);
+                if (wasEnAttente && payment.Statut == "Reussi")
+                {
+                    if (payment.TypePaiement == "Achat")
+                        _ = ConfirmerAchatAsync(payment);
+                    else if (payment.ReservationId.HasValue)
+                        _ = ConfirmerReservationAsync(payment);
+                }
             }
 
             return Ok(new { success = true, statut = payment.Statut });
         }
 
         // ─── POST /api/payments/callback ──────────────────────────────────────
-        // Webhook CamPay (notification automatique après paiement)
         [HttpPost("callback")]
         [AllowAnonymous]
         public async Task<IActionResult> Callback([FromBody] CamPayWebhookPayload payload)
@@ -142,20 +259,57 @@ namespace SaidAfricaBackend.Controllers
             var payment = await _context.Payments.FindAsync(paymentId);
             if (payment == null) return Ok();
 
-            var wasEnAttente = payment.Statut == "EnAttente";
-
-            payment.Statut    = payload.Status == "SUCCESSFUL" ? "Reussi" : "Echoue";
-            payment.UpdatedAt = DateTime.UtcNow;
-            if (payload.Status != "SUCCESSFUL")
-                payment.MotifEchec = "Paiement refusé ou annulé";
+            var wasEnAttente   = payment.Statut == "EnAttente";
+            payment.Statut     = payload.Status == "SUCCESSFUL" ? "Reussi" : "Echoue";
+            payment.UpdatedAt  = DateTime.UtcNow;
+            if (payload.Status != "SUCCESSFUL") payment.MotifEchec = "Paiement refusé ou annulé";
 
             await _context.SaveChangesAsync();
 
-            // Confirmer la réservation uniquement lors du premier succès
-            if (wasEnAttente && payment.Statut == "Reussi" && payment.ReservationId.HasValue)
-                _ = ConfirmerReservationAsync(payment);
+            if (wasEnAttente && payment.Statut == "Reussi")
+            {
+                if (payment.TypePaiement == "Achat")
+                    _ = ConfirmerAchatAsync(payment);
+                else if (payment.ReservationId.HasValue)
+                    _ = ConfirmerReservationAsync(payment);
+            }
 
             return Ok();
+        }
+
+        private async Task ConfirmerAchatAsync(Payment payment)
+        {
+            try
+            {
+                if (!payment.ReservationId.HasValue) return;
+                var commTx = await _context.CommissionTransactions.FindAsync(payment.ReservationId.Value);
+                if (commTx == null) return;
+
+                commTx.Statut = "Complète";
+                await _context.SaveChangesAsync();
+
+                var bien = await _context.Biens.Include(b => b.Proprietaire)
+                    .FirstOrDefaultAsync(b => b.Id == payment.BienId);
+                if (bien?.Proprietaire == null) return;
+
+                NotificationHelper.Creer(_context, bien.ProprietaireId,
+                    "TransactionConfirmee", "Transaction confirmée via Levetimmo",
+                    $"Paiement reçu pour « {bien.Titre} ». Votre part : {commTx.CommissionAgent:N0} XAF.",
+                    "transactions");
+
+                var admins = await _context.Users
+                    .Where(u => u.Role == "AdminRegion" || u.Role == "AdminPays" || u.Role == "DirecteurProjet")
+                    .ToListAsync();
+
+                foreach (var admin in admins)
+                    NotificationHelper.Creer(_context, admin.Id,
+                        "NouvelleCommission", "Nouvelle commission Levetimmo",
+                        $"Transaction « {bien.Titre} » : {commTx.CommissionLevetimmo:N0} XAF de commission.",
+                        "transactions");
+
+                await _context.SaveChangesAsync();
+            }
+            catch { /* non bloquant */ }
         }
 
         private async Task ConfirmerReservationAsync(Payment payment)
@@ -245,6 +399,13 @@ namespace SaidAfricaBackend.Controllers
         public string  NumeroPayeur  { get; set; } = string.Empty;
         public int?    BienId        { get; set; }
         public int?    ReservationId { get; set; }
+    }
+
+    public class AcheterRequest
+    {
+        public int    BienId       { get; set; }
+        public string NumeroPayeur { get; set; } = string.Empty;
+        public string Operateur    { get; set; } = "mtn";
     }
 
     public class CamPayWebhookPayload
