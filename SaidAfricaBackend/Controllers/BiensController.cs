@@ -22,15 +22,11 @@ namespace SaidAfricaBackend.Controllers
         private string? CurrentRole()   => User.FindFirst(ClaimTypes.Role)?.Value;
         private bool    IsAdmin()       => CurrentRole() is "AdminRegion" or "AdminPays" or "DirecteurProjet";
 
-        private async Task<bool> IsAdminForBienAsync(Bien bien)
+        private Task<bool> IsAdminForBienAsync(Bien bien)
         {
             var role = CurrentRole();
-            if (role is "AdminPays" or "DirecteurProjet") return true;
-            if (role != "AdminRegion") return false;
-
-            var admin   = await _context.Users.FindAsync(CurrentUserId());
-            var proprio = await _context.Users.FindAsync(bien.ProprietaireId);
-            return admin?.Region != null && admin.Region == proprio?.Region;
+            // Un seul admin gère toutes les régions pour l'instant — pas de filtre de région
+            return Task.FromResult(role is "AdminRegion" or "AdminPays" or "DirecteurProjet");
         }
 
         // ─── GET /api/biens ───────────────────────────────────────────────────
