@@ -287,8 +287,7 @@ namespace SaidAfricaBackend.Controllers
                     if (prop != null)
                     {
                         var admins = await _context.Users
-                            .Where(u => (u.Role == "AdminRegion" || u.Role == "AdminPays" || u.Role == "DirecteurProjet")
-                                        && u.Region == prop.Region)
+                            .Where(u => u.Role == "AdminRegion" || u.Role == "AdminPays" || u.Role == "DirecteurProjet")
                             .ToListAsync();
 
                         foreach (var admin in admins)
@@ -405,21 +404,19 @@ namespace SaidAfricaBackend.Controllers
             bien.MotifsRejet       = null;
 
             var proprio = await _context.Users.FindAsync(CurrentUserId());
-            if (proprio?.Region != null)
-            {
-                var admins = await _context.Users
-                    .Where(u => u.Role == "AdminRegion" && u.Region == proprio.Region)
-                    .ToListAsync();
+            var admins2 = await _context.Users
+                .Where(u => u.Role == "AdminRegion" || u.Role == "AdminPays" || u.Role == "DirecteurProjet")
+                .ToListAsync();
 
-                foreach (var admin in admins)
-                {
-                    NotificationHelper.Creer(_context,
-                        admin.Id,
-                        "nouvelle-annonce",
-                        "Bien resoumis pour validation",
-                        $"{proprio.Prenom} {proprio.Nom} a resoumis « {bien.Titre} » pour validation.",
-                        "biens");
-                }
+            var nomProprio2 = proprio != null ? $"{proprio.Prenom} {proprio.Nom}" : "Un utilisateur";
+            foreach (var admin in admins2)
+            {
+                NotificationHelper.Creer(_context,
+                    admin.Id,
+                    "nouvelle-annonce",
+                    "Bien resoumis pour validation",
+                    $"{nomProprio2} a resoumis « {bien.Titre} » pour validation.",
+                    "biens");
             }
 
             await _context.SaveChangesAsync();
@@ -584,19 +581,21 @@ namespace SaidAfricaBackend.Controllers
 
             _context.Biens.Add(bien);
 
-            if (!isAdmin && proprio?.Region != null)
+            if (!isAdmin)
             {
+                // Notifier tous les admins sans filtre de région
                 var admins = await _context.Users
-                    .Where(u => u.Role == "AdminRegion" && u.Region == proprio.Region)
+                    .Where(u => u.Role == "AdminRegion" || u.Role == "AdminPays" || u.Role == "DirecteurProjet")
                     .ToListAsync();
 
+                var nomProprio = proprio != null ? $"{proprio.Prenom} {proprio.Nom}" : "Un utilisateur";
                 foreach (var admin in admins)
                 {
                     NotificationHelper.Creer(_context,
                         admin.Id,
                         "nouvelle-annonce",
                         "Nouveau bien à valider",
-                        $"{proprio.Prenom} {proprio.Nom} a publié « {req.Titre} » à {req.Localisation} — en attente de validation terrain.",
+                        $"{nomProprio} a publié « {req.Titre} » à {req.Localisation} — en attente de validation.",
                         "biens");
                 }
             }
